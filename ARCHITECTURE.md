@@ -5,6 +5,12 @@ result approvals, artifacts, scoped local tools, a configurable model adapter,
 workspace memory, and React Mission Control are implemented. Live provider and
 browser acceptance verification remain outstanding.
 
+An explicitly selected offline Calculator demo reuses the same mission, tool,
+and approval services with scripted generation and actual local tests. Its
+databases, memory, artifacts, and scratch work live under `.agentos/demo/`.
+Normal startup never falls back to demo execution. Demo source fingerprints and
+its fixed goal prevent canned responses from being used for another project.
+
 ## Boundaries
 
 - **Core domain:** agent and tool definitions, role manifests, missions, tasks,

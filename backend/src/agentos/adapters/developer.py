@@ -3,9 +3,14 @@
 from typing import Any
 
 from agentos.adapters.local_tools import LocalWorkspaceTools, MethodTool
-from agentos.adapters.provider import ResponsesExecutor
 from agentos.adapters.workspace import WorkspaceStore
-from agentos.domain.agents import AgentDefinition, AgentResult, ExecutionContext, Permission
+from agentos.domain.agents import (
+    AgentDefinition,
+    AgentResult,
+    ExecutionContext,
+    Permission,
+    StructuredGenerator,
+)
 from agentos.domain.artifacts import ArtifactDraft
 from agentos.domain.governance import UserRole
 from agentos.domain.missions import StateConflict
@@ -36,7 +41,11 @@ def register_local_tools(registry: ToolRegistry, workspace: LocalWorkspaceTools)
 
 class DeveloperExecutor:
     def __init__(
-        self, model: ResponsesExecutor, tools: ToolRegistry, memory: WorkspaceStore, role: UserRole
+        self,
+        model: StructuredGenerator,
+        tools: ToolRegistry,
+        memory: WorkspaceStore,
+        role: UserRole,
     ) -> None:
         self.model = model
         self.tools = tools

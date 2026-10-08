@@ -9,6 +9,7 @@ from urllib.parse import urlsplit
 
 from pydantic import computed_field
 
+from agentos.adapters.demo import demo_directory, demo_workspace
 from agentos.adapters.manifests import load_registry
 from agentos.adapters.provider import ModelSettings
 from agentos.adapters.workspace import read_workspace_source
@@ -26,6 +27,7 @@ class SetupCheck(Definition):
 class SetupReport(Definition):
     checks: tuple[SetupCheck, ...]
     live_provider_verified: bool = False
+    execution_mode: str = "live"
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -66,14 +68,20 @@ def client_assets_valid(directory: Path) -> bool:
         return False
 
 
-def diagnose(root: Path) -> SetupReport:
+def diagnose(root: Path, *, demo: bool = False) -> SetupReport:
     checks: list[SetupCheck] = []
 
     def record(id: str, passed: bool, detail: str) -> None:
         checks.append(SetupCheck(id=id, passed=passed, detail=detail))
 
+    if demo:
+        try:
+            demo_directory(root)
+            record("demo_storage", True, "Separate demo storage paths do not redirect elsewhere.")
+        except Exception:
+            record("demo_storage", False, "Demo storage paths must not be symlinks or junctions.")
     try:
-        packages = Path(os.environ.get("AGENTOS_PACKAGES", "packages"))
+        packages = Path("packages" if demo else os.environ.get("AGENTOS_PACKAGES", "packages"))
         registry = load_registry(packages if packages.is_absolute() else root / packages)
         record(
             "packages",
@@ -83,11 +91,13 @@ def diagnose(root: Path) -> SetupReport:
     except Exception:
         record("packages", False, "Check role and agent manifests; package loading failed.")
     try:
-        provider = ModelSettings.from_environment()
+        provider = None if demo else ModelSettings.from_environment()
         record(
             "provider",
-            provider is not None,
-            "Provider configuration is present; connectivity is unverified."
+            demo or provider is not None,
+            "Offline demo uses scripted responses; provider configuration is ignored."
+            if demo
+            else "Provider configuration is present; connectivity is unverified."
             if provider
             else "Set AGENTOS_MODEL and the provider key when required in .env.",
         )
@@ -110,7 +120,11 @@ def diagnose(root: Path) -> SetupReport:
     config = Path(os.environ.get("AGENTOS_WORKSPACE_CONFIG", ".agentos/workspace.json"))
     try:
         path = config if config.is_absolute() else root / config
-        settings = WorkspaceSettings.model_validate_json(path.read_text(encoding="utf-8"))
+        settings = (
+            demo_workspace(root)
+            if demo
+            else WorkspaceSettings.model_validate_json(path.read_text(encoding="utf-8"))
+        )
         if not settings.repository.is_absolute():
             settings = settings.model_copy(update={"repository": root / settings.repository})
         files = read_workspace_source(settings)
@@ -134,7 +148,9 @@ def diagnose(root: Path) -> SetupReport:
         record(
             "workspace",
             False,
-            "Check workspace.json, paths, UTF-8 encoding, and size limits. "
+            "Offline demo requires the unchanged bundled Calculator sample."
+            if demo
+            else "Check workspace.json, paths, UTF-8 encoding, and size limits. "
             "Use setup-sample for the bundled project.",
         )
         record(
@@ -148,4 +164,4 @@ def diagnose(root: Path) -> SetupReport:
         if assets
         else "Build the client: npm --prefix frontend ci, then npm --prefix frontend run build.",
     )
-    return SetupReport(checks=tuple(checks))
+    return SetupReport(checks=tuple(checks), execution_mode="demo" if demo else "live")

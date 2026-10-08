@@ -10,13 +10,21 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from agentos.adapters.artifacts import ArtifactStore
+from agentos.adapters.demo import (
+    DEMO_GOAL,
+    DEMO_LABEL,
+    DemoDeveloperExecutor,
+    DemoGenerator,
+    demo_directory,
+    demo_workspace,
+)
 from agentos.adapters.developer import DeveloperExecutor, register_local_tools
 from agentos.adapters.local_tools import LocalWorkspaceTools
 from agentos.adapters.manifests import load_registry
 from agentos.adapters.provider import ModelSettings, ResponsesExecutor
 from agentos.adapters.sqlite import SQLiteMissionRepository
 from agentos.adapters.workspace import WorkspaceStore
-from agentos.domain.agents import AgentDefinition
+from agentos.domain.agents import AgentDefinition, AgentExecutor, StructuredGenerator
 from agentos.domain.artifacts import Artifact
 from agentos.domain.governance import (
     Approval,
@@ -34,6 +42,7 @@ from agentos.domain.missions import (
     MissionNotFound,
     MissionValidationError,
     StateConflict,
+    TaskAction,
     TaskActionRequest,
     VersionRequest,
 )
@@ -64,7 +73,30 @@ def create_app(
     workspace: WorkspaceSettings | None = None,
     model: ResponsesExecutor | None = None,
     frontend_root: Path | None = None,
+    demo_root: Path | None = None,
 ) -> FastAPI:
+    if demo_root is not None:
+        if any(
+            item is not None
+            for item in (
+                registry,
+                workspace,
+                model,
+                executors,
+                db_path,
+                artifact_root,
+                package_root,
+                frontend_root,
+            )
+        ):
+            raise ValueError("Demo mode uses its own isolated startup configuration")
+        demo_root = demo_root.resolve(strict=True)
+        workspace = demo_workspace(demo_root)
+        directory = demo_directory(demo_root)
+        db_path = directory / "agentos.sqlite3"
+        artifact_root = directory / "artifacts"
+        package_root = demo_root / "packages"
+        frontend_root = demo_root / "frontend" / "dist"
     if registry is None:
         root = package_root or Path(os.environ.get("AGENTOS_PACKAGES", "packages"))
         registry = load_registry(root)
@@ -80,18 +112,22 @@ def create_app(
     )
     memory = WorkspaceStore(repository.path.parent / "workspace.sqlite3")
     configuration = Path(os.environ.get("AGENTOS_WORKSPACE_CONFIG", ".agentos/workspace.json"))
-    if workspace is None and configuration.exists():
+    if demo_root is None and workspace is None and configuration.exists():
         workspace = WorkspaceSettings.model_validate_json(configuration.read_text(encoding="utf-8"))
-    settings = ModelSettings.from_environment() if model is None else None
+    settings = ModelSettings.from_environment() if demo_root is None and model is None else None
     if settings is not None:
         model = ResponsesExecutor(settings)
     bindings = executors or ExecutorRegistry()
-    if executors is None and workspace is not None and model is not None:
+    generator: StructuredGenerator | None = DemoGenerator() if demo_root is not None else model
+    if executors is None and workspace is not None and generator is not None:
         tools = ToolRegistry(repository.record_tool_event)
         register_local_tools(
             tools, LocalWorkspaceTools(workspace, memory, repository.path.parent / "scratch")
         )
-        developer = DeveloperExecutor(model, tools, memory, role)
+        scoped = DeveloperExecutor(generator, tools, memory, role)
+        developer: AgentExecutor = (
+            DemoDeveloperExecutor(scoped) if demo_root is not None else scoped
+        )
         for agent_id in ("investigation", "code_helper", "testing"):
             bindings.register_agent(agent_id, developer)
     orchestrator = Orchestrator(catalog, repository, bindings, storage)
@@ -157,7 +193,12 @@ def create_app(
             "test_commands": workspace.test_commands if workspace else [],
             "user_role": role.value,
             "memory_retrieval": "lexical",
-            "workflow_ready": workspace is not None and model is not None,
+            "workflow_ready": workspace is not None and generator is not None,
+            "execution_mode": "demo" if demo_root is not None else "live",
+            "execution_label": DEMO_LABEL
+            if demo_root is not None
+            else "Configured model execution",
+            "demo_goal": DEMO_GOAL if demo_root is not None else None,
         }
 
     @app.get("/memory")
@@ -177,10 +218,14 @@ def create_app(
     @app.post("/workflows/developer", status_code=201)
     def create_developer_mission(request: DeveloperMissionCreate) -> Mission:
         require_operator(role)
-        if workspace is None or model is None:
+        if workspace is None or generator is None:
             raise StateConflict(
                 "Configure a workspace and model provider before creating a Developer mission"
             )
+        if demo_root is not None:
+            if request.goal != DEMO_GOAL:
+                raise StateConflict("Offline demo supports only its fixed Calculator mission")
+            demo_workspace(demo_root)
         return missions.create(developer_mission(request.goal))
 
     @app.get("/agents")
@@ -208,6 +253,8 @@ def create_app(
     @app.post("/missions", status_code=201)
     def create_mission(request: MissionCreate) -> Mission:
         require_operator(role)
+        if demo_root is not None:
+            raise StateConflict("Use the fixed Developer scenario in offline demo mode")
         return missions.create(request)
 
     @app.get("/missions")
@@ -231,6 +278,10 @@ def create_app(
     @app.post("/missions/{mission_id}/tasks/{task_id}/actions")
     def task_action(mission_id: str, task_id: str, request: TaskActionRequest) -> Mission:
         require_operator(role)
+        if demo_root is not None and request.action != TaskAction.RETRY:
+            raise StateConflict(
+                "Offline demo uses executor results; only explicit retry is allowed"
+            )
         return missions.act(mission_id, task_id, request)
 
     @app.post("/missions/{mission_id}/cancel")
@@ -288,3 +339,8 @@ def create_app(
         app.mount("/app", StaticFiles(directory=assets, html=True), name="mission-control")
 
     return app
+
+
+def create_demo_app() -> FastAPI:
+    """Opt-in CLI factory; never selected because a provider is missing."""
+    return create_app(demo_root=Path.cwd())

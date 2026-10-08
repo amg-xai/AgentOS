@@ -6,6 +6,31 @@ the subprocess runner, not a model. The engine still uses manifest agent IDs,
 dependency-linked tasks, durable claims, permission checks, artifacts, and
 digest-bound result approvals.
 
+## Explicit offline demo
+
+`python -m agentos serve --demo` selects only the unchanged bundled Calculator
+fixture. Findings and patches are deterministic scripted responses. The same
+registered tools perform real source reads, Git checks, and subprocess tests;
+the existing engine persists tasks, reviews, artifacts, and audit events.
+Every task adds an `offline-demo.txt` provenance artifact, and text reports carry
+the demo label. Patch files remain valid unified diffs with provenance alongside.
+The final review bundle includes the exact tested diff, actual report, and label.
+
+Demo startup ignores provider, package-path, workspace-path, database-path, and
+artifact-path environment overrides. It uses checkout manifests and separate
+`.agentos/demo/` storage; local role permissions still apply. It never constructs
+a model provider, even if live credentials are present. Manual task completion
+and custom missions are disabled in this mode; explicit retry, cancel, review,
+and documented admin recovery retain their existing semantics. Normal startup
+and normal workspace history are unchanged. Source text is fingerprinted before
+startup/creation and again before scripted generation; altered fixtures fail
+instead of receiving a canned result. Demo source checks normalize CRLF to LF.
+
+Demo completion validates local workflow mechanics, not live model behavior.
+See the [offline walkthrough](getting-started.md#offline-demo-without-a-model).
+
+## Configured model workflow
+
 Workspace configuration is server-side JSON in `.agentos/workspace.json` (or
 `AGENTOS_WORKSPACE_CONFIG`). It selects a directory, explicit source file paths,
 and test argv arrays. There is no shell command field and models cannot select

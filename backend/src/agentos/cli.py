@@ -32,7 +32,12 @@ def main() -> None:
     parser.add_argument("--root", type=Path, default=Path.cwd())
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--json", action="store_true", help="Print doctor results as JSON")
+    parser.add_argument(
+        "--demo", action="store_true", help="Use the isolated scripted Calculator demo"
+    )
     args = parser.parse_args()
+    if args.demo and args.command == "setup-sample":
+        parser.error("Demo mode selects its sample without changing workspace configuration")
     root = args.root.resolve(strict=True)
     if not (root / "packages").is_dir():
         parser.error("Run from the AgentOS checkout, or select it with --root")
@@ -47,7 +52,7 @@ def main() -> None:
     os.chdir(root)
     load_dotenv(root / ".env", override=False)
     if args.command == "doctor":
-        report = diagnose(root)
+        report = diagnose(root, demo=args.demo)
         if args.json:
             print(report.model_dump_json(indent=2))
         else:
@@ -60,4 +65,7 @@ def main() -> None:
         parser.error(
             "Build the client first: npm --prefix frontend ci; npm --prefix frontend run build"
         )
-    uvicorn.run("agentos.api.app:create_app", factory=True, host="127.0.0.1", port=args.port)
+    factory = "create_demo_app" if args.demo else "create_app"
+    if args.demo:
+        print("Offline demo: scripted responses, no model calls; separate .agentos/demo history.")
+    uvicorn.run(f"agentos.api.app:{factory}", factory=True, host="127.0.0.1", port=args.port)

@@ -45,3 +45,13 @@ database to preserve the mission database contract. Use explicit lexical memory
 retrieval first. Serve the built React client from the same loopback FastAPI
 origin. Keep local configuration, credentials, runtime data, and review material
 ignored; commit the client lockfile, launcher, sample project, and setup guide.
+
+## 2026-10-08: Explicit offline acceptance mode
+
+Live model testing is deferred by the user. Add an opt-in Calculator demo with
+scripted generation, real scoped Git/test execution, the existing mission engine,
+and digest-bound review. Keep its history/memory/artifacts in `.agentos/demo/`
+and label the UI and persisted results. Require the fixed sample goal and exact
+normalized source fingerprints. Ignore live provider/storage configuration in
+demo startup; never silently select fixtures when normal configuration is absent.
+This supports local interaction testing without claiming live AI acceptance.

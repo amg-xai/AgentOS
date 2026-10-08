@@ -105,6 +105,10 @@ class AgentExecutor(Protocol):
     ) -> AgentResult: ...
 
 
+class StructuredGenerator(Protocol):
+    async def generate(self, agent: AgentDefinition, inputs: dict[str, Any]) -> dict[str, Any]: ...
+
+
 class AgentManifest(VersionedManifest):
     kind: Literal["agents"]
     agents: tuple[AgentDefinition, ...] = Field(min_length=1)
