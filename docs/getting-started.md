@@ -9,6 +9,8 @@ mission requires a configured provider.
 Creator uses the same provider but only needs a supplied content brief; it does
 not require Developer workspace, source files, or test commands. See the
 [Creator walkthrough](creator-workflow.md) for both modes.
+Student similarly uses supplied study material to produce notes, quiz questions,
+and an answer key; see the [Student walkthrough](student-workflow.md).
 
 ## Install and start
 
@@ -69,6 +71,9 @@ Choose **Creator** in **Workflow** for the fixed content scenario. Run its outli
 and script tasks, inspect `script.md` and `reviewed-outline.md`, then accept or deny
 the content. Creator produces no test report or test-pass badge. Both roles retain
 their missions in the same isolated demo history.
+Choose **Student** for the fixed stacks-and-queues study scenario. Inspect the
+questions separately from the answer key and review the bound notes. It produces
+study artifacts without software test execution, scoring, or model calls.
 
 ## Configure live execution
 
@@ -91,6 +96,7 @@ Check local prerequisites without contacting a provider or executing project cod
 .\.venv\Scripts\python.exe -m agentos doctor
 # For content workflows without Developer workspace setup:
 .\.venv\Scripts\python.exe -m agentos doctor --workflow creator
+.\.venv\Scripts\python.exe -m agentos doctor --workflow student
 # Use --json for a structured report; exit 0 means prerequisites pass, 1 means blocked.
 ```
 

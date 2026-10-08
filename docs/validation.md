@@ -239,3 +239,42 @@ Creator offline interaction is ready for user testing. Live AI quality remains
 deferred and browser visual/responsive/screen-reader acceptance remains unverified;
 the prior browser restriction was respected. No research, media generation,
 publication, Student workflow, or desktop packaging is claimed.
+
+## Student notes and quiz workflow
+
+Validated on Windows on 2026-10-09:
+
+- 201 backend tests pass; three symlink checks are skipped on this Windows account.
+  Student integration tests verify exact provider inputs, separate quiz/key
+  rendering, bounded schemas, invalid output before artifacts, partial failure
+  and explicit retry, denial/retry preserving notes and earlier artifacts, restart,
+  memory, replay rejection, cancellation, viewer enforcement, and corruption of
+  each of the three reviewed files. Provider transport is mocked.
+- Offline integration runs all three roles in one persisted demo history with
+  model HTTP construction blocked and hostile live configuration present.
+  Calculator tests execute in scratch; Student produces six labelled artifacts
+  without claiming research, scoring, correctness verification, or software tests.
+  Normal state, configuration, and source remain unchanged.
+- Twenty-two React/JSDOM tests pass, including Student selection without Developer
+  setup, fixed demo briefs, quiz-first inspection, separate answer-key download,
+  memory references, denial/retry, acceptance, and reload. Existing Developer,
+  Creator, history, viewer, integrity, and keyboard checks remain passing. Test
+  workers are capped at two to avoid resource contention between large JSDOM
+  histories; default per-test timeouts are retained, with existing scoped longer
+  budgets for complete content workflows and the 1,001-event history.
+- Ruff lint/format passes across 55 Python files. Strict Mypy passes across 37
+  source files using both Windows and Linux platform definitions. TypeScript/Vite
+  production build and Prettier checks pass.
+- The actual PowerShell demo launcher passed a loopback HTTP/API smoke on port
+  8767: Student reached review with six labelled artifacts, then completed after
+  restart and approval of the same bound result. Artifacts and memory persisted;
+  previous Developer/Creator missions remained available. Normal database/config
+  and source hashes were unchanged. Both smoke servers were stopped; scripts,
+  logs, and local demo history remain ignored.
+- `doctor --demo --workflow student --json` passes local prerequisites and reports
+  `live_provider_verified: false`. Student normal diagnostics do not require
+  Developer workspace, Git, or test-runner configuration.
+
+The offline Student workflow is ready for interaction testing. Live AI quality and
+browser visual/responsive/screen-reader acceptance remain deferred/unverified. No
+interactive quiz scoring, web research, study scheduling, or Electron is claimed.

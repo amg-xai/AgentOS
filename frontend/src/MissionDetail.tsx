@@ -152,13 +152,16 @@ export function MissionDetail({
   const test = mission.tasks.find((t) => typeof t.outputs?.passed === 'boolean');
   const canRun = ['PENDING', 'RUNNING'].includes(mission.status) && !claim;
   const creator = mission.role_id === 'creator';
+  const student = mission.role_id === 'student';
   const roleName = creator ? 'CREATOR' : mission.role_id.toUpperCase();
   const selectedArtifact = artifacts.find((a) => a.id === artifact);
   return (
     <section className="panel detail">
       <div className="section-heading">
         <span className="eyebrow">
-          {demo ? `OFFLINE DEMO ${creator ? 'CREATOR ' : ''}MISSION` : `${roleName} MISSION`}
+          {demo
+            ? `OFFLINE DEMO ${creator || student ? `${roleName} ` : ''}MISSION`
+            : `${roleName} MISSION`}
         </span>
         <Badge state={mission.status} />
       </div>
@@ -197,7 +200,7 @@ export function MissionDetail({
           </button>
         )}
       </div>
-      {test && !creator && (
+      {test && mission.role_id === 'developer' && (
         <div className={`test-result ${test.outputs?.passed ? 'pass' : 'fail'}`}>
           <strong>{test.outputs?.passed ? 'Tests passed' : 'Tests failed'}</strong>
           <span>Actual configured test execution. Inspect the report before accepting.</span>
@@ -208,9 +211,11 @@ export function MissionDetail({
           <div className="eyebrow">HUMAN REVIEW REQUIRED</div>
           <h3>The result is ready for your review</h3>
           <p>
-            {creator
-              ? 'Inspect the script and its reviewed outline. Acceptance records this content; it does not publish or send it.'
-              : 'Inspect the diff and test report. Acceptance records this result; it does not change the source project or publish anything.'}
+            {student
+              ? 'Inspect the quiz, answer key, and reviewed notes. Acceptance records review of this material; it does not verify correctness or exam readiness.'
+              : creator
+                ? 'Inspect the script and its reviewed outline. Acceptance records this content; it does not publish or send it.'
+                : 'Inspect the diff and test report. Acceptance records this result; it does not change the source project or publish anything.'}
           </p>
           {p.payload?.artifact_refs && (
             <p>
@@ -225,7 +230,9 @@ export function MissionDetail({
             onClick={() => {
               const review = artifacts.filter((a) => p.payload?.artifact_refs?.includes(a.id));
               const preferred =
-                review.find((a) => a.name === (creator ? 'script.md' : 'tested.diff')) ?? review[0];
+                review.find(
+                  (a) => a.name === (student ? 'quiz.md' : creator ? 'script.md' : 'tested.diff'),
+                ) ?? review[0];
               if (preferred) setArtifact(preferred.id);
               setTab('artifacts');
             }}

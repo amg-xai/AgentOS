@@ -17,7 +17,9 @@ are explicit; the default application never silently runs test fixtures.
 React/TypeScript Mission Control provides mission creation, execution history,
 artifact inspection, result approval/denial, retry, and workspace memory.
 The Creator package reuses that engine for a supplied brief, outline, and reviewed
-video script. Choose Developer or Creator in the workflow selector.
+video script. Student produces notes and a quiz with a separate answer key from
+supplied study material. Choose Developer, Creator, or Student in the workflow
+selector.
 
 Start with the [local setup and acceptance guide](docs/getting-started.md).
 Use `Start-AgentOS.ps1 -Demo` for the explicit offline Calculator walkthrough:
@@ -25,6 +27,8 @@ scripted findings/patches, real Git checks and tests, separate local history,
 and human review. Select Creator for a fixed, labelled outline/script walkthrough
 in the same isolated demo history. No model credentials are required and no model
 calls occur.
+Student also offers a fixed stacks-and-queues demo. See the
+[Student guide](docs/student-workflow.md) for study bundle review and downloads.
 Live AI acceptance still requires a configured model endpoint and credentials;
 automated model tests use mocked transport. Browser visual verification is pending.
 

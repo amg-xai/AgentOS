@@ -191,9 +191,9 @@ export function App() {
             <div className="setup-notice" role="note">
               <strong>Offline demo — scripted responses, no model calls</strong>
               <p>
-                Demo responses are scripted. Developer runs actual Git checks and tests; Creator
-                produces content fixtures. Demo history and memory are separate from your configured
-                workspace.
+                Demo responses are scripted. Developer runs actual Git checks and tests; Creator and
+                Student produce content fixtures. Demo history and memory are separate from your
+                configured workspace.
               </p>
             </div>
           )}
@@ -265,7 +265,7 @@ export function App() {
                       <p>{workflow?.steps ?? 'No executable workflow is installed.'}</p>
                     </div>
                     <span className="scope-tag">
-                      {roleId === 'creator' ? 'Content only' : 'Scratch checkout'}
+                      {roleId === 'developer' ? 'Scratch checkout' : 'Content only'}
                     </span>
                   </section>
                   {creating && (
@@ -299,9 +299,11 @@ export function App() {
                           ))}
                         </select>
                         <label htmlFor="goal">
-                          {roleId === 'creator'
-                            ? 'What should your video script cover?'
-                            : 'What should your agents investigate and fix?'}
+                          {roleId === 'student'
+                            ? 'What material should your study notes and quiz cover?'
+                            : roleId === 'creator'
+                              ? 'What should your video script cover?'
+                              : 'What should your agents investigate and fix?'}
                         </label>
                         <textarea
                           id="goal"

@@ -18,5 +18,12 @@ export default defineConfig({
       ].map((path) => [path, { target: 'http://127.0.0.1:8000', changeOrigin: false }]),
     ),
   },
-  test: { environment: 'jsdom', setupFiles: ['./src/test-setup.ts'], restoreMocks: true },
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./src/test-setup.ts'],
+    restoreMocks: true,
+    // Large mission histories compete for CPU when every JSDOM file runs at once.
+    maxWorkers: 2,
+    minWorkers: 1,
+  },
 });
