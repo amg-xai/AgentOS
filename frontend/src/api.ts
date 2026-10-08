@@ -96,6 +96,41 @@ export interface Role {
   agents: string[];
 }
 
+export interface TaskSummary {
+  mission_id: string;
+  mission_goal: string;
+  task_id: string;
+  title: string;
+  status: State;
+  mission_updated_at: string;
+  has_claim: boolean;
+}
+export interface AgentActivity {
+  agent_id: string;
+  task_counts: Partial<Record<State, number>>;
+  recent_tasks: TaskSummary[];
+}
+export interface Overview {
+  observed_at: string;
+  execution_mode: 'live' | 'demo';
+  local_active_runs: number;
+  total_missions: number;
+  mission_counts: Partial<Record<State, number>>;
+  pending_approvals: number;
+  durable_claims: number;
+  total_artifacts: number;
+  recent_reviews: {
+    id: string;
+    goal: string;
+    role_id: string;
+    status: State;
+    updated_at: string;
+    has_claim: boolean;
+  }[];
+  recent_artifacts: (Artifact & { mission_id: string })[];
+  agent_activity: AgentActivity[];
+}
+
 export async function api<T>(path: string, payload?: unknown, signal?: AbortSignal): Promise<T> {
   const response = await fetch(path, {
     ...(payload !== undefined

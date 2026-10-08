@@ -8,6 +8,7 @@ export default defineConfig({
     proxy: Object.fromEntries(
       [
         '/status',
+        '/overview',
         '/roles',
         '/agents',
         '/missions',

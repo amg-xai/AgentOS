@@ -311,3 +311,35 @@ The desktop launcher is ready for manual offline acceptance using the
 [desktop guide](desktop.md). Actual Electron rendering, native dialogs/downloads,
 keyboard/screen-reader behavior, and live AI quality remain unverified. Standalone
 installers, bundled Python, signing, updates, and deployment remain deferred.
+
+## Workspace overview and recorded agent activity
+
+Validated on Windows on 2026-10-09:
+
+- 226 backend tests pass; three symlink checks are skipped on this Windows account.
+  Sixteen new overview checks cover empty history, every task-derived mission
+  status, 126 mixed-role/historic missions, bounded deterministic lists, actual
+  review approval/denial/cancellation, artifact metadata, restart, Viewer access,
+  secret/token exclusion, and a concurrent WAL writer during a consistent read.
+  Existing active-run coverage now checks the separate overview run/claim counts
+  before and after interruption without releasing the retained claim.
+- 32 React/JSDOM tests pass. Ten overview checks cover global counts beyond the
+  displayed page, older review/artifact mission links, Viewer restrictions,
+  recorded agent activity, keyboard activation, failed/stale refreshes, obsolete
+  polling responses, mode mismatches, pagination reset on mode switch, and a
+  delayed creation response from the old mode. Existing three-role execution,
+  bound reviews, downloads, history, memory, integrity, and keyboard tests pass.
+- All 25 desktop tests pass. The real owned Python/HTTP process test now checks
+  three-role overview counts and unchanged persisted summaries after restart,
+  alongside the existing approval, history, source/normal-data preservation,
+  and private EOF shutdown checks. Policy coverage allows GET `/overview` and
+  rejects writes, other paths, and remote origins.
+- Ruff lint/format passes across 60 Python files. Strict Mypy passes across 40
+  source files with Windows and Linux platform definitions. TypeScript/Vite
+  production build, frontend/desktop Prettier, and desktop syntax checks pass.
+
+Workspace overview is ready for offline interaction testing using the
+[Mission Control guide](mission-control.md). Reads scan stored mission snapshots,
+so cost grows with history and can briefly delay SQLite writers. Native/browser
+visual, responsive, and screen-reader acceptance remain unverified under the
+existing browser restriction. Live model quality remains deferred.

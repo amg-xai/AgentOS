@@ -98,3 +98,17 @@ processes. Keep this regression in real Python/HTTP desktop checks on both OSes.
 Preserve sandbox/context isolation, CSP, local request/navigation restrictions,
 native save prompts, existing RBAC, and the three role histories. Native rendering
 and dialogs remain manual acceptance under the existing browser restriction.
+
+## 2026-10-09: Read-only workspace overview
+
+Add workspace-wide counts and bounded review/artifact/task summaries without
+another state store or schema migration. Stream snapshots and reuse Mission.status
+instead of duplicating its precedence in SQL. Read persisted evidence in one
+transaction; accept history-proportional read cost for this local MVP.
+
+Keep local active-run observation separate from persisted claims and RUNNING
+states. Agent cards describe recorded tasks, without inferring executor readiness
+or worker liveness. Open existing mission detail for inspection and integrity
+checks. Prevent obsolete frontend refreshes and old-mode creation responses from
+restoring earlier history. The desktop policy allows only the new GET endpoint;
+existing permission, review, and process ownership boundaries remain in force.

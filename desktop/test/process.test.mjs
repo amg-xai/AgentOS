@@ -104,6 +104,13 @@ test(
         artifact_refs: [artifacts[0].id],
       });
       const originalIdentity = backend.session;
+      const beforeOverview = await api('/overview');
+      assert.equal(beforeOverview.execution_mode, 'demo');
+      assert.equal(beforeOverview.total_missions, 3);
+      assert.equal(beforeOverview.pending_approvals, 3);
+      assert.equal(beforeOverview.local_active_runs, 0);
+      assert.equal(beforeOverview.durable_claims, 0);
+      assert.equal(beforeOverview.recent_reviews.length, 3);
       await backend.stop();
       assert.ok(backend.exited);
       backend = await makeBackend();
@@ -111,6 +118,10 @@ test(
       assert.notEqual(backend.session, originalIdentity);
       assert.deepEqual(await api(`/missions/${student.id}`), student);
       assert.deepEqual(await api(`/missions/${student.id}/artifacts`), artifacts);
+      const afterOverview = await api('/overview');
+      const { observed_at: _beforeTime, ...beforeState } = beforeOverview;
+      const { observed_at: _afterTime, ...afterState } = afterOverview;
+      assert.deepEqual(afterState, beforeState);
       assert.ok((await api('/memory')).some((saved) => saved.id === note.id));
       assert.ok((await api('/missions')).every((mission) => missions.includes(mission.id)));
       assert.equal(

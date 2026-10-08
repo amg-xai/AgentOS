@@ -2,6 +2,7 @@ import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi, test, expect } from 'vitest';
 import { App } from './App';
+import { overviewFixture } from './overview-fixture';
 
 const status = {
   execution_mode: 'live',
@@ -86,6 +87,11 @@ function mockFetch(overrides: Record<string, unknown> = {}) {
           status: 201,
         });
       const defaults: Record<string, unknown> = {
+        '/overview': overviewFixture(
+          (overrides['/status'] as typeof status | undefined)?.execution_mode === 'demo'
+            ? 'demo'
+            : 'live',
+        ),
         '/status': status,
         '/missions?limit=100&offset=0': [],
         '/roles': [],

@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, test, vi } from 'vitest';
 import { App } from './App';
+import { overviewFixture } from './overview-fixture';
 import type { Mission } from './api';
 
 test.each([false, true])(
@@ -75,6 +76,7 @@ test.each([false, true])(
               },
             ],
           });
+        if (path === '/overview') return respond(overviewFixture(demo ? 'demo' : 'live'));
         if (path.startsWith('/missions?')) return respond(created ? [mission] : []);
         if (path === '/workflows/creator') {
           expect(JSON.parse(options?.body as string)).toEqual({ goal });

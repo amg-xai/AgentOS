@@ -32,6 +32,10 @@ test('exact local navigation and artifact downloads; no remote, encoded, or priv
   assert.ok(requestAllowed(`${origin}/missions?limit=100&offset=0`, origin));
   assert.ok(requestAllowed(`${origin}/approvals/${'a'.repeat(32)}/decision`, origin, 'POST'));
   assert.ok(requestAllowed(`${origin}/workflows/student`, origin, 'POST'));
+  assert.ok(requestAllowed(`${origin}/overview`, origin));
+  assert.equal(requestAllowed(`${origin}/overview`, origin, 'POST'), false);
+  assert.equal(requestAllowed(`${origin}/overview/extra`, origin), false);
+  assert.equal(requestAllowed('https://example.com/overview', origin), false);
   for (const [url, method, type] of [
     [`${origin}/docs`, 'GET', 'mainFrame'],
     [`${origin}/status`, 'DELETE', 'xhr'],

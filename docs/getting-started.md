@@ -3,6 +3,9 @@
 For a native window after dependency setup, see the [desktop guide](desktop.md).
 The web launcher below remains available independently.
 
+The [workspace overview guide](mission-control.md) explains dashboard totals,
+recent work links, and recorded agent activity across your full history.
+
 AgentOS runs as a loopback web app with an optional checkout-based desktop shell.
 Standalone packaging and external ticket/PR integrations are deferred.
 You need Python 3.11+, Node.js 22.12+ (24 recommended),

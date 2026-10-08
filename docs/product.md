@@ -15,6 +15,11 @@ Study review records acceptance of the bundle, without asserting correctness or
 exam readiness. Interactive answering, scoring, research, and study scheduling are
 deferred. Do not advertise placeholder packages as functional.
 
+Mission Control includes workspace-wide totals, recent waiting reviews/artifacts,
+and recorded task activity for installed agents. These are read-only projections
+of durable history; claim and task state do not imply agent availability. See
+[workspace overview](mission-control.md) for interpretation and refresh behavior.
+
 Acceptance for the vertical slice: a user creates a mission, sees tasks run,
 inspects tool activity and test output, reviews a diff, approves an explicit
 action, resumes execution, and can inspect the completed mission after restart.

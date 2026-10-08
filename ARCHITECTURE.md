@@ -146,3 +146,19 @@ It receives no privileged preload bridge. Popups, webviews, device permissions,
 and remote requests are refused. Verified local artifact downloads use a native
 save prompt. The first desktop release is a checkout launcher; see
 [desktop setup and acceptance](docs/desktop.md).
+
+## Workspace read projection
+
+`GET /overview` combines a read-only SQLite projection with installed manifest
+agents and a separate current-server active-run count. A single read transaction
+streams mission snapshots, reuses the domain's derived status, and retains bounded
+review/task summaries. Approval/claim/artifact counts and the ten most recently
+recorded artifact metadata entries come from the same persisted snapshot.
+No schema migration, claim token, task IO, provider setting, or artifact body is
+added to this response. Reading cannot execute or mutate work.
+
+Recorded task activity is scoped to installed agent ids; historic missions remain
+in workspace totals even if an agent was removed. Durable claims and persisted
+RUNNING states do not establish worker liveness. The frontend labels snapshot
+age/failures and rejects obsolete refreshes across pagination and mode changes.
+See [overview semantics](docs/mission-control.md) for bounds and read-cost limits.

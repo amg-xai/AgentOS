@@ -47,6 +47,8 @@ loopback backend. After desktop dependency/runtime setup, use
 `Start-AgentOSDesktop.ps1 -Demo` to test it. Standalone packaging remains deferred.
 
 See [validation evidence](docs/validation.md) for the verified scope and runtime.
+The [workspace overview guide](docs/mission-control.md) explains global totals,
+recent work, and recorded agent activity.
 
 ## Run locally
 

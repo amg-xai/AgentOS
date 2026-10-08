@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { api, date, errorMessage } from './api';
-import type { Agent, Mission, Role, Status } from './api';
+import type { Agent, Mission, Overview, Role, Status } from './api';
 
 import { Badge, ErrorNotice } from './components';
 import { MissionDetail } from './MissionDetail';
 import { Memory } from './Memory';
+import { RecordedActivity, WorkspaceOverview } from './Overview';
 
 export function App() {
   const [page, setPage] = useState<'missions' | 'memory' | 'agents'>('missions');
@@ -23,39 +24,89 @@ export function App() {
   const [busy, setBusy] = useState(false);
   const [offset, setOffset] = useState(0);
   const [more, setMore] = useState(false);
+  const [overview, setOverview] = useState<Overview | null>(null);
+  const requestVersion = useRef(0);
+  const refreshController = useRef<AbortController | null>(null);
   const executionMode = useRef<Status['execution_mode'] | undefined>(undefined);
-  const refresh = useCallback(async () => {
-    try {
-      const [s, m, r, a] = await Promise.all([
-        api<Status>('/status'),
-        api<Mission[]>(`/missions?limit=100&offset=${offset}`),
-        api<Role[]>('/roles'),
-        api<Agent[]>('/agents'),
-      ]);
-      if (executionMode.current !== undefined && executionMode.current !== s.execution_mode) {
-        setSelected(null);
-        setCreating(false);
-        setGoal('');
+  const modeGeneration = useRef(0);
+  const refresh = useCallback(
+    async (listOffset = offset) => {
+      const version = ++requestVersion.current;
+      refreshController.current?.abort();
+      const controller = new AbortController();
+      refreshController.current = controller;
+      try {
+        const s = await api<Status>('/status', undefined, controller.signal);
+        if (version !== requestVersion.current) return;
+        if (executionMode.current !== undefined && executionMode.current !== s.execution_mode) {
+          modeGeneration.current++;
+          setSelected(null);
+          setCreating(false);
+          setGoal('');
+          setError('');
+          setOverview(null);
+          setMissions([]);
+          setAgents([]);
+          setRoles([]);
+          setMore(false);
+          if (listOffset !== 0) {
+            executionMode.current = s.execution_mode;
+            setStatus(s);
+            setOffset(0);
+            return;
+          }
+        }
+        executionMode.current = s.execution_mode;
+        setStatus(s);
+        const [m, r, a, o] = await Promise.all([
+          api<Mission[]>(`/missions?limit=100&offset=${listOffset}`, undefined, controller.signal),
+          api<Role[]>('/roles', undefined, controller.signal),
+          api<Agent[]>('/agents', undefined, controller.signal),
+          api<Overview>('/overview', undefined, controller.signal),
+        ]);
+        if (version !== requestVersion.current) return;
+        if (o.execution_mode !== s.execution_mode) {
+          modeGeneration.current++;
+          setSelected(null);
+          setCreating(false);
+          setGoal('');
+          setError('');
+          setOverview(null);
+          setMissions([]);
+          setAgents([]);
+          setRoles([]);
+          setStatus(null);
+          setMore(false);
+          setOffset(0);
+          throw new Error(
+            'Server execution mode changed during refresh. Waiting for a consistent snapshot.',
+          );
+        }
+        setMissions(m);
+        setRoles(r);
+        setAgents(a);
+        setMore(m.length === 100);
+        setOverview(o);
+        setConnectionError('');
+      } catch (e) {
+        if (version !== requestVersion.current) return;
+        setConnectionError(errorMessage(e));
+      } finally {
+        if (version === requestVersion.current) setLoading(false);
       }
-      executionMode.current = s.execution_mode;
-      setStatus(s);
-      setMissions(m);
-      setRoles(r);
-      setAgents(a);
-      setMore(m.length === 100);
-      setConnectionError('');
-    } catch (e) {
-      setConnectionError(errorMessage(e));
-    } finally {
-      setLoading(false);
-    }
-  }, [offset]);
+    },
+    [offset],
+  );
   useEffect(() => {
     void refresh();
     const timer = window.setInterval(() => {
       void refresh();
     }, 5000);
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearInterval(timer);
+      requestVersion.current++;
+      refreshController.current?.abort();
+    };
   }, [refresh]);
   const canWrite = !!status && status.user_role !== 'viewer';
   const demo = status?.execution_mode === 'demo';
@@ -88,21 +139,28 @@ export function App() {
     event.preventDefault();
     setBusy(true);
     setError('');
+    const generation = modeGeneration.current;
     try {
       if (!workflow?.ready || !canWrite) return;
       const mission = await api<Mission>(`/workflows/${encodeURIComponent(roleId)}`, {
         goal: goal.trim(),
       });
+      if (generation !== modeGeneration.current) return;
       setOffset(0);
       setSelected(mission.id);
       setCreating(false);
       setGoal('');
-      await refresh();
+      await refresh(0);
     } catch (e) {
-      setError(errorMessage(e));
+      if (generation === modeGeneration.current) setError(errorMessage(e));
     } finally {
       setBusy(false);
     }
+  }
+  function openMission(id: string) {
+    setSelected(id);
+    setPage('missions');
+    setCreating(false);
   }
   return (
     <div className="shell">
@@ -226,25 +284,20 @@ export function App() {
               )}
               {page === 'missions' && (
                 <>
-                  <section className="metrics" aria-label="Mission overview">
-                    <div>
-                      <small>MISSIONS ON THIS PAGE</small>
-                      <strong>{missions.length}</strong>
-                    </div>
-                    <div>
-                      <small>AWAITING REVIEW</small>
-                      <strong>
-                        {missions.filter((m) => m.status === 'WAITING_APPROVAL').length}
-                        <span className="metric-hint">Your decision matters</span>
-                      </strong>
-                    </div>
-                    <div>
-                      <small>{demo ? 'EXECUTION' : 'MODEL'}</small>
-                      <strong className="model-name">
-                        {demo ? 'Scripted workflows' : (status?.model ?? 'Not configured')}
-                      </strong>
-                    </div>
-                  </section>
+                  <WorkspaceOverview
+                    overview={overview}
+                    stale={!!connectionError}
+                    onOpen={openMission}
+                  />
+                  <p className="muted">
+                    {demo ? (
+                      'Scripted workflows'
+                    ) : (
+                      <>
+                        Model: <strong>{status?.model ?? 'Not configured'}</strong>
+                      </>
+                    )}
+                  </p>
                   <section className="role-strip">
                     <span className="role-icon">&lt;/&gt;</span>
                     <div>
@@ -377,7 +430,7 @@ export function App() {
                         id={selected}
                         canWrite={canWrite}
                         demo={demo}
-                        onChange={refresh}
+                        onChange={() => refresh()}
                       />
                     ) : (
                       <section className="panel empty detail-placeholder">
@@ -420,6 +473,12 @@ export function App() {
                         </div>
                         <small>REGISTERED TOOLS</small>
                         <p className="mono">{a.tools.join(' · ')}</p>
+                        <RecordedActivity
+                          activity={overview?.agent_activity.find((item) => item.agent_id === a.id)}
+                          unavailable={!overview}
+                          stale={!!connectionError}
+                          onOpen={openMission}
+                        />
                       </article>
                     ))}
                   </div>

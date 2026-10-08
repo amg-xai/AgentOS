@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { expect, test, vi } from 'vitest';
 import type { Mission } from './api';
 import { App } from './App';
+import { overviewFixture } from './overview-fixture';
 
 const demoGoal =
   'Fix incorrect addition in the bundled Calculator sample. Preserve all test assertions.';
@@ -50,6 +51,7 @@ function workflow(
           demo_goal: demo ? demoGoal : null,
           user_role: 'operator',
         });
+      if (path === '/overview') return respond(overviewFixture(demo ? 'demo' : 'live'));
       if (path.startsWith('/missions?')) return respond([mission]);
       if (path === '/workflows/developer') {
         if (demo) expect(JSON.parse(options?.body as string)).toEqual({ goal: demoGoal });

@@ -31,7 +31,7 @@ export function requestAllowed(value, origin, method = 'GET', resourceType = 'xh
   const id = '[0-9a-f-]{36}';
   const agent = '[a-z][a-z0-9_]*';
   const get = new RegExp(
-    `^/(?:status|memory|missions|roles|agents|(?:roles|agents)/${agent}|missions/${id}(?:/(?:events|run|approvals|artifacts))?|approvals/[0-9a-f]{32}|artifacts/[0-9a-f]{32}(?:/content)?)$`,
+    `^/(?:status|overview|memory|missions|roles|agents|(?:roles|agents)/${agent}|missions/${id}(?:/(?:events|run|approvals|artifacts))?|approvals/[0-9a-f]{32}|artifacts/[0-9a-f]{32}(?:/content)?)$`,
   );
   const post = new RegExp(
     `^/(?:memory|missions|workflows/(?:developer|creator|student)|missions/${id}/(?:run|cancel|recover|tasks/${agent}/actions)|approvals/[0-9a-f]{32}/decision)$`,
