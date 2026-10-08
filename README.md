@@ -10,10 +10,13 @@ shared memory, tools, artifacts, and human approvals.
 The backend provides validated agent discovery, persisted missions, explicit
 orchestration, scoped result review, durable text artifacts, and permission-checked
 tool interfaces. Dependency outputs flow into downstream agents through bindings.
-Executors/providers must be explicitly configured in an application factory;
-the default application does not silently run test fixtures or call a model.
-Real model adapters, local Developer tools, memory retrieval, and the client UI
-remain to be built.
+The Developer workflow now connects a configured structured model provider to
+scoped source snapshots, scratch-only patch checking, and actual test execution.
+Workspace notes persist with lexical retrieval. Model and workspace configuration
+are explicit; the default application never silently runs test fixtures.
+The Mission Control client is the next part of this milestone.
+
+See [provider setup](docs/providers.md) and [local workflow scope](docs/local-workflow.md).
 
 ## Development
 

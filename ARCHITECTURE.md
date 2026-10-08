@@ -82,3 +82,12 @@ configuration, never secrets. Start with deterministic test executors, then
 connect a real provider explicitly. Do not label test fixtures as AI execution.
 There is no existing LangGraph code to reuse; evaluate it when orchestration
 requirements are implemented. Slack and Jira remain optional adapters.
+
+The Responses adapter is an external integration with bounded transport and
+strict structured output validation. The Developer executor composes it with
+registered local tools rather than granting a model arbitrary filesystem or
+shell access. Workspace configuration selects source files and test argv arrays.
+An immutable per-mission source snapshot and explicit notes live in a separately
+versioned workspace database. This leaves mission schema 2 and its history intact.
+Scratch directories isolate patch targets from source files; they do not provide
+OS process isolation. See [local workflow details](docs/local-workflow.md).
