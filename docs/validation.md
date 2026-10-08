@@ -343,3 +343,13 @@ Workspace overview is ready for offline interaction testing using the
 so cost grows with history and can briefly delay SQLite writers. Native/browser
 visual, responsive, and screen-reader acceptance remain unverified under the
 existing browser restriction. Live model quality remains deferred.
+
+## Memory search response ordering
+
+Validated on Windows on 2026-10-09: all 33 React/JSDOM tests pass, including a
+regression that completes an older canceled search after the current query has
+already displayed its matching note. Workspace memory now discards that obsolete
+success response instead of replacing newer results. TypeScript/Vite build and
+frontend Prettier checks pass. This maintenance change adds no API, storage, or
+provider behavior. Browser/native visual and screen-reader acceptance remain
+unverified; live model testing remains deferred.

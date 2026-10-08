@@ -21,6 +21,7 @@ export function Memory({ canWrite, demo = false }: { canWrite: boolean; demo?: b
       controller.signal,
     )
       .then((n) => {
+        if (controller.signal.aborted) return;
         setNotes(n);
         setError('');
       })
