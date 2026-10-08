@@ -47,6 +47,7 @@ scripted responses, no model calls** is visible:
    Confirm addition replaces subtraction and the report shows `Ran 3 tests`,
    `OK`, and `Exit code: 0`. Each task also persists `offline-demo.txt`; diff files
    remain usable patches with provenance in their accompanying artifacts.
+   Use the artifact's **Download** link to save a copy; it does not apply the patch.
 4. **Accept result** to complete the mission, or **Deny result**, **Retry task**,
    and **Run mission** to repeat actual tests in fresh scratch before reviewing.
    Acceptance records the result without applying it to the source project.
@@ -142,6 +143,9 @@ automatic dependency installation or model-selected command execution occurs.
    For longer histories, use **Load more artifacts** to browse additional results.
    Activity polls from its last loaded event and offers **Load more activity**
    when another full page is available.
+   The Tasks, Artifacts, and Activity tabs support Left/Right arrows, Home, and
+   End. Tab moves into the selected panel. Use **Download** under a verified
+   artifact to save it with its original filename.
 8. Confirm the original sample still contains `return left - right` and still fails
    two tests. The workflow changes only scratch files. Apply any accepted patch to
    a real source checkout yourself after review; there is no automatic publication.

@@ -180,6 +180,10 @@ test('create, execute, inspect artifact safely, save context, and accept the bou
   expect(await screen.findByText('<script>untrusted artifact text</script>')).toBeInTheDocument();
   expect(screen.getByLabelText('Result artifact')).toHaveValue('diff-1');
   expect(document.querySelector('pre script')).toBeNull();
+  expect(screen.getByRole('link', { name: 'Download tested.diff' })).toHaveAttribute(
+    'href',
+    '/artifacts/diff-1/content',
+  );
   await user.click(screen.getByRole('button', { name: 'Save artifact reference to memory' }));
   expect(await screen.findByText('Saved to workspace memory.')).toBeInTheDocument();
   await user.click(screen.getByRole('button', { name: 'Accept result' }));
@@ -213,6 +217,7 @@ test('artifact integrity failure is shown without rendering content', async () =
     'Artifact could not be loaded or failed its integrity check',
   );
   expect(screen.queryByText('<script>untrusted artifact text</script>')).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: /Download/ })).not.toBeInTheDocument();
 });
 
 test('review artifacts remain inspectable outside the first history page', async () => {

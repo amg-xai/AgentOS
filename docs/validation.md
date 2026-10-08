@@ -192,3 +192,16 @@ The offline workflow is available for user testing. Browser visual, responsive,
 and accessibility verification is still outstanding; the prior browser access
 restriction was respected. Live AI quality and full product acceptance remain
 separate from scripted workflow evidence. Scratch execution is not an OS sandbox.
+
+## Artifact delivery and keyboard navigation
+
+Mission Control offers a download link for the currently selected, verified
+artifact, using its original filename and the existing integrity-checked API.
+The link is available to viewers and is hidden while content is loading or an
+integrity error is shown. Downloading records no approval and applies no patch.
+
+Mission detail tabs now provide roving focus with Left/Right wraparound, Home/End,
+and associated labelled panels. Eighteen React/JSDOM tests pass, including keyboard
+focus and panel associations, viewer downloads, selection changes, and suppression
+of download links after artifact integrity failure. TypeScript/Vite and Prettier
+checks pass. These checks do not establish browser or screen-reader acceptance.

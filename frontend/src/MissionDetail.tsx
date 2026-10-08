@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { api, artifactText, date, errorMessage, label } from './api';
 import type { Activity, Approval, Artifact, Mission } from './api';
 import { Badge, ErrorNotice } from './components';
@@ -19,6 +19,9 @@ export function MissionDetail({
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [claim, setClaim] = useState<unknown>(null);
   const [tab, setTab] = useState<'tasks' | 'artifacts' | 'activity'>('tasks');
+  const tabs = ['tasks', 'artifacts', 'activity'] as const;
+  const tabId = useId();
+  const tabButtons = useRef<Partial<Record<(typeof tabs)[number], HTMLButtonElement | null>>>({});
   const [artifact, setArtifact] = useState<string>('');
   const [text, setText] = useState('');
   const [artifactError, setArtifactError] = useState('');
@@ -148,6 +151,7 @@ export function MissionDetail({
     );
   const test = mission.tasks.find((t) => typeof t.outputs?.passed === 'boolean');
   const canRun = ['PENDING', 'RUNNING'].includes(mission.status) && !claim;
+  const selectedArtifact = artifacts.find((a) => a.id === artifact);
   return (
     <section className="panel detail">
       <div className="section-heading">
@@ -250,8 +254,35 @@ export function MissionDetail({
         </div>
       ))}
       <div className="tabs" role="tablist" aria-label="Mission details">
-        {(['tasks', 'artifacts', 'activity'] as const).map((t) => (
-          <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}>
+        {tabs.map((t, index) => (
+          <button
+            key={t}
+            ref={(element) => {
+              tabButtons.current[t] = element;
+            }}
+            id={`${tabId}-${t}-tab`}
+            role="tab"
+            aria-selected={tab === t}
+            aria-controls={`${tabId}-${t}-panel`}
+            tabIndex={tab === t ? 0 : -1}
+            onClick={() => setTab(t)}
+            onKeyDown={(event) => {
+              const next =
+                event.key === 'ArrowRight'
+                  ? (index + 1) % tabs.length
+                  : event.key === 'ArrowLeft'
+                    ? (index + tabs.length - 1) % tabs.length
+                    : event.key === 'Home'
+                      ? 0
+                      : event.key === 'End'
+                        ? tabs.length - 1
+                        : null;
+              if (next === null) return;
+              event.preventDefault();
+              setTab(tabs[next]);
+              tabButtons.current[tabs[next]]?.focus();
+            }}
+          >
             {t}{' '}
             <span>
               {t === 'tasks'
@@ -263,109 +294,145 @@ export function MissionDetail({
           </button>
         ))}
       </div>
-      {tab === 'tasks' && (
-        <div className="task-list">
-          {mission.tasks.map((t, index) => (
-            <article className="task" key={t.id}>
-              <span className={`task-number ${t.status.toLowerCase()}`}>
-                {t.status === 'COMPLETED' ? '✓' : index + 1}
-              </span>
-              <div>
-                <div className="task-title">
-                  <h3>{t.title}</h3>
-                  <Badge state={t.status} />
-                </div>
-                <p>
-                  {t.agent_id.replaceAll('_', ' ')} · attempt {t.attempts}
-                  {t.dependencies.length > 0 && ` · after ${t.dependencies.join(', ')}`}
-                </p>
-                {t.error && <div className="task-error">{t.error}</div>}
-                {t.outputs && (
-                  <details>
-                    <summary>Inspect task outputs</summary>
-                    <pre>{JSON.stringify(t.outputs, null, 2)}</pre>
-                  </details>
-                )}
-                {t.status === 'FAILED' && (
-                  <button
-                    disabled={busy || !canWrite || !!claim}
-                    onClick={() =>
-                      void action(`/missions/${id}/tasks/${t.id}/actions`, { action: 'retry' })
-                    }
-                  >
-                    Retry task
-                  </button>
-                )}
-              </div>
-            </article>
-          ))}
-        </div>
-      )}
-      {tab === 'artifacts' && (
-        <div className="artifact-panel">
-          {!artifacts.length ? (
-            <div className="empty">Artifacts will appear as agents finish their work.</div>
-          ) : (
-            <>
-              <label htmlFor="artifact">Result artifact</label>
-              <select id="artifact" value={artifact} onChange={(e) => setArtifact(e.target.value)}>
-                {artifacts.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {approvals.some((p) => p.payload?.artifact_refs?.includes(a.id))
-                      ? 'Review: '
-                      : ''}
-                    {a.name} · {a.task_id} · {a.size} bytes ·{' '}
-                    {a.created_at ? date(a.created_at) : a.id.slice(0, 8)}
-                  </option>
-                ))}
-              </select>
-              {moreArtifacts && (
-                <button onClick={() => setArtifactPages((current) => current + 1)}>
-                  Load more artifacts
-                </button>
-              )}
-              <ErrorNotice message={artifactError} />
-              {artifactLoading ? (
-                <p role="status">Verifying and loading artifact…</p>
-              ) : (
-                <pre className="artifact-content">{text}</pre>
-              )}
-              <p className="muted mono hash">
-                SHA-256 {artifacts.find((a) => a.id === artifact)?.sha256}
-              </p>
-              <button onClick={() => void saveReference()} disabled={!canWrite || saving}>
-                {saving ? 'Saving reference…' : 'Save artifact reference to memory'}
-              </button>
-              {saved && <p role="status">Saved to workspace memory.</p>}
-            </>
-          )}
-        </div>
-      )}
-      {tab === 'activity' && (
-        <>
-          {moreEvents && <button onClick={() => void refresh()}>Load more activity</button>}
-          <ol className="activity">
-            {[...events].reverse().map((e) => (
-              <li key={e.sequence}>
-                <span className="activity-dot" />
+      <div
+        role="tabpanel"
+        id={`${tabId}-tasks-panel`}
+        aria-labelledby={`${tabId}-tasks-tab`}
+        hidden={tab !== 'tasks'}
+        tabIndex={0}
+      >
+        {tab === 'tasks' && (
+          <div className="task-list">
+            {mission.tasks.map((t, index) => (
+              <article className="task" key={t.id}>
+                <span className={`task-number ${t.status.toLowerCase()}`}>
+                  {t.status === 'COMPLETED' ? '✓' : index + 1}
+                </span>
                 <div>
-                  <strong>{label(e.action)}</strong>
+                  <div className="task-title">
+                    <h3>{t.title}</h3>
+                    <Badge state={t.status} />
+                  </div>
                   <p>
-                    {e.task_id ?? 'Mission'} · {e.actor}
+                    {t.agent_id.replaceAll('_', ' ')} · attempt {t.attempts}
+                    {t.dependencies.length > 0 && ` · after ${t.dependencies.join(', ')}`}
                   </p>
-                  {Object.keys(e.details).length > 0 && (
+                  {t.error && <div className="task-error">{t.error}</div>}
+                  {t.outputs && (
                     <details>
-                      <summary>Event details</summary>
-                      <pre>{JSON.stringify(e.details, null, 2)}</pre>
+                      <summary>Inspect task outputs</summary>
+                      <pre>{JSON.stringify(t.outputs, null, 2)}</pre>
                     </details>
                   )}
-                  <small>{date(e.timestamp)}</small>
+                  {t.status === 'FAILED' && (
+                    <button
+                      disabled={busy || !canWrite || !!claim}
+                      onClick={() =>
+                        void action(`/missions/${id}/tasks/${t.id}/actions`, { action: 'retry' })
+                      }
+                    >
+                      Retry task
+                    </button>
+                  )}
                 </div>
-              </li>
+              </article>
             ))}
-          </ol>
-        </>
-      )}
+          </div>
+        )}
+      </div>
+      <div
+        role="tabpanel"
+        id={`${tabId}-artifacts-panel`}
+        aria-labelledby={`${tabId}-artifacts-tab`}
+        hidden={tab !== 'artifacts'}
+        tabIndex={0}
+      >
+        {tab === 'artifacts' && (
+          <div className="artifact-panel">
+            {!artifacts.length ? (
+              <div className="empty">Artifacts will appear as agents finish their work.</div>
+            ) : (
+              <>
+                <label htmlFor="artifact">Result artifact</label>
+                <select
+                  id="artifact"
+                  value={artifact}
+                  onChange={(e) => setArtifact(e.target.value)}
+                >
+                  {artifacts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {approvals.some((p) => p.payload?.artifact_refs?.includes(a.id))
+                        ? 'Review: '
+                        : ''}
+                      {a.name} · {a.task_id} · {a.size} bytes ·{' '}
+                      {a.created_at ? date(a.created_at) : a.id.slice(0, 8)}
+                    </option>
+                  ))}
+                </select>
+                {moreArtifacts && (
+                  <button onClick={() => setArtifactPages((current) => current + 1)}>
+                    Load more artifacts
+                  </button>
+                )}
+                <ErrorNotice message={artifactError} />
+                {artifactLoading ? (
+                  <p role="status">Verifying and loading artifact…</p>
+                ) : (
+                  <pre className="artifact-content">{text}</pre>
+                )}
+                <p className="muted mono hash">SHA-256 {selectedArtifact?.sha256}</p>
+                {selectedArtifact && !artifactLoading && !artifactError && (
+                  <p>
+                    <a
+                      href={`/artifacts/${encodeURIComponent(selectedArtifact.id)}/content`}
+                      download={selectedArtifact.name}
+                    >
+                      Download {selectedArtifact.name}
+                    </a>
+                  </p>
+                )}
+                <button onClick={() => void saveReference()} disabled={!canWrite || saving}>
+                  {saving ? 'Saving reference…' : 'Save artifact reference to memory'}
+                </button>
+                {saved && <p role="status">Saved to workspace memory.</p>}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+      <div
+        role="tabpanel"
+        id={`${tabId}-activity-panel`}
+        aria-labelledby={`${tabId}-activity-tab`}
+        hidden={tab !== 'activity'}
+        tabIndex={0}
+      >
+        {tab === 'activity' && (
+          <>
+            {moreEvents && <button onClick={() => void refresh()}>Load more activity</button>}
+            <ol className="activity">
+              {[...events].reverse().map((e) => (
+                <li key={e.sequence}>
+                  <span className="activity-dot" />
+                  <div>
+                    <strong>{label(e.action)}</strong>
+                    <p>
+                      {e.task_id ?? 'Mission'} · {e.actor}
+                    </p>
+                    {Object.keys(e.details).length > 0 && (
+                      <details>
+                        <summary>Event details</summary>
+                        <pre>{JSON.stringify(e.details, null, 2)}</pre>
+                      </details>
+                    )}
+                    <small>{date(e.timestamp)}</small>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </>
+        )}
+      </div>
     </section>
   );
 }

@@ -168,3 +168,50 @@ test('a successful refresh clears a transient history connection error', async (
   await screen.findByText(/revision 4/);
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 });
+
+test('mission tabs support arrow navigation, wrapping, Home/End, and labelled panels', async () => {
+  mockHistory(() => undefined);
+  const user = userEvent.setup();
+  renderHistory();
+  const tasks = await screen.findByRole('tab', { name: /tasks/ });
+  const artifacts = screen.getByRole('tab', { name: /artifacts/ });
+  const activity = screen.getByRole('tab', { name: /activity/ });
+  for (const item of [tasks, artifacts, activity]) {
+    expect(document.getElementById(item.getAttribute('aria-controls')!)).not.toBeNull();
+  }
+  tasks.focus();
+  await user.keyboard('{ArrowRight}');
+  expect(artifacts).toHaveFocus();
+  expect(artifacts).toHaveAttribute('aria-selected', 'true');
+  expect(tasks).toHaveAttribute('tabindex', '-1');
+  const panel = screen.getByRole('tabpanel', { name: /artifacts/ });
+  expect(artifacts).toHaveAttribute('aria-controls', panel.id);
+  expect(panel).toHaveAttribute('aria-labelledby', artifacts.id);
+  await user.keyboard('{End}');
+  expect(activity).toHaveFocus();
+  await user.keyboard('{ArrowRight}');
+  expect(tasks).toHaveFocus();
+  await user.keyboard('{ArrowLeft}');
+  expect(activity).toHaveFocus();
+  await user.keyboard('{Home}');
+  expect(tasks).toHaveFocus();
+  await user.tab();
+  expect(screen.getByRole('tabpanel', { name: /tasks/ })).toHaveFocus();
+});
+
+test('a viewer can download the selected verified artifact with its original filename', async () => {
+  mockHistory((path) => {
+    if (path.endsWith('/artifacts?limit=100&offset=0')) return respond([artifact(0), artifact(1)]);
+  });
+  const user = userEvent.setup();
+  renderHistory();
+  await user.click(await screen.findByRole('tab', { name: /artifacts/ }));
+  const first = await screen.findByRole('link', { name: 'Download result-0.txt' });
+  expect(first).toHaveAttribute('href', '/artifacts/artifact-0/content');
+  expect(first).toHaveAttribute('download', 'result-0.txt');
+  await user.selectOptions(screen.getByLabelText('Result artifact'), 'artifact-1');
+  const second = await screen.findByRole('link', { name: 'Download result-1.txt' });
+  expect(second).toHaveAttribute('href', '/artifacts/artifact-1/content');
+  expect(second).toHaveAttribute('download', 'result-1.txt');
+  expect(screen.queryByRole('link', { name: 'Download result-0.txt' })).not.toBeInTheDocument();
+});
