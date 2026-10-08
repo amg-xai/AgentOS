@@ -205,3 +205,37 @@ and associated labelled panels. Eighteen React/JSDOM tests pass, including keybo
 focus and panel associations, viewer downloads, selection changes, and suppression
 of download links after artifact integrity failure. TypeScript/Vite and Prettier
 checks pass. These checks do not establish browser or screen-reader acceptance.
+
+## Creator package and role selection
+
+Validated on Windows on 2026-10-09:
+
+- 179 backend tests pass; three symlink tests are skipped on this Windows account.
+  Creator coverage includes exact provider dependency inputs without workspace
+  enrichment, bounded output, durable artifacts/memory and restart, denial/retry
+  preserving the completed outline, replay/cancellation rejection, tamper detection
+  for both reviewed files, viewer restrictions, and per-role readiness. Provider
+  requests use mocked transport. Demo tests block model HTTP client construction
+  with hostile live settings present and verify source/normal-state preservation.
+- Twenty React/JSDOM tests pass. Creator coverage exercises both workflow selectors,
+  readiness without Developer setup, normal and fixed-demo creation, script-first
+  review, downloads, memory references, denial/retry, acceptance, and reload. It
+  checks that content review displays no test-pass badge; earlier Developer,
+  history pagination, integrity, viewer, and keyboard checks remain passing.
+- Ruff lint/format passes across 52 Python files; strict Mypy passes across 35
+  source files with Windows and Linux platform definitions. TypeScript/Vite
+  production build and frontend Prettier checks pass.
+- The actual PowerShell demo launcher passed a loopback HTTP/API smoke on port
+  8767: Creator reached review with five labelled artifacts, then accepted the
+  same bound result after process restart. Artifact references and memory persisted,
+  existing Developer demo history remained available, and normal database/config
+  and sample source hashes were unchanged. Both smoke servers were stopped;
+  diagnostic scripts/logs and demo data remain ignored.
+- `doctor --demo --workflow creator --json` passes all local prerequisites and
+  reports `live_provider_verified: false`. Creator diagnostics skip Developer
+  source/Git/test-runner requirements in normal mode.
+
+Creator offline interaction is ready for user testing. Live AI quality remains
+deferred and browser visual/responsive/screen-reader acceptance remains unverified;
+the prior browser restriction was respected. No research, media generation,
+publication, Student workflow, or desktop packaging is claimed.

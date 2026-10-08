@@ -19,6 +19,7 @@ export function App() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [goal, setGoal] = useState('');
+  const [roleId, setRoleId] = useState('developer');
   const [busy, setBusy] = useState(false);
   const [offset, setOffset] = useState(0);
   const [more, setMore] = useState(false);
@@ -58,12 +59,40 @@ export function App() {
   }, [refresh]);
   const canWrite = !!status && status.user_role !== 'viewer';
   const demo = status?.execution_mode === 'demo';
+  const workflows = status?.workflows ?? [
+    {
+      role_id: 'developer',
+      name: 'Developer',
+      ready: !!status?.workflow_ready,
+      reason: '',
+      steps: 'Investigate → propose a patch → run tests → human review',
+      context_notice: `Selected project: ${status?.workspace_name}. Only configured source files will be sent to the model.`,
+      demo_goal: status?.demo_goal ?? null,
+    },
+  ];
+  const workflow = workflows.find((item) => item.role_id === roleId);
+  useEffect(() => {
+    if (status?.workflows && !status.workflows.some((item) => item.role_id === roleId)) {
+      const first = status.workflows.find((item) => item.ready) ?? status.workflows[0];
+      if (first) {
+        setRoleId(first.role_id);
+        setGoal(first.demo_goal ?? '');
+      }
+    }
+  }, [status, roleId]);
+  function selectRole(value: string) {
+    setRoleId(value);
+    setGoal(demo ? (workflows.find((item) => item.role_id === value)?.demo_goal ?? '') : '');
+  }
   async function create(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
     setError('');
     try {
-      const mission = await api<Mission>('/workflows/developer', { goal: goal.trim() });
+      if (!workflow?.ready || !canWrite) return;
+      const mission = await api<Mission>(`/workflows/${encodeURIComponent(roleId)}`, {
+        goal: goal.trim(),
+      });
       setOffset(0);
       setSelected(mission.id);
       setCreating(false);
@@ -147,9 +176,9 @@ export function App() {
             {page === 'missions' && (
               <button
                 className="primary"
-                disabled={!status?.workflow_ready || !canWrite}
+                disabled={!workflow?.ready || !canWrite}
                 onClick={() => {
-                  setGoal(demo ? (status?.demo_goal ?? '') : '');
+                  setGoal(demo ? (workflow?.demo_goal ?? '') : '');
                   setCreating(true);
                 }}
               >
@@ -162,8 +191,9 @@ export function App() {
             <div className="setup-notice" role="note">
               <strong>Offline demo — scripted responses, no model calls</strong>
               <p>
-                The Calculator findings and patch are scripted. Git checks and tests run locally.
-                Demo history and memory are separate from your configured workspace.
+                Demo responses are scripted. Developer runs actual Git checks and tests; Creator
+                produces content fixtures. Demo history and memory are separate from your configured
+                workspace.
               </p>
             </div>
           )}
@@ -173,11 +203,13 @@ export function App() {
             </div>
           ) : (
             <>
-              {status && !status.workflow_ready && (
+              {status && !workflow?.ready && (
                 <div className="setup-notice">
                   <strong>Finish local setup to run your first mission</strong>
                   <p>
-                    {!status.workspace_configured &&
+                    {workflow?.reason && `${workflow.reason} `}
+                    {roleId === 'developer' &&
+                      !status.workspace_configured &&
                       'Select source files and test commands in workspace configuration. '}
                     {!status.provider_configured &&
                       'Configure a model and provider credentials in the server environment. '}
@@ -209,7 +241,7 @@ export function App() {
                     <div>
                       <small>{demo ? 'EXECUTION' : 'MODEL'}</small>
                       <strong className="model-name">
-                        {demo ? 'Scripted Calculator' : (status?.model ?? 'Not configured')}
+                        {demo ? 'Scripted workflows' : (status?.model ?? 'Not configured')}
                       </strong>
                     </div>
                   </section>
@@ -217,15 +249,33 @@ export function App() {
                     <span className="role-icon">&lt;/&gt;</span>
                     <div>
                       <small>ACTIVE WORKFLOW</small>
-                      <strong>Developer</strong>
-                      <p>Investigate → propose a patch → run tests → human review</p>
+                      <label htmlFor="workflow-role">Workflow</label>
+                      <select
+                        id="workflow-role"
+                        value={roleId}
+                        onChange={(e) => selectRole(e.target.value)}
+                      >
+                        {workflows.map((item) => (
+                          <option key={item.role_id} value={item.role_id}>
+                            {item.name}
+                            {item.ready ? '' : ' · setup required'}
+                          </option>
+                        ))}
+                      </select>
+                      <p>{workflow?.steps ?? 'No executable workflow is installed.'}</p>
                     </div>
-                    <span className="scope-tag">Scratch checkout</span>
+                    <span className="scope-tag">
+                      {roleId === 'creator' ? 'Content only' : 'Scratch checkout'}
+                    </span>
                   </section>
                   {creating && (
                     <section className="panel create-panel">
                       <div className="section-heading">
-                        <h2>{demo ? 'Try the Calculator demo' : 'Create a Developer mission'}</h2>
+                        <h2>
+                          {demo
+                            ? `Try the ${workflow?.name} demo`
+                            : `Create a ${workflow?.name} mission`}
+                        </h2>
                         <button
                           className="text-button"
                           onClick={() => setCreating(false)}
@@ -236,12 +286,23 @@ export function App() {
                       </div>
                       <form onSubmit={create}>
                         <label htmlFor="mission-role">Role package</label>
-                        <select id="mission-role" defaultValue="developer">
-                          <option value="developer">
-                            {roles.find((role) => role.id === 'developer')?.name ?? 'Developer'}
-                          </option>
+                        <select
+                          id="mission-role"
+                          value={roleId}
+                          onChange={(e) => selectRole(e.target.value)}
+                        >
+                          {workflows.map((item) => (
+                            <option key={item.role_id} value={item.role_id}>
+                              {item.name}
+                              {item.ready ? '' : ' · setup required'}
+                            </option>
+                          ))}
                         </select>
-                        <label htmlFor="goal">What should your agents investigate and fix?</label>
+                        <label htmlFor="goal">
+                          {roleId === 'creator'
+                            ? 'What should your video script cover?'
+                            : 'What should your agents investigate and fix?'}
+                        </label>
                         <textarea
                           id="goal"
                           value={goal}
@@ -255,9 +316,12 @@ export function App() {
                         <p className="muted">
                           {demo
                             ? 'Fixed sample scenario. No source files or notes are sent to a model.'
-                            : `Selected project: ${status?.workspace_name}. Only configured source files will be sent to the model.`}
+                            : workflow?.context_notice}
                         </p>
-                        <button className="primary" disabled={busy || !goal.trim()}>
+                        <button
+                          className="primary"
+                          disabled={busy || !goal.trim() || !workflow?.ready || !canWrite}
+                        >
                           {busy ? 'Creating…' : demo ? 'Create demo mission' : 'Create mission'}
                         </button>
                       </form>
@@ -273,7 +337,7 @@ export function App() {
                         <div className="empty">
                           <span className="empty-symbol">◈</span>
                           <h3>Your next idea starts here</h3>
-                          <p>Create a mission to turn a project issue into a reviewed patch.</p>
+                          <p>Create a mission to turn a goal into a reviewed result.</p>
                         </div>
                       )}
                       {missions.map((m) => (

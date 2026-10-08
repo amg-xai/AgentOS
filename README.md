@@ -16,15 +16,20 @@ Workspace notes persist with lexical retrieval. Model and workspace configuratio
 are explicit; the default application never silently runs test fixtures.
 React/TypeScript Mission Control provides mission creation, execution history,
 artifact inspection, result approval/denial, retry, and workspace memory.
+The Creator package reuses that engine for a supplied brief, outline, and reviewed
+video script. Choose Developer or Creator in the workflow selector.
 
 Start with the [local setup and acceptance guide](docs/getting-started.md).
 Use `Start-AgentOS.ps1 -Demo` for the explicit offline Calculator walkthrough:
 scripted findings/patches, real Git checks and tests, separate local history,
-and human review. No model credentials are required and no model calls occur.
+and human review. Select Creator for a fixed, labelled outline/script walkthrough
+in the same isolated demo history. No model credentials are required and no model
+calls occur.
 Live AI acceptance still requires a configured model endpoint and credentials;
 automated model tests use mocked transport. Browser visual verification is pending.
 
 See [provider setup](docs/providers.md) and [local workflow scope](docs/local-workflow.md).
+The [Creator guide](docs/creator-workflow.md) covers content review and its limits.
 
 ## Development
 

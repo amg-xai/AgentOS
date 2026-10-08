@@ -1,4 +1,14 @@
+export interface Workflow {
+  role_id: string;
+  name: string;
+  ready: boolean;
+  reason: string;
+  steps: string;
+  context_notice: string;
+  demo_goal: string | null;
+}
 export interface Status {
+  workflows?: Workflow[];
   execution_mode: 'live' | 'demo';
   execution_label: string;
   demo_goal: string | null;

@@ -1,4 +1,4 @@
-# Test the local Developer workflow
+# Test the local workflows
 
 AgentOS runs as a loopback web app. Electron packaging and external ticket/PR
 integrations are deferred. You need Python 3.11+, Node.js 22.12+ (24 recommended),
@@ -6,6 +6,9 @@ Git, and a model endpoint supporting the Responses API with strict structured
 outputs. Without a configured provider you can inspect the client, agents,
 history, and memory, or use the explicit offline demo below. A real Developer
 mission requires a configured provider.
+Creator uses the same provider but only needs a supplied content brief; it does
+not require Developer workspace, source files, or test commands. See the
+[Creator walkthrough](creator-workflow.md) for both modes.
 
 ## Install and start
 
@@ -38,7 +41,8 @@ ignored for demo execution. The service still binds to loopback.
 Open [Mission Control](http://127.0.0.1:8000/app/) and confirm **Offline demo —
 scripted responses, no model calls** is visible:
 
-1. Select **+ New mission**, then **Create demo mission**. The Calculator goal is
+1. Choose **Developer** in **Workflow**, then select **+ New mission** and
+   **Create demo mission**. The Calculator goal is
    fixed; this mode cannot investigate arbitrary goals or projects.
 2. Select **Run mission**. Investigation and patch generation use scripted
    responses; the tools actually check/apply the patch in scratch and execute the
@@ -61,6 +65,11 @@ unchanged sample for the scripted scenario and normal mode for custom projects.
 This walkthrough tests local workflow interaction, not live AI quality. Browser
 visual/responsive/accessibility verification remains outstanding.
 
+Choose **Creator** in **Workflow** for the fixed content scenario. Run its outline
+and script tasks, inspect `script.md` and `reviewed-outline.md`, then accept or deny
+the content. Creator produces no test report or test-pass badge. Both roles retain
+their missions in the same isolated demo history.
+
 ## Configure live execution
 
 Skip this section while using the offline demo. For model-backed execution:
@@ -80,6 +89,8 @@ Check local prerequisites without contacting a provider or executing project cod
 
 ```powershell
 .\.venv\Scripts\python.exe -m agentos doctor
+# For content workflows without Developer workspace setup:
+.\.venv\Scripts\python.exe -m agentos doctor --workflow creator
 # Use --json for a structured report; exit 0 means prerequisites pass, 1 means blocked.
 ```
 
