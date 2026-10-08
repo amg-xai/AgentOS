@@ -1,7 +1,8 @@
 # Architecture
 
-Status: agent registry, role loading, IO validation, and read-only discovery API
-implemented. Mission persistence, tools, orchestration, and clients are planned.
+Status: agent registry, role loading, IO validation, persisted mission/task
+lifecycle, and a local API implemented. Tools, orchestration, action approval,
+memory retrieval, and clients are planned.
 
 ## Boundaries
 
@@ -42,9 +43,17 @@ memory and upstream outputs. Each meaningful transition persists with an audit
 event. Approval decisions authorize a specific action and payload; resuming must
 not repeat completed work. Artifacts reference durable files or structured data.
 
-Use SQLite initially, keeping transactions around state changes and associated
-events. Persist failures so retry and restart are observable. Introduce a durable
-worker before claiming background execution survives process restarts.
+SQLite stores versioned mission snapshots and ordered audit events. Optimistic
+version checks reject stale mutations; a transaction writes the snapshot and all
+events together. Schema version 1 is initialized atomically, and unsupported
+versions fail initialization. Repository connections close after each operation.
+
+Mission status is derived from task states. Failure blocks downstream tasks;
+retry refreshes their readiness while preserving completed work. Cancellation
+terminates unfinished tasks. WAITING_APPROVAL is persisted, but there is no
+decision/resumption endpoint yet. A restart restores recorded state without
+automatically executing or recovering a worker. Introduce a durable worker
+before claiming background execution survives process restarts.
 
 ## Provider and integration strategy
 

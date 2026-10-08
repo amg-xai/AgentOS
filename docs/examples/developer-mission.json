@@ -1,0 +1,25 @@
+{
+  "goal": "Investigate and fix the authentication bug",
+  "role_id": "developer",
+  "workspace_id": "local",
+  "tasks": [
+    {
+      "id": "investigate",
+      "title": "Investigate the failure",
+      "agent_id": "investigation",
+      "inputs": {"goal": "Identify why authentication fails"}
+    },
+    {
+      "id": "fix",
+      "title": "Propose a fix",
+      "agent_id": "code_helper",
+      "dependencies": ["investigate"]
+    },
+    {
+      "id": "verify",
+      "title": "Verify the fix",
+      "agent_id": "testing",
+      "dependencies": ["fix"]
+    }
+  ]
+}

@@ -5,8 +5,8 @@ from agentos.adapters.manifests import ManifestError
 from agentos.api.app import create_app
 
 
-def test_discovery_api(registry):
-    with TestClient(create_app(registry)) as client:
+def test_discovery_api(registry, tmp_path):
+    with TestClient(create_app(registry, db_path=tmp_path / "api.sqlite3")) as client:
         assert client.get("/health").json() == {"status": "ok", "capability": "discovery"}
         agents = client.get("/agents").json()
         assert {a["id"] for a in agents} == {"investigation", "code_helper", "testing"}
@@ -23,10 +23,10 @@ def test_discovery_api(registry):
         assert client.post("/agents/testing", json={}).status_code == 405
 
 
-def test_explicit_manifest_root():
+def test_explicit_manifest_root(tmp_path):
     from conftest import PACKAGES
 
-    with TestClient(create_app(package_root=PACKAGES)) as client:
+    with TestClient(create_app(package_root=PACKAGES, db_path=tmp_path / "api.sqlite3")) as client:
         assert client.get("/agents").status_code == 200
 
 
@@ -35,9 +35,10 @@ def test_initialization_fails_on_bad_manifests(tmp_path):
         create_app(package_root=tmp_path)
 
 
-def test_environment_package_root(monkeypatch):
+def test_environment_package_root(monkeypatch, tmp_path):
     from conftest import PACKAGES
 
     monkeypatch.setenv("AGENTOS_PACKAGES", str(PACKAGES))
+    monkeypatch.setenv("AGENTOS_DATABASE", str(tmp_path / "api.sqlite3"))
     with TestClient(create_app()) as client:
         assert len(client.get("/agents").json()) == 3
