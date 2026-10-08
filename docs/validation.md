@@ -48,3 +48,34 @@ The mission engine records manual task lifecycle actions. It does not run agents
 call model providers, execute tools, or resume after approval. Those features and
 the Mission Control UI remain subsequent milestones. The complete product is not
 yet ready for user acceptance testing.
+
+## Orchestration, approval, and artifact milestone
+
+Validated on Windows on 2026-10-08 using the established Python 3.14 environment:
+
+- 100 tests passed; one symlink test was skipped because this Windows account
+  cannot create symlinks. Linux CI exercises that test.
+- End-to-end fixture workflows validate dependency IO binding, staged diffs,
+  approval/denial, resume without duplicate execution, retries with new approvals,
+  durable artifacts, restart persistence, and replay/stale-digest rejection.
+- Safety tests cover manual review bypass, cross-mission artifact references,
+  corrupted files, Viewer/Operator/Admin enforcement, request-header impersonation,
+  concurrent runs/decisions, claim revocation, and interrupted-run recovery.
+- Storage tests cover migration from actual schema-1 snapshots/events, migration
+  rollback, failed result/decision transactions, a claim/manual-write race, and
+  retaining committed artifact files after an ambiguous commit outcome.
+- Tool tests verify input/output schemas, user and agent permissions, disabled
+  high-impact dispatch, mandatory audit recording, and persisted running-task
+  audit scope without raw inputs, provider secrets, or claim tokens in event details.
+- Ruff lint and formatting passed across 34 Python files. Strict Mypy passed
+  across 23 source files.
+- A temporary loopback HTTP server passed execution, staged diff download,
+  process restart, approval, downstream resume, and artifact checks. Its factory
+  explicitly injected test executors; it is an ignored diagnostic. Both server
+  instances and temporary data were cleaned up afterward.
+- The runtime core commit passed [GitHub Linux checks](https://github.com/amg-xai/AgentOS/actions/runs/37812533574).
+
+No real model provider or production tool is connected by default. Review accepts
+an immutable staged result; it does not authorize an external/destructive action.
+High-impact tool dispatch remains disabled. The product still needs a real local
+Developer workflow, workspace memory, and Mission Control before acceptance testing.

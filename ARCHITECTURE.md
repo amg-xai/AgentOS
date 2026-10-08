@@ -1,8 +1,8 @@
 # Architecture
 
-Status: agent registry, role loading, IO validation, persisted mission/task
-lifecycle, and a local API implemented. Tools, orchestration, action approval,
-memory retrieval, and clients are planned.
+Status: registry, role loading, persisted missions, explicit orchestration,
+result approvals, artifacts, tool contracts, and a local API implemented.
+Production model/tool adapters, workspace memory, and clients are planned.
 
 ## Boundaries
 
@@ -44,16 +44,36 @@ event. Approval decisions authorize a specific action and payload; resuming must
 not repeat completed work. Artifacts reference durable files or structured data.
 
 SQLite stores versioned mission snapshots and ordered audit events. Optimistic
-version checks reject stale mutations; a transaction writes the snapshot and all
-events together. Schema version 1 is initialized atomically, and unsupported
-versions fail initialization. Repository connections close after each operation.
+version checks reject stale mutations; a transaction writes the snapshot, events,
+artifact metadata, and approval records together. Schema 2 adds durable run
+claims, approvals, and artifacts; migration from schema 1 preserves missions and
+history. Unsupported versions fail initialization. Connections close after each
+operation. Claim checks and mutations share the same immediate transaction.
 
 Mission status is derived from task states. Failure blocks downstream tasks;
 retry refreshes their readiness while preserving completed work. Cancellation
-terminates unfinished tasks. WAITING_APPROVAL is persisted, but there is no
-decision/resumption endpoint yet. A restart restores recorded state without
-automatically executing or recovering a worker. Introduce a durable worker
-before claiming background execution survives process restarts.
+terminates unfinished tasks. Explicit runs claim a mission, execute ready tasks
+sequentially through ExecutorRegistry, validate resolved IO schemas, and persist
+each step. Input bindings reference outputs of direct dependencies.
+
+Review-required results are staged in WAITING_APPROVAL with an immutable digest
+covering outputs and artifact references. ApprovalService validates the current
+version, task attempt, digest, and artifact integrity before completing the task.
+It never reruns the executor or grants permission to an external tool. Denied
+results fail and can be retried only explicitly.
+
+Artifact files have generated ids and content hashes; filenames are metadata,
+not user-controlled paths. Files are written and flushed before metadata commits.
+Confirmed uncommitted files are removed on failure; ambiguous files are retained
+for recovery. A crash can leave an orphan file, but it must not delete a committed
+artifact. There is no automatic artifact garbage collector yet.
+
+Interrupted runs retain their durable claim. Admin recovery requires the exact
+claim token, current version, and explicit acknowledgement that the old worker
+has stopped and potential side effects have been checked. It marks running tasks
+failed and revokes the old claim; it does not retry or execute work. This is a
+local single-server design, not a distributed worker lease system. No exactly-once
+side-effect guarantee or autonomous background recovery is claimed.
 
 ## Provider and integration strategy
 

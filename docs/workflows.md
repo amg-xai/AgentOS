@@ -35,16 +35,59 @@ and transition details. Paginate with `after` and `limit` on the events endpoint
 
 Manual lifecycle actions do not invoke an agent or validate execution outputs
 against agent schemas. The execution service performs that validation when an
-executor is invoked; integration with mission orchestration is a later milestone.
+executor is invoked by the explicit orchestrator described below.
 
 The first workflow is investigate -> propose fix -> test -> human review ->
 approved result. The review includes the exact proposed diff and test evidence.
 An approval is scoped to a pending action, not blanket permission for a mission.
 
-WAITING_APPROVAL cannot be resumed through the current API. Action-scoped approval
-and orchestration will provide that transition. Workspace memory and automatic
-execution/resumption are also planned. A restart currently restores persisted
-records and history without launching work.
+## Explicit orchestration and review
+
+ExecutorRegistry binds an agent id or provider id to an execution interface.
+There are no default model executors or fixture fallbacks. A task can declare
+`input_bindings: {"field": {"task_id": "dependency", "output_key": "output"}}`.
+Bindings may reference only direct dependencies and cannot overwrite explicit
+inputs. Resolve bindings and validate IO against the registered agent schemas.
+
+POST `/missions/{id}/run` claims a mission and executes ready tasks sequentially.
+Each start and result persists independently. Completed tasks are not rerun.
+Failure records a sanitized error, blocks dependants, and stops that run. Explicit
+retry is required before trying again. Runs also stop at review-required results.
+
+For `review_required: true`, store outputs and artifact references before entering
+WAITING_APPROVAL. The approval binds mission, task, attempt, `review_result` action,
+and a SHA-256 digest of the canonical payload. Decisions require the current
+mission version and matching digest. Reject replayed, denied, stale, or mismatched
+approvals. Cancellation invalidates pending approvals. Check artifact integrity
+before accepting a result; damaged artifacts can still be denied.
+
+Approving transitions the staged task from WAITING_APPROVAL to COMPLETED, without
+rerunning its executor. Downstream tasks become ready and can be resumed by an
+explicit run. Denial transitions it to FAILED. Retry keeps previous artifacts in
+history but generates a fresh result and approval. Only ApprovalService may accept
+an orchestrated waiting result; manual completion cannot bypass review_required.
+
+Legacy manual `wait_approval` only records a waiting state, without generating a
+result approval. New executable workflows should use `review_required` instead.
+Result approval does not authorize a tool call, deployment, or publication.
+
+## Interrupted run recovery
+
+GET `/missions/{id}/run` to inspect a durable claim. A normal run releases it;
+an interrupted/ambiguous run retains it. Automatic expiry is deliberately absent,
+so another process cannot silently redispatch uncertain work.
+
+An Admin can POST to `/missions/{id}/recover` with `expected_version`,
+`claim_token`, and `acknowledge_ambiguity: true`. First stop the old worker and
+inspect any possible side effects. Recovery rejects a known active local run,
+stale versions, or changed tokens. It revokes the claim and marks RUNNING tasks
+FAILED, preserving completed results. It does not retry anything. Explicit retry
+may repeat an external side effect; exactly-once execution is not guaranteed.
+
+The API is a single trusted local-user service. Server configuration selects the
+user role; request headers cannot elevate it. Viewer is read-only, Operator may
+run/review work, and Admin additionally handles recovery. Remote authentication,
+distributed workers, and background scheduling are outside the current scope.
 
 Creator and Student workflows reuse the engine; they do not create separate
 applications or alternate permission paths.

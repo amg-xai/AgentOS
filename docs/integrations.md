@@ -15,3 +15,23 @@ delete files, modify production, or deploy without action-specific approval.
 
 Audit records include timestamp, actor, mission/task, agent/tool, action,
 redacted input reference, result, and approval reference.
+
+## Implemented tool boundary
+
+ToolRegistry accepts validated definitions and executors plus a mandatory audit
+recorder. A call must satisfy both the user's role and the agent's registered
+tool/permission capabilities. Validate input before dispatch and output afterward.
+Record started/completed/denied/failed events without logging raw inputs or
+provider error strings. If the audit recorder fails before dispatch, do not call
+the executor.
+
+Viewer permits READ; Operator permits READ/WRITE/EXECUTE; Admin additionally has
+DESTRUCTIVE capability metadata. High-impact and DESTRUCTIVE dispatch is disabled
+for every role until a dedicated tool-action approval mechanism is implemented.
+The current `review_result` approval is limited to accepting an agent's staged
+output; it cannot authorize tool side effects.
+
+SQLite's tool audit recorder checks the current execution claim, workspace, and
+RUNNING task scope. Claim tokens are internal execution context and are not
+persisted in audit details. No production tool executors or arbitrary HTTP tool
+dispatch endpoint are shipped yet. Tests use explicitly labelled toy executors.

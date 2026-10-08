@@ -1,15 +1,19 @@
 # AgentOS
 
+[![Backend checks](https://github.com/amg-xai/AgentOS/actions/workflows/backend.yml/badge.svg?branch=main)](https://github.com/amg-xai/AgentOS/actions/workflows/backend.yml)
+
 A local work environment for role-specific AI agents, persistent missions,
 shared memory, tools, artifacts, and human approvals.
 
 ## Current status
 
-The backend provides validated agent/role discovery and a persisted mission/task
-engine with dependency handling, retry, cancellation, version checks, and event
-history. Three Developer agent definitions and an injectable execution contract
-are available. No model providers or executable tools are connected yet; task
-actions currently record lifecycle changes rather than running agents.
+The backend provides validated agent discovery, persisted missions, explicit
+orchestration, scoped result review, durable text artifacts, and permission-checked
+tool interfaces. Dependency outputs flow into downstream agents through bindings.
+Executors/providers must be explicitly configured in an application factory;
+the default application does not silently run test fixtures or call a model.
+Real model adapters, local Developer tools, memory retrieval, and the client UI
+remain to be built.
 
 ## Development
 
@@ -66,9 +70,46 @@ GET `/missions`, `/missions/{id}`, and `/missions/{id}/events` to inspect persis
 work. POST `{"expected_version": <current version>}` to `/missions/{id}/cancel`
 to cancel unfinished tasks. See [workflow semantics](docs/workflows.md).
 
-`wait_approval` records a waiting state. Approval decisions and resumption are
-not implemented yet, and the API cannot bypass that waiting state. This backend
-milestone is not the complete autonomous Developer workflow or Mission Control UI.
+Manual actions record lifecycle changes without running an agent. A manual
+`wait_approval` is a legacy state-only operation; use orchestrated review below
+to create a reviewable approval record. Reviewed tasks cannot be completed via
+the manual action endpoint.
+
+## Execution, review, and artifacts
+
+POST `{"expected_version": <current version>}` to `/missions/{id}/run` to execute
+ready tasks through configured executors. Missing configuration returns 409
+without changing the mission. An execution claim prevents concurrent dispatch
+and manual mutations while a run owns the mission.
+
+Tasks can bind input fields to direct dependencies' output fields using
+`input_bindings`, as shown in the sample mission. Mark a task `review_required`
+to persist its result and artifacts, then pause at WAITING_APPROVAL. GET
+`/missions/{id}/approvals` for pending reviews and `/missions/{id}/artifacts` for
+artifact metadata. GET `/artifacts/{id}/content` to download verified content.
+
+POST a decision to `/approvals/{id}/decision`:
+
+```json
+{"expected_version": 7, "decision": "approve", "payload_digest": "<digest returned by the approval endpoint>"}
+```
+
+Use the actual current version and digest. Approval accepts exactly the staged
+result and completes that task without rerunning its executor. Run the mission
+again to execute newly ready downstream tasks. Denial fails the task and blocks
+dependants; explicit retry generates a new result and approval. A result review
+does not authorize publishing, deployment, or any external/destructive tool.
+High-impact tool dispatch is disabled in this milestone, including for Admin.
+
+Set `AGENTOS_USER_ROLE` at server startup to `viewer`, `operator` (default), or
+`admin`. This configures the single local user's access; it is not remote
+authentication. Clients cannot select their role through request headers.
+Keep the service on loopback and use it only from a trusted local machine.
+
+State is migrated atomically from database schema 1 to 2. Artifacts default to
+`artifacts/` alongside the database; override with `AGENTOS_ARTIFACTS`. Review
+[runtime semantics and recovery](docs/workflows.md) before recovering an
+interrupted run. The complete product is not yet ready for acceptance testing.
 
 ## Verify
 

@@ -13,13 +13,20 @@
       "id": "fix",
       "title": "Propose a fix",
       "agent_id": "code_helper",
-      "dependencies": ["investigate"]
+      "dependencies": ["investigate"],
+      "input_bindings": {
+        "findings": {"task_id": "investigate", "output_key": "findings"}
+      }
     },
     {
       "id": "verify",
       "title": "Verify the fix",
       "agent_id": "testing",
-      "dependencies": ["fix"]
+      "dependencies": ["fix"],
+      "input_bindings": {
+        "diff": {"task_id": "fix", "output_key": "diff"}
+      },
+      "review_required": true
     }
   ]
 }
