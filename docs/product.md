@@ -19,6 +19,8 @@ Mission Control includes workspace-wide totals, recent waiting reviews/artifacts
 and recorded task activity for installed agents. These are read-only projections
 of durable history; claim and task state do not imply agent availability. See
 [workspace overview](mission-control.md) for interpretation and refresh behavior.
+Mission history supports goal search and role/state filters across persisted
+records, independently of workflow creation and global dashboard totals.
 
 Acceptance for the vertical slice: a user creates a mission, sees tasks run,
 inspects tool activity and test output, reviews a diff, approves an explicit

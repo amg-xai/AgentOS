@@ -162,3 +162,10 @@ in workspace totals even if an agent was removed. Durable claims and persisted
 RUNNING states do not establish worker liveness. The frontend labels snapshot
 age/failures and rejects obsolete refreshes across pagination and mode changes.
 See [overview semantics](docs/mission-control.md) for bounds and read-cost limits.
+
+Mission history's existing array endpoint supports optional goal, role, and state
+filters before pagination. Filtered reads stream snapshots in the existing stable
+creation-time/id order, reuse domain status, and use literal Unicode case-folded
+goal matching. Historic roles need not remain installed. Unfiltered reads keep the
+existing SQL LIMIT/OFFSET path. The UI invalidates obsolete requests and keeps
+filter/page state separate from workflow selection and workspace-wide totals.

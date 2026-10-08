@@ -232,6 +232,24 @@ main {
   padding: 6px 10px;
   background: #f1f5ef;
 }
+.history-filters {
+  padding: 16px;
+  border-bottom: 1px solid #e1e5e0;
+}
+.history-filters label {
+  display: block;
+  margin-top: 10px;
+}
+.history-filters input,
+.history-filters select {
+  width: 100%;
+}
+.history-filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
 .workspace-overview {
   margin-bottom: 24px;
 }

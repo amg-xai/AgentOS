@@ -353,3 +353,33 @@ success response instead of replacing newer results. TypeScript/Vite build and
 frontend Prettier checks pass. This maintenance change adds no API, storage, or
 provider behavior. Browser/native visual and screen-reader acceptance remain
 unverified; live model testing remains deferred.
+
+## Mission history search and filters
+
+Validated on Windows on 2026-10-09:
+
+- 256 backend tests pass; three symlink checks are skipped on this Windows account.
+  Thirty history checks cover matching beyond the first 100 records, pagination
+  after filtering, all task-derived mission states, combined/exact/historic role
+  filters, Unicode case folding, whitespace, literal wildcard/regex characters,
+  excluding task IO from matching, stable ties, Viewer access, retained claims and
+  audit history, unchanged schema/default paging, and invalid parameter rejection.
+- 39 React/JSDOM tests pass. Six history-filter checks cover explicit submission,
+  global overview totals, independent workflow selection, older mission inspection,
+  no matches, clearing, page reset, obsolete response suppression, failure/stale
+  states, mode switching, query encoding, and keyboard submission retaining focus.
+  Earlier three-role, memory, integrity, review, navigation, and refresh tests pass.
+- All 25 desktop checks pass. The real owned Python/HTTP process test now filters
+  Student's waiting mission by goal, role, and state, then verifies unchanged
+  persisted overview after restart. Existing demo isolation, history/artifact/
+  memory preservation, bound review, and private EOF shutdown checks remain passing.
+  Renderer policy permits the filtered GET through the existing endpoint allowance.
+- Ruff lint/format passes across 61 Python files. Strict Mypy passes across 40
+  source files with Windows/Linux platform definitions. TypeScript/Vite production
+  build, frontend/desktop Prettier, and desktop syntax checks pass.
+
+History search is ready for offline interaction testing using the
+[Mission Control guide](mission-control.md#search-mission-history). Filtered reads
+scan history; the compatible array API does not supply an exact filtered total or
+next-page token. Native/browser visual and screen-reader acceptance remain
+unverified under the existing browser restriction. Live model testing is deferred.

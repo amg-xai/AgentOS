@@ -105,6 +105,10 @@ test(
       });
       const originalIdentity = backend.session;
       const beforeOverview = await api('/overview');
+      const filteredHistory = await api(
+        `/missions?query=${encodeURIComponent(student.goal.slice(0, 24))}&role_id=student&status=WAITING_APPROVAL`,
+      );
+      assert.deepEqual(filteredHistory, [student]);
       assert.equal(beforeOverview.execution_mode, 'demo');
       assert.equal(beforeOverview.total_missions, 3);
       assert.equal(beforeOverview.pending_approvals, 3);

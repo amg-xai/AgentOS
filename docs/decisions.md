@@ -112,3 +112,14 @@ or worker liveness. Open existing mission detail for inspection and integrity
 checks. Prevent obsolete frontend refreshes and old-mode creation responses from
 restoring earlier history. The desktop policy allows only the new GET endpoint;
 existing permission, review, and process ownership boundaries remain in force.
+
+## 2026-10-09: Search persisted mission history
+
+Extend the existing GET `/missions` array contract with optional bounded goal
+query, role id, and derived mission state filters. Match before pagination using
+literal Unicode case folding and the existing domain status rules. Historical
+role lookup does not depend on currently installed manifests. Keep unfiltered SQL
+paging unchanged; accept history-proportional scan cost without a schema/status
+cache. Explicitly submit UI filters and preserve selected mission inspection,
+global overview totals, and independent workflow creation. Failed queries remain
+unavailable, failed polls label retained results, and mode changes clear filters.

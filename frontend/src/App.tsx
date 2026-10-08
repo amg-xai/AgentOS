@@ -7,6 +7,8 @@ import { Badge, ErrorNotice } from './components';
 import { MissionDetail } from './MissionDetail';
 import { Memory } from './Memory';
 import { RecordedActivity, WorkspaceOverview } from './Overview';
+import { emptyHistoryQuery, HistoryFilters } from './HistoryFilters';
+import type { HistoryQuery } from './HistoryFilters';
 
 export function App() {
   const [page, setPage] = useState<'missions' | 'memory' | 'agents'>('missions');
@@ -24,6 +26,10 @@ export function App() {
   const [busy, setBusy] = useState(false);
   const [offset, setOffset] = useState(0);
   const [more, setMore] = useState(false);
+  const [filters, setFilters] = useState<HistoryQuery>(emptyHistoryQuery);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState('');
+  const hasFilters = !!(filters.query || filters.role_id || filters.status);
   const [overview, setOverview] = useState<Overview | null>(null);
   const requestVersion = useRef(0);
   const refreshController = useRef<AbortController | null>(null);
@@ -49,7 +55,10 @@ export function App() {
           setAgents([]);
           setRoles([]);
           setMore(false);
-          if (listOffset !== 0) {
+          setFilters(emptyHistoryQuery);
+          setHistoryLoading(true);
+          setHistoryError('');
+          if (listOffset !== 0 || filters.query || filters.role_id || filters.status) {
             executionMode.current = s.execution_mode;
             setStatus(s);
             setOffset(0);
@@ -58,8 +67,12 @@ export function App() {
         }
         executionMode.current = s.execution_mode;
         setStatus(s);
+        const params = new URLSearchParams({ limit: '100', offset: String(listOffset) });
+        if (filters.query) params.set('query', filters.query);
+        if (filters.role_id) params.set('role_id', filters.role_id);
+        if (filters.status) params.set('status', filters.status);
         const [m, r, a, o] = await Promise.all([
-          api<Mission[]>(`/missions?limit=100&offset=${listOffset}`, undefined, controller.signal),
+          api<Mission[]>(`/missions?${params}`, undefined, controller.signal),
           api<Role[]>('/roles', undefined, controller.signal),
           api<Agent[]>('/agents', undefined, controller.signal),
           api<Overview>('/overview', undefined, controller.signal),
@@ -78,6 +91,9 @@ export function App() {
           setStatus(null);
           setMore(false);
           setOffset(0);
+          setFilters(emptyHistoryQuery);
+          setHistoryLoading(true);
+          setHistoryError('');
           throw new Error(
             'Server execution mode changed during refresh. Waiting for a consistent snapshot.',
           );
@@ -88,14 +104,18 @@ export function App() {
         setMore(m.length === 100);
         setOverview(o);
         setConnectionError('');
+        setHistoryError('');
+        setHistoryLoading(false);
       } catch (e) {
         if (version !== requestVersion.current) return;
         setConnectionError(errorMessage(e));
+        setHistoryError(errorMessage(e));
+        setHistoryLoading(false);
       } finally {
         if (version === requestVersion.current) setLoading(false);
       }
     },
-    [offset],
+    [offset, filters],
   );
   useEffect(() => {
     void refresh();
@@ -161,6 +181,25 @@ export function App() {
     setSelected(id);
     setPage('missions');
     setCreating(false);
+  }
+  function applyFilters(next: HistoryQuery) {
+    requestVersion.current++;
+    refreshController.current?.abort();
+    setFilters({ ...next });
+    setOffset(0);
+    setMissions([]);
+    setMore(false);
+    setHistoryLoading(true);
+    setHistoryError('');
+  }
+  function changePage(next: number) {
+    requestVersion.current++;
+    refreshController.current?.abort();
+    setOffset(next);
+    setMissions([]);
+    setMore(false);
+    setHistoryLoading(true);
+    setHistoryError('');
   }
   return (
     <div className="shell">
@@ -388,11 +427,36 @@ export function App() {
                         <h2>Missions</h2>
                         <span className="count">{missions.length}</span>
                       </div>
-                      {!missions.length && (
+                      <HistoryFilters
+                        key={status?.execution_mode}
+                        filters={filters}
+                        roles={roles}
+                        onApply={applyFilters}
+                      />
+                      <p className="muted">
+                        {hasFilters ? 'Matching missions' : 'Missions'} on this page:{' '}
+                        {missions.length}
+                      </p>
+                      {historyLoading && <p role="status">Loading mission history…</p>}
+                      {!!historyError && (
+                        <p role="status">
+                          Mission history refresh failed.{' '}
+                          {missions.length
+                            ? 'Showing the last successful results for these filters.'
+                            : 'Results are unavailable; retry Apply filters.'}
+                        </p>
+                      )}
+                      {!historyLoading && !historyError && !missions.length && (
                         <div className="empty">
                           <span className="empty-symbol">◈</span>
-                          <h3>Your next idea starts here</h3>
-                          <p>Create a mission to turn a goal into a reviewed result.</p>
+                          <h3>
+                            {hasFilters ? 'No matching missions' : 'Your next idea starts here'}
+                          </h3>
+                          <p>
+                            {hasFilters
+                              ? 'Try another goal, role, or state, or clear the filters.'
+                              : 'Create a mission to turn a goal into a reviewed result.'}
+                          </p>
                         </div>
                       )}
                       {missions.map((m) => (
@@ -413,12 +477,15 @@ export function App() {
                       {(offset > 0 || more) && (
                         <div className="pagination">
                           <button
-                            disabled={!offset}
-                            onClick={() => setOffset((o) => Math.max(0, o - 100))}
+                            disabled={!offset || historyLoading}
+                            onClick={() => changePage(Math.max(0, offset - 100))}
                           >
                             Previous
                           </button>
-                          <button disabled={!more} onClick={() => setOffset((o) => o + 100)}>
+                          <button
+                            disabled={!more || historyLoading}
+                            onClick={() => changePage(offset + 100)}
+                          >
                             Next
                           </button>
                         </div>

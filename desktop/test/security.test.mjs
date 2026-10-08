@@ -30,6 +30,12 @@ test('exact local navigation and artifact downloads; no remote, encoded, or priv
   const mission = '12345678-1234-1234-1234-123456789abc';
   assert.ok(requestAllowed(`${origin}/missions/${mission}/tasks/quiz/actions`, origin, 'POST'));
   assert.ok(requestAllowed(`${origin}/missions?limit=100&offset=0`, origin));
+  assert.ok(
+    requestAllowed(
+      `${origin}/missions?query=older&role_id=student&status=WAITING_APPROVAL`,
+      origin,
+    ),
+  );
   assert.ok(requestAllowed(`${origin}/approvals/${'a'.repeat(32)}/decision`, origin, 'POST'));
   assert.ok(requestAllowed(`${origin}/workflows/student`, origin, 'POST'));
   assert.ok(requestAllowed(`${origin}/overview`, origin));

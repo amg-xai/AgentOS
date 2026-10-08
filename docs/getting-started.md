@@ -5,6 +5,7 @@ The web launcher below remains available independently.
 
 The [workspace overview guide](mission-control.md) explains dashboard totals,
 recent work links, and recorded agent activity across your full history.
+Use the mission list's goal search and role/state filters to find older work.
 
 AgentOS runs as a loopback web app with an optional checkout-based desktop shell.
 Standalone packaging and external ticket/PR integrations are deferred.

@@ -23,6 +23,46 @@ provides tasks, activity, reviews, and integrity-checked artifact inspection and
 downloads. Opening a mission does not run agents or accept its result. Viewer
 access remains read-only.
 
+## Search mission history
+
+Use **Search mission goals**, **History role id**, and **Mission state** beside
+the mission list, then choose **Apply filters** or press Enter. Goal matching is
+a literal, case-insensitive substring search with Unicode case folding. Spaces
+around the query are ignored; `%`, `_`, and regex characters are ordinary text.
+Search covers persisted goal text across the whole selected history, not task
+inputs/outputs, memory, or artifact contents.
+
+Leave the role blank for all roles. Suggestions show installed role ids; you can
+also enter a historic id whose package has since been removed. Role matching is
+exact. Goal, role, and state filters combine with AND. Filters do not change the
+selected workflow for creating missions, and overview totals remain global.
+
+Applying or clearing filters returns to the first page. Existing selected mission
+detail stays available even when that mission is outside the matches. Failed
+queries report unavailable, while failed refreshes label retained results as stale.
+Normal/demo mode switches clear filters, page, and selection. Old responses cannot
+restore the previous results. **Clear filters** returns to unfiltered history.
+
+Pages contain up to 100 results in creation-time descending/id ascending order.
+The existing list API does not return a filtered total or a next-page token. When
+the last page has exactly 100 results, **Next** can open an empty page; **Previous**
+returns to the earlier results.
+
+`GET /missions` accepts optional `query` (up to 200 characters), `role_id` (a
+lowercase identifier of up to 80 characters), and `status` (a mission state).
+Invalid parameters return 422; a valid unknown role returns its matches or an
+empty list. Existing `limit` (1–100), nonnegative `offset`, defaults, and the array
+response remain compatible. For example:
+
+```text
+/missions?limit=100&offset=0&query=calculator&role_id=developer&status=FAILED
+```
+
+Filters run before pagination. Filtered reads stream snapshots and reuse the
+domain mission-status calculation, stopping after the requested matching page.
+Cost grows with the history searched. No schema migration, search index, provider
+call, audit event, execution, or permission change is introduced.
+
 ## Interpret activity correctly
 
 **Active runs on this server** is a current in-memory observation from this API
