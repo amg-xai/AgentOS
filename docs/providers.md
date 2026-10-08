@@ -1,0 +1,18 @@
+# Model provider
+
+The Responses adapter uses a configurable model and endpoint, strict JSON Schema
+outputs, local output validation, bounded HTTP requests, and no automatic retries
+or fixture fallback. Requests disable provider-side storage with `store: false`.
+The wire format follows the [official structured output documentation](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=responses).
+
+Set `AGENTOS_MODEL` to a model that supports strict structured outputs. Set
+`AGENTOS_MODEL_KEY` (or `OPENAI_API_KEY`) in the server environment. The default
+endpoint is `https://api.openai.com/v1`; `AGENTOS_MODEL_URL` may select another
+Responses-compatible server. Plain HTTP is allowed only on loopback. A local
+server must support `/responses` and strict structured outputs; compatibility
+with Chat Completions alone is insufficient. Model names are explicit to avoid
+silently changing cost or behavior. Desktop sign-in and Git credentials are not
+API credentials. Never put keys in manifests, source control, or review notes.
+
+Provider tests use mocked transport. They verify the wire contract and rejection
+paths; they do not establish model quality or live endpoint compatibility.
