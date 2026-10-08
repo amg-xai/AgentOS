@@ -118,7 +118,37 @@ class SQLiteMissionRepository:
             raise MissionNotFound(f"Mission {mission_id} not found")
         return Mission.model_validate_json(row[0])
 
-    def list_missions(self, limit: int = 50, offset: int = 0) -> list[Mission]:
+    def list_missions(
+        self,
+        limit: int = 50,
+        offset: int = 0,
+        *,
+        query: str = "",
+        role_id: str | None = None,
+        status: MissionStatus | None = None,
+    ) -> list[Mission]:
+        search = query.strip().casefold()
+        if search or role_id is not None or status is not None:
+            result: list[Mission] = []
+            skipped = 0
+            with closing(self._connect()) as connection:
+                for row in connection.execute(
+                    "SELECT payload FROM missions ORDER BY created_at DESC, id"
+                ):
+                    mission = Mission.model_validate_json(row[0])
+                    if (
+                        (search and search not in mission.goal.casefold())
+                        or (role_id is not None and mission.role_id != role_id)
+                        or (status is not None and mission.status != status)
+                    ):
+                        continue
+                    if skipped < offset:
+                        skipped += 1
+                        continue
+                    result.append(mission)
+                    if len(result) >= limit:
+                        break
+            return result
         with closing(self._connect()) as connection:
             rows = connection.execute(
                 "SELECT payload FROM missions ORDER BY created_at DESC, id LIMIT ? OFFSET ?",

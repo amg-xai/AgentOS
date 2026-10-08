@@ -28,6 +28,7 @@ from agentos.adapters.student import STUDENT_DEMO_GOAL, StudentDemoGenerator, St
 from agentos.adapters.workspace import WorkspaceStore
 from agentos.domain.agents import AgentDefinition, AgentExecutor, StructuredGenerator
 from agentos.domain.artifacts import Artifact
+from agentos.domain.base import Identifier
 from agentos.domain.governance import (
     Approval,
     ApprovalDecision,
@@ -42,6 +43,7 @@ from agentos.domain.missions import (
     MissionCreate,
     MissionEvent,
     MissionNotFound,
+    MissionStatus,
     MissionValidationError,
     StateConflict,
     TaskAction,
@@ -380,9 +382,13 @@ def create_app(
 
     @app.get("/missions")
     def list_missions(
-        limit: int = Query(default=50, ge=1, le=100), offset: int = Query(default=0, ge=0)
+        limit: int = Query(default=50, ge=1, le=100),
+        offset: int = Query(default=0, ge=0),
+        query: str = Query(default="", max_length=200),
+        role_id: Identifier | None = None,
+        status: MissionStatus | None = None,
     ) -> list[Mission]:
-        return repository.list_missions(limit, offset)
+        return repository.list_missions(limit, offset, query=query, role_id=role_id, status=status)
 
     @app.get("/missions/{mission_id}")
     def get_mission(mission_id: str) -> Mission:
