@@ -13,6 +13,7 @@ from agentos.adapters.desktop import watch_parent
 from agentos.api.app import create_app
 from agentos.cli import main
 from agentos.domain.governance import UserRole
+from agentos.services.overview import workspace_overview
 
 demo_root = demo_fixture
 runtime = runtime_fixture
@@ -90,10 +91,18 @@ def test_active_run_count_and_interrupted_claim_are_preserved(runtime):
         )
         await started.wait()
         assert runtime.runner.active_run_count == 1
+        overview = workspace_overview(
+            runtime.repository, runtime.registry, "live", runtime.runner.active_run_count
+        )
+        assert overview.local_active_runs == overview.durable_claims == 1
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
             await task
         assert runtime.runner.active_run_count == 0
+        overview = workspace_overview(
+            runtime.repository, runtime.registry, "live", runtime.runner.active_run_count
+        )
+        assert overview.local_active_runs == 0 and overview.durable_claims == 1
         assert runtime.repository.claim(mission.id) is not None
         assert runtime.repository.get(mission.id).tasks[0].status.value == "RUNNING"
 

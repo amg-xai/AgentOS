@@ -19,10 +19,12 @@ from agentos.domain.missions import (
     Mission,
     MissionEvent,
     MissionNotFound,
+    MissionStatus,
     NewEvent,
     StateConflict,
     TaskStatus,
 )
+from agentos.domain.overview import AgentActivity, MissionSummary, PersistedOverview, TaskSummary
 from agentos.domain.tools import ToolCallEvent
 
 
@@ -123,6 +125,86 @@ class SQLiteMissionRepository:
                 (limit, offset),
             ).fetchall()
         return [Mission.model_validate_json(row[0]) for row in rows]
+
+    def overview(self, agent_ids: tuple[str, ...]) -> PersistedOverview:
+        counts = dict.fromkeys(MissionStatus, 0)
+        task_counts = {agent: dict.fromkeys(TaskStatus, 0) for agent in agent_ids}
+        activity: dict[str, list[TaskSummary]] = {agent: [] for agent in agent_ids}
+        reviews: list[MissionSummary] = []
+        # One read snapshot for all persisted evidence; no full-history list retained.
+        with closing(self._connect()) as connection, connection:
+            connection.execute("BEGIN")
+            observed_at = datetime.now(UTC)
+            for row in connection.execute(
+                "SELECT missions.payload, run_claims.mission_id IS NOT NULL "
+                "FROM missions LEFT JOIN run_claims ON missions.id = run_claims.mission_id"
+            ):
+                mission = Mission.model_validate_json(row[0])
+                claimed = bool(row[1])
+                counts[mission.status] += 1
+                if mission.status == MissionStatus.WAITING_APPROVAL:
+                    reviews.append(
+                        MissionSummary(
+                            id=mission.id,
+                            goal=mission.goal[:240],
+                            role_id=mission.role_id,
+                            status=mission.status,
+                            updated_at=mission.updated_at,
+                            has_claim=claimed,
+                        )
+                    )
+                    reviews.sort(key=lambda item: (item.updated_at, item.id), reverse=True)
+                    del reviews[10:]
+                for task in mission.tasks:
+                    if task.agent_id not in activity:
+                        continue
+                    task_counts[task.agent_id][task.status] += 1
+                    recent = activity[task.agent_id]
+                    recent.append(
+                        TaskSummary(
+                            mission_id=mission.id,
+                            mission_goal=mission.goal[:240],
+                            task_id=task.id,
+                            title=task.title[:240],
+                            status=task.status,
+                            mission_updated_at=mission.updated_at,
+                            has_claim=claimed,
+                        )
+                    )
+                    recent.sort(
+                        key=lambda item: (item.mission_updated_at, item.mission_id, item.task_id),
+                        reverse=True,
+                    )
+                    del recent[5:]
+            pending = connection.execute(
+                "SELECT COUNT(*) FROM approvals WHERE status = 'PENDING'"
+            ).fetchone()[0]
+            claims = connection.execute("SELECT COUNT(*) FROM run_claims").fetchone()[0]
+            artifacts = connection.execute("SELECT COUNT(*) FROM artifacts").fetchone()[0]
+            recent_artifacts = tuple(
+                Artifact.model_validate_json(row[0])
+                for row in connection.execute(
+                    "SELECT payload FROM artifacts ORDER BY rowid DESC LIMIT 10"
+                )
+            )
+        return PersistedOverview(
+            observed_at=observed_at,
+            total_missions=sum(counts.values()),
+            mission_counts=counts,
+            pending_approvals=pending,
+            durable_claims=claims,
+            total_artifacts=artifacts,
+            recent_reviews=tuple(reviews),
+            recent_artifacts=recent_artifacts,
+            agent_activity=tuple(
+                AgentActivity(
+                    agent_id=agent,
+                    task_counts=task_counts[agent],
+                    recent_tasks=tuple(activity[agent]),
+                )
+                for agent in agent_ids
+            ),
+        )
 
     @staticmethod
     def _check_claim(connection: sqlite3.Connection, mission_id: str, token: str | None) -> None:

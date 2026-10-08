@@ -48,6 +48,7 @@ from agentos.domain.missions import (
     TaskActionRequest,
     VersionRequest,
 )
+from agentos.domain.overview import WorkspaceOverview
 from agentos.domain.roles import RolePackage
 from agentos.domain.workspace import (
     CreatorMissionCreate,
@@ -63,6 +64,7 @@ from agentos.services.developer import developer_mission
 from agentos.services.execution import ExecutorRegistry
 from agentos.services.missions import MissionService
 from agentos.services.orchestration import Orchestrator
+from agentos.services.overview import workspace_overview
 from agentos.services.registry import AgentRegistry
 from agentos.services.student import student_mission
 from agentos.services.tools import ToolRegistry
@@ -297,6 +299,15 @@ def create_app(
             else "Configured model execution",
             "demo_goal": DEMO_GOAL if demo_root is not None else None,
         }
+
+    @app.get("/overview")
+    def overview() -> WorkspaceOverview:
+        return workspace_overview(
+            repository,
+            catalog,
+            "demo" if demo_root is not None else "live",
+            orchestrator.active_run_count,
+        )
 
     @app.get("/memory")
     def list_memory(
