@@ -18,6 +18,9 @@ React/TypeScript Mission Control provides mission creation, execution history,
 artifact inspection, result approval/denial, retry, and workspace memory.
 
 Start with the [local setup and acceptance guide](docs/getting-started.md).
+Use `Start-AgentOS.ps1 -Demo` for the explicit offline Calculator walkthrough:
+scripted findings/patches, real Git checks and tests, separate local history,
+and human review. No model credentials are required and no model calls occur.
 Live AI acceptance still requires a configured model endpoint and credentials;
 automated model tests use mocked transport. Browser visual verification is pending.
 
@@ -133,5 +136,5 @@ Role manifests list agents and tools; agent manifests declare schemas,
 permissions, instructions, and optional provider configuration. See
 `packages/developer/` for examples. Schemas use Draft 2020-12 and local fragment
 references only. Provider configuration may reference an environment variable
-name, never an inline credential. Permissions here are metadata; actual tool
-dispatch must enforce authorization when tool execution is implemented.
+name, never an inline credential. Registered tool dispatch enforces user and
+agent permissions and records scoped audit events.

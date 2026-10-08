@@ -156,3 +156,39 @@ Thirteen React component tests pass, including 101-artifact and 1,001-event
 histories, inspection after acceptance, overlapping refreshes, and connection
 recovery. TypeScript, production build, and formatting checks pass. These are
 JSDOM checks; live provider and browser acceptance remain deferred/unverified.
+
+## Explicit offline Calculator demo
+
+The approved demo uses deterministic investigation/patch generation, registered
+local tools, and the existing durable engine. It is selected only by `--demo`
+(`-Demo` in the PowerShell launcher), with separate `.agentos/demo/` data and
+persistent UI/artifact labels. Model configuration is ignored; no live model
+request is made or claimed.
+
+- 165 backend tests pass locally; three symlink tests are skipped because this
+  Windows account cannot create symlinks. New coverage includes the actual
+  three-test Calculator pass, restart/approval, memory, source/config/history
+  preservation, denial/retry, review integrity, viewer permissions, fixed mission
+  restrictions, sample fingerprint failures before startup/creation/execution,
+  ignoring valid and malformed provider settings, storage redirect rejection,
+  explicit CLI factory selection, and read-only demo diagnostics.
+- Sixteen React/JSDOM tests pass. Demo coverage verifies the fixed read-only
+  mission goal, no missing-provider block, persistent labels through review and
+  reload, separated memory messaging, viewer controls, and clearing the previous
+  mission selection when switching server execution modes.
+- Backend Ruff lint/format and strict Mypy (Windows and Linux definitions),
+  frontend TypeScript/Vite build, and Prettier checks pass.
+- The actual PowerShell launcher was run on loopback port 8767. An HTTP/API smoke
+  created the scripted mission, checked the actual three-test pass and eight
+  artifacts, and saved an artifact reference. After stopping and restarting the
+  launcher, the same review was accepted to COMPLETED and persisted artifacts,
+  memory, source files, and normal configuration/history hashes were verified.
+  Both smoke servers were stopped afterward; the ignored demo history is kept
+  for local inspection. The smoke script and review proposal remain Git-ignored.
+- `python -m agentos doctor --demo --json` passes all local prerequisites and
+  explicitly reports `live_provider_verified: false`.
+
+The offline workflow is available for user testing. Browser visual, responsive,
+and accessibility verification is still outstanding; the prior browser access
+restriction was respected. Live AI quality and full product acceptance remain
+separate from scripted workflow evidence. Scratch execution is not an OS sandbox.

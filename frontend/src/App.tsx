@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { api, date, errorMessage } from './api';
 import type { Agent, Mission, Role, Status } from './api';
@@ -22,6 +22,7 @@ export function App() {
   const [busy, setBusy] = useState(false);
   const [offset, setOffset] = useState(0);
   const [more, setMore] = useState(false);
+  const executionMode = useRef<Status['execution_mode'] | undefined>(undefined);
   const refresh = useCallback(async () => {
     try {
       const [s, m, r, a] = await Promise.all([
@@ -30,6 +31,12 @@ export function App() {
         api<Role[]>('/roles'),
         api<Agent[]>('/agents'),
       ]);
+      if (executionMode.current !== undefined && executionMode.current !== s.execution_mode) {
+        setSelected(null);
+        setCreating(false);
+        setGoal('');
+      }
+      executionMode.current = s.execution_mode;
       setStatus(s);
       setMissions(m);
       setRoles(r);
@@ -50,6 +57,7 @@ export function App() {
     return () => window.clearInterval(timer);
   }, [refresh]);
   const canWrite = !!status && status.user_role !== 'viewer';
+  const demo = status?.execution_mode === 'demo';
   async function create(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
@@ -140,13 +148,25 @@ export function App() {
               <button
                 className="primary"
                 disabled={!status?.workflow_ready || !canWrite}
-                onClick={() => setCreating(true)}
+                onClick={() => {
+                  setGoal(demo ? (status?.demo_goal ?? '') : '');
+                  setCreating(true);
+                }}
               >
                 + New mission
               </button>
             )}
           </div>
           <ErrorNotice message={connectionError || error} />
+          {demo && (
+            <div className="setup-notice" role="note">
+              <strong>Offline demo — scripted responses, no model calls</strong>
+              <p>
+                The Calculator findings and patch are scripted. Git checks and tests run locally.
+                Demo history and memory are separate from your configured workspace.
+              </p>
+            </div>
+          )}
           {loading ? (
             <div className="empty" role="status">
               Connecting to your local workspace…
@@ -187,8 +207,10 @@ export function App() {
                       </strong>
                     </div>
                     <div>
-                      <small>MODEL</small>
-                      <strong className="model-name">{status?.model ?? 'Not configured'}</strong>
+                      <small>{demo ? 'EXECUTION' : 'MODEL'}</small>
+                      <strong className="model-name">
+                        {demo ? 'Scripted Calculator' : (status?.model ?? 'Not configured')}
+                      </strong>
                     </div>
                   </section>
                   <section className="role-strip">
@@ -203,7 +225,7 @@ export function App() {
                   {creating && (
                     <section className="panel create-panel">
                       <div className="section-heading">
-                        <h2>Create a Developer mission</h2>
+                        <h2>{demo ? 'Try the Calculator demo' : 'Create a Developer mission'}</h2>
                         <button
                           className="text-button"
                           onClick={() => setCreating(false)}
@@ -223,6 +245,7 @@ export function App() {
                         <textarea
                           id="goal"
                           value={goal}
+                          readOnly={demo}
                           onChange={(e) => setGoal(e.target.value)}
                           placeholder="Investigate and fix incorrect addition. Preserve the existing tests."
                           required
@@ -230,11 +253,12 @@ export function App() {
                           rows={3}
                         />
                         <p className="muted">
-                          Selected project: {status?.workspace_name}. Only configured source files
-                          will be sent to the model.
+                          {demo
+                            ? 'Fixed sample scenario. No source files or notes are sent to a model.'
+                            : `Selected project: ${status?.workspace_name}. Only configured source files will be sent to the model.`}
                         </p>
                         <button className="primary" disabled={busy || !goal.trim()}>
-                          {busy ? 'Creating…' : 'Create mission'}
+                          {busy ? 'Creating…' : demo ? 'Create demo mission' : 'Create mission'}
                         </button>
                       </form>
                     </section>
@@ -286,6 +310,7 @@ export function App() {
                         key={selected}
                         id={selected}
                         canWrite={canWrite}
+                        demo={demo}
                         onChange={refresh}
                       />
                     ) : (
@@ -300,7 +325,9 @@ export function App() {
                   </div>
                 </>
               )}
-              {page === 'memory' && <Memory canWrite={canWrite} />}
+              {page === 'memory' && (
+                <Memory key={status?.execution_mode} canWrite={canWrite} demo={demo} />
+              )}
               {page === 'agents' && (
                 <>
                   <section className="panel package">

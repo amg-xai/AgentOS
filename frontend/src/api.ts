@@ -1,4 +1,7 @@
 export interface Status {
+  execution_mode: 'live' | 'demo';
+  execution_label: string;
+  demo_goal: string | null;
   provider_configured: boolean;
   model: string | null;
   workspace_configured: boolean;

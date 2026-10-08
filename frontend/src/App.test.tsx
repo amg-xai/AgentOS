@@ -1,9 +1,10 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi, test, expect } from 'vitest';
 import { App } from './App';
 
 const status = {
+  execution_mode: 'live',
   workflow_ready: false,
   workspace_configured: true,
   workspace_name: 'Calculator',
@@ -14,6 +15,68 @@ const status = {
   user_role: 'operator',
   memory_retrieval: 'lexical',
 };
+
+test('offline demo keeps viewer controls read-only and its label visible across pages', async () => {
+  mockFetch({
+    '/status': {
+      ...status,
+      execution_mode: 'demo',
+      workflow_ready: true,
+      workspace_name: 'Offline demo · Calculator',
+      user_role: 'viewer',
+    },
+  });
+  const user = userEvent.setup();
+  render(<App />);
+  await screen.findByText('Offline demo — scripted responses, no model calls');
+  expect(screen.getByRole('button', { name: '+ New mission' })).toBeDisabled();
+  await user.click(screen.getByRole('button', { name: /Workspace memory/ }));
+  expect(
+    await screen.findByText(/Demo notes stay in separate local demo history/),
+  ).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Save note' })).toBeDisabled();
+  await user.click(screen.getByRole('button', { name: /Agents & roles/ }));
+  expect(screen.getByText('Offline demo — scripted responses, no model calls')).toBeInTheDocument();
+});
+
+test('switching server execution mode clears the previous mission selection', async () => {
+  let poll: () => void = () => {};
+  const originalInterval = window.setInterval.bind(window);
+  vi.spyOn(window, 'setInterval').mockImplementation((callback, delay) => {
+    if (delay !== 5000) return originalInterval(callback, delay);
+    poll = callback as () => void;
+    return 1;
+  });
+  const savedMission = {
+    id: 'demo-mission',
+    goal: 'Previously selected demo',
+    role_id: 'developer',
+    status: 'COMPLETED',
+    version: 4,
+    created_at: '2026-10-08T12:00:00Z',
+    tasks: [],
+  };
+  const overrides: Record<string, unknown> = {
+    '/status': { ...status, execution_mode: 'demo', workflow_ready: true },
+    '/missions?limit=100&offset=0': [savedMission],
+    '/missions/demo-mission': savedMission,
+    '/missions/demo-mission/run': null,
+  };
+  mockFetch(overrides);
+  const user = userEvent.setup();
+  render(<App />);
+  await user.click(await screen.findByRole('button', { name: /Previously selected demo/ }));
+  await screen.findByText('OFFLINE DEMO MISSION');
+  overrides['/status'] = status;
+  overrides['/missions?limit=100&offset=0'] = [];
+  await act(async () => poll());
+  await screen.findByText('A clear view of the work');
+  expect(screen.queryByText('OFFLINE DEMO MISSION')).not.toBeInTheDocument();
+  expect(screen.queryByText('Previously selected demo')).not.toBeInTheDocument();
+  expect(
+    screen.queryByText('Offline demo — scripted responses, no model calls'),
+  ).not.toBeInTheDocument();
+});
 function mockFetch(overrides: Record<string, unknown> = {}) {
   vi.stubGlobal(
     'fetch',

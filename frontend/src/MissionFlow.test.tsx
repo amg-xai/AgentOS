@@ -4,10 +4,17 @@ import { expect, test, vi } from 'vitest';
 import type { Mission } from './api';
 import { App } from './App';
 
-function workflow(initialFailed = false, brokenArtifact = false, reviewOutsidePage = false) {
+const demoGoal =
+  'Fix incorrect addition in the bundled Calculator sample. Preserve all test assertions.';
+function workflow(
+  initialFailed = false,
+  brokenArtifact = false,
+  reviewOutsidePage = false,
+  demo = false,
+) {
   let mission: Mission = {
     id: 'mission-1',
-    goal: 'Fix calculator addition',
+    goal: demo ? demoGoal : 'Fix calculator addition',
     role_id: 'developer',
     status: initialFailed ? 'FAILED' : 'PENDING',
     version: 1,
@@ -37,12 +44,17 @@ function workflow(initialFailed = false, brokenArtifact = false, reviewOutsidePa
           workflow_ready: true,
           workspace_configured: true,
           workspace_name: 'Calculator',
-          provider_configured: true,
-          model: 'TEST TRANSPORT',
+          provider_configured: !demo,
+          model: demo ? null : 'TEST TRANSPORT',
+          execution_mode: demo ? 'demo' : 'live',
+          demo_goal: demo ? demoGoal : null,
           user_role: 'operator',
         });
       if (path.startsWith('/missions?')) return respond([mission]);
-      if (path === '/workflows/developer') return respond(mission, 201);
+      if (path === '/workflows/developer') {
+        if (demo) expect(JSON.parse(options?.body as string)).toEqual({ goal: demoGoal });
+        return respond(mission, 201);
+      }
       if (path.endsWith('/actions') && options?.method === 'POST') {
         mission = {
           ...mission,
@@ -219,4 +231,37 @@ test('review artifacts remain inspectable outside the first history page', async
   );
   expect(screen.getByLabelText('Result artifact')).toHaveValue('diff-1');
   expect(screen.getByRole('option', { name: /tested.diff/ })).toBeInTheDocument();
+});
+
+test('offline demo has a fixed goal and stays labelled through creation, review, and reload', async () => {
+  workflow(false, false, false, true);
+  const user = userEvent.setup();
+  const view = render(<App />);
+  await screen.findByText('Offline demo — scripted responses, no model calls');
+  expect(
+    screen.queryByText('Finish local setup to run your first mission'),
+  ).not.toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: '+ New mission' }));
+  const goal = screen.getByLabelText('What should your agents investigate and fix?');
+  expect(goal).toHaveValue(demoGoal);
+  expect(goal).toHaveAttribute('readonly');
+  expect(screen.getByText(/No source files or notes are sent to a model/)).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Create demo mission' }));
+  await user.click(await screen.findByRole('button', { name: 'Run mission' }));
+  expect(await screen.findByText('OFFLINE DEMO MISSION')).toBeInTheDocument();
+  await user.click(await screen.findByRole('button', { name: 'Accept result' }));
+  await waitFor(() =>
+    expect(screen.queryByRole('button', { name: 'Accept result' })).not.toBeInTheDocument(),
+  );
+  view.unmount();
+  render(<App />);
+  await screen.findByText('Offline demo — scripted responses, no model calls');
+  await user.click(await screen.findByRole('button', { name: /Fix incorrect addition/ }));
+  expect(await screen.findByText('OFFLINE DEMO MISSION')).toBeInTheDocument();
+  expect(screen.getAllByText('completed').length).toBeGreaterThan(0);
+  await user.click(screen.getByRole('button', { name: /Workspace memory/ }));
+  expect(
+    await screen.findByText(/Demo notes stay in separate local demo history/),
+  ).toBeInTheDocument();
+  expect(screen.queryByText(/Relevant notes may be sent/)).not.toBeInTheDocument();
 });

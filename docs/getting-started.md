@@ -4,7 +4,8 @@ AgentOS runs as a loopback web app. Electron packaging and external ticket/PR
 integrations are deferred. You need Python 3.11+, Node.js 22.12+ (24 recommended),
 Git, and a model endpoint supporting the Responses API with strict structured
 outputs. Without a configured provider you can inspect the client, agents,
-history, and memory, but cannot start a real Developer mission.
+history, and memory, or use the explicit offline demo below. A real Developer
+mission requires a configured provider.
 
 ## Install and start
 
@@ -15,8 +16,57 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -e "./backend[dev]"
 npm --prefix frontend ci
 npm --prefix frontend run build
+```
+
+## Offline demo without a model
+
+After installing dependencies and building the client above:
+
+```powershell
+.\.venv\Scripts\python.exe -m agentos doctor --demo
+.\Start-AgentOS.ps1 -Demo
+# Or, on any supported OS, from your installed Python environment:
+python -m agentos serve --demo
+```
+
+The launcher prefers an existing `.venv-runtime`; use that interpreter for the
+doctor command too when your machine requires it. Do not combine `-Demo` with
+`-SetupSample`: demo selects the bundled sample without changing configuration.
+No `.env` or workspace setup is needed. Existing live provider variables are
+ignored for demo execution. The service still binds to loopback.
+
+Open [Mission Control](http://127.0.0.1:8000/app/) and confirm **Offline demo —
+scripted responses, no model calls** is visible:
+
+1. Select **+ New mission**, then **Create demo mission**. The Calculator goal is
+   fixed; this mode cannot investigate arbitrary goals or projects.
+2. Select **Run mission**. Investigation and patch generation use scripted
+   responses; the tools actually check/apply the patch in scratch and execute the
+   three bundled tests. Source tests are not changed.
+3. Select **Inspect artifacts**. Inspect `tested.diff` and `test-report.txt`.
+   Confirm addition replaces subtraction and the report shows `Ran 3 tests`,
+   `OK`, and `Exit code: 0`. Each task also persists `offline-demo.txt`; diff files
+   remain usable patches with provenance in their accompanying artifacts.
+4. **Accept result** to complete the mission, or **Deny result**, **Retry task**,
+   and **Run mission** to repeat actual tests in fresh scratch before reviewing.
+   Acceptance records the result without applying it to the source project.
+5. Save an artifact reference to demo memory. Stop with Ctrl+C, restart with
+   `-Demo`, and inspect the same mission, artifacts, decision, and note.
+
+Demo data lives in ignored `.agentos/demo/`. Your normal workspace configuration,
+history, memory, and bundled source remain unchanged. Start without `-Demo` to
+return to normal mode. Modified bundled sample files are refused; use an
+unchanged sample for the scripted scenario and normal mode for custom projects.
+This walkthrough tests local workflow interaction, not live AI quality. Browser
+visual/responsive/accessibility verification remains outstanding.
+
+## Configure live execution
+
+Skip this section while using the offline demo. For model-backed execution:
+
+```powershell
 .\.venv\Scripts\python.exe -m agentos setup-sample
-Copy-Item .env.example .env
+if (-not (Test-Path -LiteralPath .env)) { Copy-Item .env.example .env }
 ```
 
 Edit the ignored `.env` file locally. Set `AGENTOS_MODEL` to your chosen model and

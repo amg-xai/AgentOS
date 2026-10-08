@@ -3,7 +3,7 @@ import type { FormEvent } from 'react';
 import { api, date, errorMessage } from './api';
 import type { Note } from './api';
 import { ErrorNotice } from './components';
-export function Memory({ canWrite }: { canWrite: boolean }) {
+export function Memory({ canWrite, demo = false }: { canWrite: boolean; demo?: boolean }) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [query, setQuery] = useState('');
   const [title, setTitle] = useState('');
@@ -50,8 +50,10 @@ export function Memory({ canWrite }: { canWrite: boolean }) {
   return (
     <>
       <div className="info">
-        Relevant notes may be sent to your configured model during investigation. Retrieval uses
-        keyword overlap, not semantic search.
+        {demo
+          ? 'Demo notes stay in separate local demo history. Scripted responses do not use their content. '
+          : 'Relevant notes may be sent to your configured model during investigation. '}
+        Retrieval uses keyword overlap, not semantic search.
       </div>
       <ErrorNotice message={error} />
       <div className="memory-layout">

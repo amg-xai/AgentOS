@@ -6,10 +6,12 @@ export function MissionDetail({
   id,
   canWrite,
   onChange,
+  demo = false,
 }: {
   id: string;
   canWrite: boolean;
   onChange: () => Promise<void>;
+  demo?: boolean;
 }) {
   const [mission, setMission] = useState<Mission | null>(null);
   const [events, setEvents] = useState<Activity[]>([]);
@@ -149,7 +151,7 @@ export function MissionDetail({
   return (
     <section className="panel detail">
       <div className="section-heading">
-        <span className="eyebrow">DEVELOPER MISSION</span>
+        <span className="eyebrow">{demo ? 'OFFLINE DEMO MISSION' : 'DEVELOPER MISSION'}</span>
         <Badge state={mission.status} />
       </div>
       <h2 className="mission-goal">{mission.goal}</h2>
