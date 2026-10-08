@@ -42,12 +42,28 @@ class MissionStatus(StrEnum):
     CANCELLED = "CANCELLED"
 
 
+class InputBinding(Definition):
+    task_id: Identifier
+    output_key: Text
+
+
 class TaskSpec(Definition):
     id: Identifier
     title: Text
     agent_id: Identifier
     dependencies: tuple[Identifier, ...] = ()
     inputs: dict[str, Any] = Field(default_factory=dict)
+    input_bindings: dict[Identifier, InputBinding] = Field(default_factory=dict)
+    review_required: bool = Field(default=False, strict=True)
+
+    @model_validator(mode="after")
+    def valid_bindings(self) -> Self:
+        if self.inputs.keys() & self.input_bindings.keys():
+            raise MissionValidationError("Bound inputs must not overwrite explicit inputs")
+        for binding in self.input_bindings.values():
+            if binding.task_id not in self.dependencies:
+                raise MissionValidationError("Input bindings must reference direct dependencies")
+        return self
 
 
 def dependency_order(tasks: tuple[TaskSpec, ...]) -> list[str]:
@@ -94,6 +110,7 @@ class Task(TaskSpec):
     attempts: int = Field(default=0, ge=0)
     outputs: dict[str, Any] | None = None
     error: str | None = None
+    artifact_refs: tuple[Text, ...] = ()
 
 
 class Mission(Definition):

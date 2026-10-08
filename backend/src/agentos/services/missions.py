@@ -26,7 +26,14 @@ class MissionRepository(Protocol):
     def create(self, mission: Mission, events: list[NewEvent]) -> Mission: ...
     def get(self, mission_id: str) -> Mission: ...
     def list_missions(self, limit: int = 50, offset: int = 0) -> list[Mission]: ...
-    def save(self, mission: Mission, expected_version: int, events: list[NewEvent]) -> Mission: ...
+    def save(
+        self,
+        mission: Mission,
+        expected_version: int,
+        events: list[NewEvent],
+        *,
+        claim_token: str | None = None,
+    ) -> Mission: ...
     def events(self, mission_id: str, after: int = 0, limit: int = 100) -> list[MissionEvent]: ...
 
 
@@ -49,9 +56,16 @@ def refresh_dependencies(tasks: tuple[Task, ...]) -> tuple[Task, ...]:
 
 
 class MissionService:
-    def __init__(self, registry: AgentRegistry, repository: MissionRepository) -> None:
+    def __init__(
+        self,
+        registry: AgentRegistry,
+        repository: MissionRepository,
+        *,
+        claim_token: str | None = None,
+    ) -> None:
         self.registry = registry
         self.repository = repository
+        self.claim_token = claim_token
 
     def create(self, request: MissionCreate, actor: str = "local") -> Mission:
         if request.workspace_id != "local":
@@ -136,7 +150,7 @@ class MissionService:
                         },
                     )
                 )
-        return self.repository.save(mission, old.version, events)
+        return self.repository.save(mission, old.version, events, claim_token=self.claim_token)
 
     def act(
         self, mission_id: str, task_id: str, request: TaskActionRequest, actor: str = "local"
@@ -155,6 +169,8 @@ class MissionService:
         required, target = transitions[request.action]
         if task.status != required:
             raise StateConflict(f"Cannot {request.action} task {task_id} in {task.status}")
+        if request.action == TaskAction.COMPLETE and task.review_required:
+            raise StateConflict("Reviewed tasks must complete through orchestration and approval")
         updated = task.model_copy(
             update={
                 "status": target,

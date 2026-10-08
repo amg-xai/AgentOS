@@ -248,7 +248,7 @@ def test_schema_version_and_foreign_keys(tmp_path):
     finally:
         connection.close()
     with sqlite3.connect(path) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 1
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 2
         connection.execute("PRAGMA user_version = 99")
     with pytest.raises(RuntimeError, match="Unsupported database schema"):
         SQLiteMissionRepository(path)

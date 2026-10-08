@@ -5,14 +5,12 @@ from typing import Annotated, Any, Literal, Protocol
 
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import Field, field_validator
 
-Identifier = Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]*$", max_length=80)]
-Text = Annotated[str, Field(min_length=1)]
-
-
-class Definition(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
+from agentos.domain.artifacts import ArtifactDraft
+from agentos.domain.base import Definition as Definition
+from agentos.domain.base import Identifier as Identifier
+from agentos.domain.base import Text as Text
 
 
 class VersionedManifest(Definition):
@@ -92,11 +90,13 @@ class ExecutionContext(Definition):
     workspace_id: Text
     mission_id: Text
     task_id: Text
+    run_token: str | None = None
 
 
 class AgentResult(Definition):
     outputs: dict[str, Any]
     artifact_refs: tuple[Text, ...] = ()
+    artifacts: tuple[ArtifactDraft, ...] = ()
 
 
 class AgentExecutor(Protocol):
