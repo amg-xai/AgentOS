@@ -1,0 +1,135 @@
+{
+  "kind": "agents",
+  "schema_version": 1,
+  "agents": [
+    {
+      "id": "investigation",
+      "name": "Investigation Agent",
+      "description": "Inspect project context and report evidence-backed findings.",
+      "role": "developer",
+      "instructions": "Read scoped project context, identify likely causes, and cite evidence. Do not modify files or send external messages.",
+      "tools": [
+        "filesystem",
+        "git"
+      ],
+      "permissions": [
+        "READ"
+      ],
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "goal": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "goal"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "findings": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "findings"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "code_helper",
+      "name": "Code Helper",
+      "description": "Propose a focused code diff from investigation findings.",
+      "role": "developer",
+      "instructions": "Use investigation evidence to propose a minimal patch. Operate only within the workspace through permission-checked tools. Present the diff for human review before high-impact actions.",
+      "tools": [
+        "filesystem",
+        "git"
+      ],
+      "permissions": [
+        "READ",
+        "WRITE"
+      ],
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "findings": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "findings"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "diff": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "diff",
+          "summary"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "testing",
+      "name": "Testing Agent",
+      "description": "Verify a proposed fix and report actual test evidence.",
+      "role": "developer",
+      "instructions": "Run scoped tests only through authorized execution tools. Report command, exit status, and output references. Never claim tests ran without evidence. Do not deploy or publish.",
+      "tools": [
+        "filesystem",
+        "terminal"
+      ],
+      "permissions": [
+        "READ",
+        "EXECUTE"
+      ],
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "diff": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "diff"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "passed": {
+            "type": "boolean"
+          },
+          "report": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "passed",
+          "report"
+        ],
+        "additionalProperties": false
+      }
+    }
+  ]
+}

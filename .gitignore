@@ -9,6 +9,7 @@
 __pycache__/
 *.py[cod]
 .venv/
+.venv-runtime/
 venv/
 .pytest_cache/
 .mypy_cache/

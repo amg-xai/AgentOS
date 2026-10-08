@@ -1,6 +1,7 @@
 # Architecture
 
-Status: proposed; implementation has not started.
+Status: agent registry, role loading, IO validation, and read-only discovery API
+implemented. Mission persistence, tools, orchestration, and clients are planned.
 
 ## Boundaries
 
