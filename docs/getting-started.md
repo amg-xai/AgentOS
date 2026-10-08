@@ -1,7 +1,11 @@
 # Test the local workflows
 
-AgentOS runs as a loopback web app. Electron packaging and external ticket/PR
-integrations are deferred. You need Python 3.11+, Node.js 22.12+ (24 recommended),
+For a native window after dependency setup, see the [desktop guide](desktop.md).
+The web launcher below remains available independently.
+
+AgentOS runs as a loopback web app with an optional checkout-based desktop shell.
+Standalone packaging and external ticket/PR integrations are deferred.
+You need Python 3.11+, Node.js 22.12+ (24 recommended),
 Git, and a model endpoint supporting the Responses API with strict structured
 outputs. Without a configured provider you can inspect the client, agents,
 history, and memory, or use the explicit offline demo below. A real Developer

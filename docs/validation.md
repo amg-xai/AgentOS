@@ -278,3 +278,36 @@ Validated on Windows on 2026-10-09:
 The offline Student workflow is ready for interaction testing. Live AI quality and
 browser visual/responsive/screen-reader acceptance remain deferred/unverified. No
 interactive quiz scoring, web research, study scheduling, or Electron is claimed.
+
+## Checkout-based desktop shell
+
+Validated on Windows on 2026-10-09:
+
+- 210 backend tests pass; three symlink checks are skipped on this Windows account.
+  Desktop coverage checks explicit normal/demo identity, Viewer enforcement,
+  absence of HTTP shutdown, private EOF shutdown requests, and active-run counts
+  with durable interrupted claims. Existing workflow and persistence checks pass.
+- All 25 desktop tests pass, including a real owned Python/HTTP process test.
+  Developer executes its Calculator tests; Creator and Student reach content
+  review without claiming a test pass. All three histories, Student artifacts,
+  and memory persist across restart, and the same bound approval completes.
+  Normal history and sample source hashes are preserved with hostile live model
+  settings present. Both owned processes stop gracefully through stdin EOF.
+- Helper tests cover direct argv, occupied ports, readiness mismatch, startup
+  timeout/failure, owned cleanup, crashes without restart, singleton focus,
+  active/unknown-status exit choices, restricted window/session settings,
+  navigation, permissions, and downloads using injected Electron adapters.
+- Ruff lint/format passes across 57 Python files. Strict Mypy passes across 38
+  source files using Windows and Linux platform definitions. Desktop JavaScript
+  syntax and Prettier checks pass. The PowerShell launcher parses successfully.
+- All 22 React/JSDOM regression tests pass across Developer, Creator, Student,
+  history, integrity, Viewer restrictions, downloads, and keyboard navigation.
+  TypeScript/Vite production build and frontend Prettier checks pass.
+- The pinned Electron runtime is installed locally. It was not launched to
+  inspect the previously restricted browser page. Linux/Windows desktop CI runs
+  helper tests and the real Python process regression without opening Electron.
+
+The desktop launcher is ready for manual offline acceptance using the
+[desktop guide](desktop.md). Actual Electron rendering, native dialogs/downloads,
+keyboard/screen-reader behavior, and live AI quality remain unverified. Standalone
+installers, bundled Python, signing, updates, and deployment remain deferred.

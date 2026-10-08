@@ -1,0 +1,36 @@
+name: Desktop checks
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install backend
+        run: python -m pip install -e './backend[dev]'
+      - name: Install desktop dependencies
+        run: npm --prefix desktop ci --no-fund --no-audit
+      - name: Test desktop and real owned backend processes
+        shell: pwsh
+        run: |
+          $env:AGENTOS_TEST_PYTHON = (Get-Command python).Source
+          npm --prefix desktop test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - run: npm --prefix desktop run check
+      - run: npm --prefix desktop run format:check

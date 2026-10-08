@@ -83,3 +83,18 @@ or test runner. Add a fixed labelled stacks-and-queues scenario in explicit demo
 mode without constructing a model. Preserve all three roles' histories. Review
 does not establish independent correctness or exam readiness. Interactive scoring,
 web research, scheduling, and desktop packaging remain deferred.
+
+## 2026-10-09: First desktop shell
+
+Wrap existing Mission Control with a small checkout-based Electron project rather
+than another execution engine. Pin Electron 44.7.0, install its runtime explicitly,
+and keep Python/backend prerequisites separate. The main process owns its backend,
+checks a per-launch identity, and closes a private stdin pipe to request shutdown.
+No HTTP shutdown, privileged renderer bridge, or automatic claim recovery is added.
+
+A real Windows process test found that Git inherited the desktop control pipe and
+stalled workflow execution. Git now uses DEVNULL stdin, matching configured test
+processes. Keep this regression in real Python/HTTP desktop checks on both OSes.
+Preserve sandbox/context isolation, CSP, local request/navigation restrictions,
+native save prompts, existing RBAC, and the three role histories. Native rendering
+and dialogs remain manual acceptance under the existing browser restriction.

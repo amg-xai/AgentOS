@@ -42,7 +42,9 @@ The [Creator guide](docs/creator-workflow.md) covers content review and its limi
 - Store local credentials in ignored environment files, never in Git.
 
 The stack is Python/FastAPI with SQLite and React/TypeScript.
-Desktop packaging follows a working local web application.
+The [local desktop shell](docs/desktop.md) wraps Mission Control with an owned
+loopback backend. After desktop dependency/runtime setup, use
+`Start-AgentOSDesktop.ps1 -Demo` to test it. Standalone packaging remains deferred.
 
 See [validation evidence](docs/validation.md) for the verified scope and runtime.
 

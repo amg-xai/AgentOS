@@ -24,7 +24,8 @@ Student adds a fixed notes/quiz fixture in the same isolated demo history.
   local Git, and optional external services.
 - **API:** FastAPI exposes application services to local clients.
 - **UI:** React/TypeScript Mission Control consumes the API.
-- **Desktop:** Electron shell after the local web workflow is verified.
+- **Desktop:** checkout-based Electron shell with an owned loopback backend;
+  standalone packaging and native renderer acceptance remain outstanding.
 
 Domain code must not import service-specific SDKs or the HTTP/UI layer.
 Agents and workflows share the same execution and persistence infrastructure.
@@ -124,3 +125,24 @@ The executor renders separate questions and answers; final review owns `quiz.md`
 enrichment and needs no Developer workspace/test configuration. Existing mission
 schema 2, retries, artifact integrity, and approval services remain unchanged.
 `doctor --workflow student` checks its prerequisites without contacting a provider.
+
+## Desktop lifecycle
+
+The Electron main process spawns the selected Python environment directly and
+verifies a per-launch identity in `/status` before loading `/app/`. The identity
+is supplied explicitly by the private desktop CLI, not by ordinary web startup;
+it is not authentication. `/status.active_runs` reports this server's executing
+run count without exposing claim tokens. No HTTP shutdown endpoint exists.
+
+Parent stdin EOF requests graceful Uvicorn shutdown. Git tools and configured test
+processes use closed stdin so they cannot inherit the desktop control channel.
+The shell bounds startup/shutdown waits and cleans up only its owned process tree.
+It does not retry/recover interrupted work or change result approvals. Normal/demo
+storage paths and existing migration/recovery semantics are preserved.
+
+The renderer uses an ephemeral session, sandboxing, context isolation, disabled
+Node integration, existing server CSP, and exact local request/navigation policies.
+It receives no privileged preload bridge. Popups, webviews, device permissions,
+and remote requests are refused. Verified local artifact downloads use a native
+save prompt. The first desktop release is a checkout launcher; see
+[desktop setup and acceptance](docs/desktop.md).

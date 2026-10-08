@@ -1,0 +1,18 @@
+{
+  "name": "agentos-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/main.mjs",
+  "scripts": {
+    "install:runtime": "install-electron",
+    "start": "electron .",
+    "test": "node --test test/*.test.mjs",
+    "check": "node --check src/main.mjs && node --check src/backend.mjs && node --check src/security.mjs && node --check src/shell.mjs",
+    "format:check": "prettier --check src test package.json"
+  },
+  "devDependencies": {
+    "electron": "44.7.0",
+    "prettier": "3.9.9"
+  }
+}
