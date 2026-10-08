@@ -89,6 +89,9 @@ automatic dependency installation or model-selected command execution occurs.
    failed review task and run again. This reruns tests, not patch generation.
 7. Save an artifact reference to memory. Stop and restart the service; verify the
    same mission, artifacts, activity, decision, and notes remain available.
+   For longer histories, use **Load more artifacts** to browse additional results.
+   Activity polls from its last loaded event and offers **Load more activity**
+   when another full page is available.
 8. Confirm the original sample still contains `return left - right` and still fails
    two tests. The workflow changes only scratch files. Apply any accepted patch to
    a real source checkout yourself after review; there is no automatic publication.

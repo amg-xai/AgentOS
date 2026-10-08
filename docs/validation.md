@@ -142,3 +142,17 @@ Windows account) and nine React component tests. The client additionally fetches
 current approval artifact metadata when those artifacts are outside the first
 history page, with a regression test confirming they can still be inspected.
 Backend lint/format/types and frontend production build/format checks pass.
+
+## Mission history continuity
+
+Mission Control now pages through artifact history and polls activity after its
+last loaded event instead of repeatedly displaying only the first 1,000 events.
+Previously inspected review artifacts remain available after acceptance, including
+artifacts fetched outside the first page. Refresh responses are ordered so a
+delayed older request cannot replace a newer mission revision; successful refreshes
+clear transient connection errors without clearing action failures.
+
+Thirteen React component tests pass, including 101-artifact and 1,001-event
+histories, inspection after acceptance, overlapping refreshes, and connection
+recovery. TypeScript, production build, and formatting checks pass. These are
+JSDOM checks; live provider and browser acceptance remain deferred/unverified.

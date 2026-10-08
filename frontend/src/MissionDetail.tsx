@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, artifactText, date, errorMessage, label } from './api';
 import type { Activity, Approval, Artifact, Mission } from './api';
 import { Badge, ErrorNotice } from './components';
@@ -24,17 +24,29 @@ export function MissionDetail({
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [refreshError, setRefreshError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [artifactPages, setArtifactPages] = useState(1);
+  const [moreArtifacts, setMoreArtifacts] = useState(false);
+  const [moreEvents, setMoreEvents] = useState(false);
+  const eventCursor = useRef(0);
+  const refreshNumber = useRef(0);
   const refresh = useCallback(async () => {
+    const requestNumber = ++refreshNumber.current;
     try {
       const base = `/missions/${encodeURIComponent(id)}`;
-      const [m, e, a, p, c] = await Promise.all([
+      const [m, e, pages, p, c] = await Promise.all([
         api<Mission>(base),
-        api<Activity[]>(`${base}/events?limit=1000`),
-        api<Artifact[]>(`${base}/artifacts`),
+        api<Activity[]>(`${base}/events?limit=1000&after=${eventCursor.current}`),
+        Promise.all(
+          Array.from({ length: artifactPages }, (_, page) =>
+            api<Artifact[]>(`${base}/artifacts?limit=100&offset=${page * 100}`),
+          ),
+        ),
         api<Approval[]>(`${base}/approvals`),
         api<unknown>(`${base}/run`),
       ]);
+      const a = pages.flat();
       // Current review artifacts must remain inspectable beyond the history page.
       const missing = [...new Set(p.flatMap((item) => item.payload?.artifact_refs ?? []))].filter(
         (ref) => !a.some((item) => item.id === ref),
@@ -42,25 +54,39 @@ export function MissionDetail({
       const reviewArtifacts = await Promise.all(
         missing.map((ref) => api<Artifact>(`/artifacts/${encodeURIComponent(ref)}`)),
       );
+      if (requestNumber !== refreshNumber.current) return;
       setMission(m);
-      setEvents(e);
-      setArtifacts([...a, ...reviewArtifacts]);
+      setEvents((current) =>
+        [...new Map([...current, ...e].map((item) => [item.sequence, item])).values()].sort(
+          (left, right) => left.sequence - right.sequence,
+        ),
+      );
+      if (e.length) eventCursor.current = e[e.length - 1].sequence;
+      setMoreEvents(e.length === 1000);
+      setMoreArtifacts(pages[pages.length - 1].length === 100);
+      setArtifacts((current) => [
+        ...new Map([...current, ...a, ...reviewArtifacts].map((item) => [item.id, item])).values(),
+      ]);
       setApprovals(p);
       setClaim(c);
+      setRefreshError('');
       setArtifact(
         (current) =>
           current || a.find((item) => item.name === 'proposed.diff')?.id || a[0]?.id || '',
       );
     } catch (e) {
-      setError(errorMessage(e));
+      if (requestNumber === refreshNumber.current) setRefreshError(errorMessage(e));
     }
-  }, [id]);
+  }, [id, artifactPages]);
   useEffect(() => {
     void refresh();
     const timer = window.setInterval(() => {
       void refresh();
     }, 2000);
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearInterval(timer);
+      refreshNumber.current += 1;
+    };
   }, [refresh]);
   useEffect(() => {
     if (!artifact) return;
@@ -114,7 +140,7 @@ export function MissionDetail({
   if (!mission)
     return (
       <section className="panel detail">
-        <ErrorNotice message={error} />
+        <ErrorNotice message={refreshError || error} />
         <p role="status">Loading mission…</p>
       </section>
     );
@@ -130,7 +156,7 @@ export function MissionDetail({
       <p className="muted mono">
         {id.slice(0, 8)} · revision {mission.version}
       </p>
-      <ErrorNotice message={error} />
+      <ErrorNotice message={refreshError || error} />
       {claim && !busy ? (
         <div className="info">
           This mission has an execution claim. If its worker was interrupted, stop that worker and
@@ -291,6 +317,11 @@ export function MissionDetail({
                   </option>
                 ))}
               </select>
+              {moreArtifacts && (
+                <button onClick={() => setArtifactPages((current) => current + 1)}>
+                  Load more artifacts
+                </button>
+              )}
               <ErrorNotice message={artifactError} />
               {artifactLoading ? (
                 <p role="status">Verifying and loading artifact…</p>
@@ -309,26 +340,29 @@ export function MissionDetail({
         </div>
       )}
       {tab === 'activity' && (
-        <ol className="activity">
-          {[...events].reverse().map((e) => (
-            <li key={e.sequence}>
-              <span className="activity-dot" />
-              <div>
-                <strong>{label(e.action)}</strong>
-                <p>
-                  {e.task_id ?? 'Mission'} · {e.actor}
-                </p>
-                {Object.keys(e.details).length > 0 && (
-                  <details>
-                    <summary>Event details</summary>
-                    <pre>{JSON.stringify(e.details, null, 2)}</pre>
-                  </details>
-                )}
-                <small>{date(e.timestamp)}</small>
-              </div>
-            </li>
-          ))}
-        </ol>
+        <>
+          {moreEvents && <button onClick={() => void refresh()}>Load more activity</button>}
+          <ol className="activity">
+            {[...events].reverse().map((e) => (
+              <li key={e.sequence}>
+                <span className="activity-dot" />
+                <div>
+                  <strong>{label(e.action)}</strong>
+                  <p>
+                    {e.task_id ?? 'Mission'} · {e.actor}
+                  </p>
+                  {Object.keys(e.details).length > 0 && (
+                    <details>
+                      <summary>Event details</summary>
+                      <pre>{JSON.stringify(e.details, null, 2)}</pre>
+                    </details>
+                  )}
+                  <small>{date(e.timestamp)}</small>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </>
       )}
     </section>
   );

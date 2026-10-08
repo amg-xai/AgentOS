@@ -105,7 +105,7 @@ function workflow(initialFailed = false, brokenArtifact = false, reviewOutsidePa
               ]
             : [],
         );
-      if (path.endsWith('/artifacts'))
+      if (path.includes('/artifacts?'))
         return respond(
           mission.tasks[0].outputs
             ? [
@@ -213,4 +213,10 @@ test('review artifacts remain inspectable outside the first history page', async
   await user.click(screen.getByRole('button', { name: 'Inspect artifacts →' }));
   expect(await screen.findByText('<script>untrusted artifact text</script>')).toBeInTheDocument();
   expect(screen.getByLabelText('Result artifact')).toHaveValue('diff-1');
+  await user.click(screen.getByRole('button', { name: 'Accept result' }));
+  await waitFor(() =>
+    expect(screen.queryByRole('button', { name: 'Accept result' })).not.toBeInTheDocument(),
+  );
+  expect(screen.getByLabelText('Result artifact')).toHaveValue('diff-1');
+  expect(screen.getByRole('option', { name: /tested.diff/ })).toBeInTheDocument();
 });
