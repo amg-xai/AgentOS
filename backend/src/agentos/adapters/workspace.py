@@ -14,6 +14,33 @@ from agentos.domain.missions import StateConflict
 from agentos.domain.workspace import MemoryCreate, MemoryNote, WorkspaceSettings
 
 
+def read_workspace_source(settings: WorkspaceSettings) -> dict[str, str]:
+    """Validate and read selected text without creating or updating runtime state."""
+    root = settings.repository.resolve(strict=True)
+    files = {}
+    total = 0
+    for relative in settings.files:
+        path = root / relative
+        current = path
+        while current != root:
+            if current.is_symlink() or (
+                getattr(current.lstat(), "st_file_attributes", 0)
+                & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
+            ):
+                raise StateConflict("Workspace symlinks and junctions are not supported")
+            current = current.parent
+        if not path.resolve(strict=True).is_relative_to(root):
+            raise StateConflict("Workspace file escapes repository")
+        if path.stat().st_size > 100_000:
+            raise StateConflict("Workspace file exceeds 100 KB")
+        data = path.read_bytes()
+        total += len(data)
+        if total > 512_000 or b"\x00" in data:
+            raise StateConflict("Workspace exceeds 512 KB or contains binary files")
+        files[relative] = data.decode("utf-8").replace("\r\n", "\n")
+    return files
+
+
 class WorkspaceStore:
     def __init__(self, path: Path) -> None:
         self.path = path
@@ -65,28 +92,7 @@ class WorkspaceStore:
                     raise StateConflict("Workspace snapshot integrity check failed")
                 files: dict[str, str] = json.loads(payload)
                 return files
-            root = settings.repository.resolve(strict=True)
-            files = {}
-            total = 0
-            for relative in settings.files:
-                path = root / relative
-                current = path
-                while current != root:
-                    if current.is_symlink() or (
-                        getattr(current.lstat(), "st_file_attributes", 0)
-                        & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
-                    ):
-                        raise StateConflict("Workspace symlinks and junctions are not supported")
-                    current = current.parent
-                if not path.resolve(strict=True).is_relative_to(root):
-                    raise StateConflict("Workspace file escapes repository")
-                if path.stat().st_size > 100_000:
-                    raise StateConflict("Workspace file exceeds 100 KB")
-                data = path.read_bytes()
-                total += len(data)
-                if total > 512_000 or b"\x00" in data:
-                    raise StateConflict("Workspace exceeds 512 KB or contains binary files")
-                files[relative] = data.decode("utf-8").replace("\r\n", "\n")
+            files = read_workspace_source(settings)
             payload = json.dumps(files, ensure_ascii=False, sort_keys=True)
             conn.execute(
                 "INSERT INTO snapshots VALUES (?, ?, ?)",

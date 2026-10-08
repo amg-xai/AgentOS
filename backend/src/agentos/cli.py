@@ -7,6 +7,7 @@ from pathlib import Path
 import uvicorn
 from dotenv import load_dotenv
 
+from agentos.adapters.diagnostics import diagnose
 from agentos.domain.workspace import WorkspaceSettings
 
 
@@ -27,9 +28,10 @@ def setup_sample(root: Path) -> Path:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="AgentOS local Mission Control")
-    parser.add_argument("command", choices=("serve", "setup-sample"))
+    parser.add_argument("command", choices=("serve", "setup-sample", "doctor"))
     parser.add_argument("--root", type=Path, default=Path.cwd())
     parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--json", action="store_true", help="Print doctor results as JSON")
     args = parser.parse_args()
     root = args.root.resolve(strict=True)
     if not (root / "packages").is_dir():
@@ -44,6 +46,15 @@ def main() -> None:
         parser.error("Port must be between 1 and 65535")
     os.chdir(root)
     load_dotenv(root / ".env", override=False)
+    if args.command == "doctor":
+        report = diagnose(root)
+        if args.json:
+            print(report.model_dump_json(indent=2))
+        else:
+            for check in report.checks:
+                print(f"{'PASS' if check.passed else 'BLOCKED'} [{check.id}] {check.detail}")
+            print("Read-only checks only. Live model and browser acceptance remain separate.")
+        raise SystemExit(0 if report.configured_ready else 1)
     print(f"Mission Control: http://127.0.0.1:{args.port}/app/")
     if not (root / "frontend" / "dist" / "index.html").exists():
         parser.error(

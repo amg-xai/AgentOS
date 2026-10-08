@@ -25,6 +25,20 @@ Edit the ignored `.env` file locally. Set `AGENTOS_MODEL` to your chosen model a
 No model is selected implicitly, and desktop sign-in does not supply an API key.
 The launcher reads `.env` without overriding existing environment variables.
 
+Check local prerequisites without contacting a provider or executing project code:
+
+```powershell
+.\.venv\Scripts\python.exe -m agentos doctor
+# Use --json for a structured report; exit 0 means prerequisites pass, 1 means blocked.
+```
+
+The check validates manifests, selected source files, configured runner paths,
+role permissions, provider configuration, and built client assets. It does not
+create databases or snapshots and never prints credentials. Missing provider
+configuration is reported as blocked for real execution; you can still start the
+client and inspect agents, memory, and existing history. A passing local check
+does not establish live model connectivity or complete browser acceptance.
+
 ```powershell
 .\Start-AgentOS.ps1
 # Or, on any supported OS:

@@ -128,3 +128,11 @@ its two failing tests, generate a controlled test patch through mocked model
 transport, execute all three tests successfully in scratch, restart, approve,
 and verify the original sample remains byte-for-byte unchanged. This is model
 transport test evidence, not a live AI acceptance result.
+
+Local startup diagnostics (`python -m agentos doctor`) check manifests, provider
+configuration, permissions, Git, selected source, test runners, and referenced
+client assets without contacting a model, running tests, or creating runtime
+databases. Tests cover missing/invalid settings, absent runners, malformed
+manifests, escaping/remote/missing assets, credential redaction, `.env` loading,
+and CLI exit codes. Live model verification is deferred at the user's request.
+Hosted backend checks now cover both Linux and Windows.
