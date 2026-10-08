@@ -10,6 +10,8 @@ and approval services with scripted generation and actual local tests. Its
 databases, memory, artifacts, and scratch work live under `.agentos/demo/`.
 Normal startup never falls back to demo execution. Demo source fingerprints and
 its fixed goal prevent canned responses from being used for another project.
+The same explicit demo also offers fixed Creator outline/script fixtures with
+persistent provenance and no test execution for content missions.
 
 ## Boundaries
 
@@ -98,3 +100,17 @@ An immutable per-mission source snapshot and explicit notes live in a separately
 versioned workspace database. This leaves mission schema 2 and its history intact.
 Scratch directories isolate patch targets from source files; they do not provide
 OS process isolation. See [local workflow details](docs/local-workflow.md).
+
+Creator is a separate manifest package with two tool-free agents. Its graph binds
+the outline output into the script task and requires review of the script plus
+an exact copy of the outline used. The executor sends only the supplied brief
+and outline to the structured generator, without source or memory enrichment.
+It uses the existing mission schema, artifact store, approval integrity checks,
+and retry/recovery services. No additional database migration is required.
+
+API startup binds executors separately from manifest discovery. `/status` exposes
+readiness for each installed supported workflow; its legacy `workflow_ready`
+field still describes Developer. Creator needs provider configuration in normal
+mode, but no Developer source/test configuration. Invalid Developer workspace
+settings are reported without preventing Creator from starting. Workflow-specific
+diagnostics are available through `doctor --workflow creator`.

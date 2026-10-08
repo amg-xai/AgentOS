@@ -32,8 +32,12 @@ def main() -> None:
     parser.add_argument("--root", type=Path, default=Path.cwd())
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--json", action="store_true", help="Print doctor results as JSON")
+    parser.add_argument("--demo", action="store_true", help="Use isolated scripted workflow demos")
     parser.add_argument(
-        "--demo", action="store_true", help="Use the isolated scripted Calculator demo"
+        "--workflow",
+        choices=("developer", "creator"),
+        default="developer",
+        help="Workflow to check with doctor",
     )
     args = parser.parse_args()
     if args.demo and args.command == "setup-sample":
@@ -52,7 +56,7 @@ def main() -> None:
     os.chdir(root)
     load_dotenv(root / ".env", override=False)
     if args.command == "doctor":
-        report = diagnose(root, demo=args.demo)
+        report = diagnose(root, demo=args.demo, workflow=args.workflow)
         if args.json:
             print(report.model_dump_json(indent=2))
         else:

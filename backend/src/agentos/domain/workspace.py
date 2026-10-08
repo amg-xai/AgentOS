@@ -73,3 +73,7 @@ class MemoryNote(MemoryCreate):
 
 class DeveloperMissionCreate(Definition):
     goal: Annotated[str, Field(min_length=1, max_length=8000)]
+
+
+class CreatorMissionCreate(Definition):
+    goal: Annotated[str, Field(min_length=1, max_length=8000)]

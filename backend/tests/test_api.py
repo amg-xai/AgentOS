@@ -9,8 +9,14 @@ def test_discovery_api(registry, tmp_path):
     with TestClient(create_app(registry, db_path=tmp_path / "api.sqlite3")) as client:
         assert client.get("/health").json() == {"status": "ok", "capability": "discovery"}
         agents = client.get("/agents").json()
-        assert {a["id"] for a in agents} == {"investigation", "code_helper", "testing"}
-        assert client.get("/roles").json()[0]["id"] == "developer"
+        assert {a["id"] for a in agents} == {
+            "investigation",
+            "code_helper",
+            "testing",
+            "creator_outline",
+            "creator_script",
+        }
+        assert {r["id"] for r in client.get("/roles").json()} == {"developer", "creator"}
         assert client.get("/roles/developer").json()["agents"] == [
             "investigation",
             "code_helper",
@@ -41,4 +47,4 @@ def test_environment_package_root(monkeypatch, tmp_path):
     monkeypatch.setenv("AGENTOS_PACKAGES", str(PACKAGES))
     monkeypatch.setenv("AGENTOS_DATABASE", str(tmp_path / "api.sqlite3"))
     with TestClient(create_app()) as client:
-        assert len(client.get("/agents").json()) == 3
+        assert len(client.get("/agents").json()) == 5

@@ -1,0 +1,11 @@
+{
+  "kind": "role",
+  "schema_version": 1,
+  "role": {
+    "id": "creator",
+    "name": "Creator",
+    "description": "Turn a supplied content brief into an outline and a reviewed video script.",
+    "agents": ["creator_outline", "creator_script"],
+    "tools": []
+  }
+}

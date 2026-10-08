@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from agentos.adapters.artifacts import ArtifactStore
+from agentos.adapters.creator import CREATOR_DEMO_GOAL, CreatorDemoGenerator, CreatorExecutor
 from agentos.adapters.demo import (
     DEMO_GOAL,
     DEMO_LABEL,
@@ -48,12 +49,14 @@ from agentos.domain.missions import (
 )
 from agentos.domain.roles import RolePackage
 from agentos.domain.workspace import (
+    CreatorMissionCreate,
     DeveloperMissionCreate,
     MemoryCreate,
     MemoryNote,
     WorkspaceSettings,
 )
 from agentos.services.approvals import ApprovalService
+from agentos.services.creator import creator_mission
 from agentos.services.developer import developer_mission
 from agentos.services.execution import ExecutorRegistry
 from agentos.services.missions import MissionService
@@ -112,8 +115,14 @@ def create_app(
     )
     memory = WorkspaceStore(repository.path.parent / "workspace.sqlite3")
     configuration = Path(os.environ.get("AGENTOS_WORKSPACE_CONFIG", ".agentos/workspace.json"))
+    workspace_error: str | None = None
     if demo_root is None and workspace is None and configuration.exists():
-        workspace = WorkspaceSettings.model_validate_json(configuration.read_text(encoding="utf-8"))
+        try:
+            workspace = WorkspaceSettings.model_validate_json(
+                configuration.read_text(encoding="utf-8")
+            )
+        except (OSError, ValueError):
+            workspace_error = "Developer workspace configuration is invalid; check workspace.json."
     settings = ModelSettings.from_environment() if demo_root is None and model is None else None
     if settings is not None:
         model = ResponsesExecutor(settings)
@@ -130,6 +139,71 @@ def create_app(
         )
         for agent_id in ("investigation", "code_helper", "testing"):
             bindings.register_agent(agent_id, developer)
+    if executors is None and generator is not None:
+        creator = CreatorExecutor(
+            CreatorDemoGenerator() if demo_root is not None else generator,
+            demo=demo_root is not None,
+        )
+        for agent_id in ("creator_outline", "creator_script"):
+            bindings.register_agent(agent_id, creator)
+
+    def workflow_status() -> list[dict[str, object]]:
+        result: list[dict[str, object]] = []
+        for role_id, agents, steps, notice, goal in (
+            (
+                "developer",
+                ("investigation", "code_helper", "testing"),
+                "Investigate → propose a patch → run tests → human review",
+                "Selected source files and relevant notes are sent to the configured model.",
+                DEMO_GOAL,
+            ),
+            (
+                "creator",
+                ("creator_outline", "creator_script"),
+                "Brief → outline → script → human review",
+                "Only the supplied brief and outline are sent to the configured model.",
+                CREATOR_DEMO_GOAL,
+            ),
+        ):
+            try:
+                package = catalog.role(role_id)
+            except KeyError:
+                continue
+            reason = ""
+            if generator is None:
+                reason = "Configure a model provider before creating this workflow."
+            elif role_id == "developer" and workspace is None:
+                reason = workspace_error or "Configure selected source files and test commands."
+            else:
+                try:
+                    if not set(agents) <= set(package.agents):
+                        raise StateConflict("Package is missing required workflow agents")
+                    for agent_id in agents:
+                        bindings.resolve(catalog.agent(agent_id))
+                except (KeyError, StateConflict):
+                    reason = "Required workflow agents or executors are unavailable."
+            result.append(
+                {
+                    "role_id": role_id,
+                    "name": package.name,
+                    "ready": not reason,
+                    "reason": reason,
+                    "steps": steps,
+                    "context_notice": "Fixed scripted scenario. No model calls or source sharing."
+                    if demo_root is not None
+                    else notice,
+                    "demo_goal": goal if demo_root is not None else None,
+                }
+            )
+        return result
+
+    def require_workflow(role_id: str) -> None:
+        item = next((w for w in workflow_status() if w["role_id"] == role_id), None)
+        if item is None or not item["ready"]:
+            raise StateConflict(
+                str(item["reason"]) if item else "Workflow package is not installed"
+            )
+
     orchestrator = Orchestrator(catalog, repository, bindings, storage)
     approvals = ApprovalService(repository, storage)
     app = FastAPI(title="AgentOS", version="0.1.0")
@@ -188,12 +262,16 @@ def create_app(
             "provider_configured": model is not None,
             "model": model.settings.model if model else None,
             "workspace_configured": workspace is not None,
+            "workspace_error": workspace_error,
             "workspace_name": workspace.name if workspace else None,
             "workspace_files": list(workspace.files) if workspace else [],
             "test_commands": workspace.test_commands if workspace else [],
             "user_role": role.value,
             "memory_retrieval": "lexical",
-            "workflow_ready": workspace is not None and generator is not None,
+            "workflow_ready": any(
+                w["role_id"] == "developer" and w["ready"] for w in workflow_status()
+            ),
+            "workflows": workflow_status(),
             "execution_mode": "demo" if demo_root is not None else "live",
             "execution_label": DEMO_LABEL
             if demo_root is not None
@@ -218,15 +296,20 @@ def create_app(
     @app.post("/workflows/developer", status_code=201)
     def create_developer_mission(request: DeveloperMissionCreate) -> Mission:
         require_operator(role)
-        if workspace is None or generator is None:
-            raise StateConflict(
-                "Configure a workspace and model provider before creating a Developer mission"
-            )
+        require_workflow("developer")
         if demo_root is not None:
             if request.goal != DEMO_GOAL:
                 raise StateConflict("Offline demo supports only its fixed Calculator mission")
             demo_workspace(demo_root)
         return missions.create(developer_mission(request.goal))
+
+    @app.post("/workflows/creator", status_code=201)
+    def create_creator_mission(request: CreatorMissionCreate) -> Mission:
+        require_operator(role)
+        require_workflow("creator")
+        if demo_root is not None and request.goal != CREATOR_DEMO_GOAL:
+            raise StateConflict("Offline Creator demo supports only its fixed brief")
+        return missions.create(creator_mission(request.goal))
 
     @app.get("/agents")
     def agents() -> list[AgentDefinition]:
@@ -254,7 +337,7 @@ def create_app(
     def create_mission(request: MissionCreate) -> Mission:
         require_operator(role)
         if demo_root is not None:
-            raise StateConflict("Use the fixed Developer scenario in offline demo mode")
+            raise StateConflict("Use a fixed workflow scenario in offline demo mode")
         return missions.create(request)
 
     @app.get("/missions")

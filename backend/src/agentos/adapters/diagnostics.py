@@ -28,6 +28,7 @@ class SetupReport(Definition):
     checks: tuple[SetupCheck, ...]
     live_provider_verified: bool = False
     execution_mode: str = "live"
+    workflow: str = "developer"
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -68,7 +69,9 @@ def client_assets_valid(directory: Path) -> bool:
         return False
 
 
-def diagnose(root: Path, *, demo: bool = False) -> SetupReport:
+def diagnose(root: Path, *, demo: bool = False, workflow: str = "developer") -> SetupReport:
+    if workflow not in {"developer", "creator"}:
+        raise ValueError("Unknown workflow")
     checks: list[SetupCheck] = []
 
     def record(id: str, passed: bool, detail: str) -> None:
@@ -83,6 +86,13 @@ def diagnose(root: Path, *, demo: bool = False) -> SetupReport:
     try:
         packages = Path("packages" if demo else os.environ.get("AGENTOS_PACKAGES", "packages"))
         registry = load_registry(packages if packages.is_absolute() else root / packages)
+        required = (
+            {"creator_outline", "creator_script"}
+            if workflow == "creator"
+            else {"investigation", "code_helper", "testing"}
+        )
+        if not required <= set(registry.role(workflow).agents):
+            raise ValueError("Package is missing required workflow agents")
         record(
             "packages",
             True,
@@ -116,6 +126,22 @@ def diagnose(root: Path, *, demo: bool = False) -> SetupReport:
         )
     except ValueError:
         record("permissions", False, "AGENTOS_USER_ROLE must be viewer, operator, or admin.")
+    if workflow == "creator":
+        if demo:
+            try:
+                demo_workspace(root)
+                record(
+                    "demo_sample", True, "Bundled Calculator fixture is unchanged for demo startup."
+                )
+            except Exception:
+                record(
+                    "demo_sample", False, "Demo startup requires the unchanged Calculator sample."
+                )
+        assets = client_assets_valid(root / "frontend" / "dist")
+        record("client", assets, "Client assets exist." if assets else "Build the client first.")
+        return SetupReport(
+            checks=tuple(checks), execution_mode="demo" if demo else "live", workflow=workflow
+        )
     record("git", shutil.which("git") is not None, "Git is required for scratch patch checking.")
     config = Path(os.environ.get("AGENTOS_WORKSPACE_CONFIG", ".agentos/workspace.json"))
     try:
@@ -164,4 +190,6 @@ def diagnose(root: Path, *, demo: bool = False) -> SetupReport:
         if assets
         else "Build the client: npm --prefix frontend ci, then npm --prefix frontend run build.",
     )
-    return SetupReport(checks=tuple(checks), execution_mode="demo" if demo else "live")
+    return SetupReport(
+        checks=tuple(checks), execution_mode="demo" if demo else "live", workflow=workflow
+    )

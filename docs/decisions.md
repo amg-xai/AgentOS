@@ -55,3 +55,17 @@ and label the UI and persisted results. Require the fixed sample goal and exact
 normalized source fingerprints. Ignore live provider/storage configuration in
 demo startup; never silently select fixtures when normal configuration is absent.
 This supports local interaction testing without claiming live AI acceptance.
+
+## 2026-10-09: Creator on the shared engine
+
+Add two tool-free Creator agents for a supplied brief, outline, and short script.
+Reuse the existing graph, artifact, review, and persistence services with no schema
+migration. Bind approval to the script and an exact copy of its input outline.
+Keep source files and unrelated workspace memory out of Creator model requests.
+Expose readiness per installed supported workflow so missing or invalid Developer
+workspace settings do not block content work. Retain legacy Developer status fields.
+
+Extend the explicit isolated demo with a fixed Creator scenario and persistent
+fixture labels. Content missions do not execute tests or display a test-pass badge.
+Live AI verification remains deferred; research, media production, publication,
+Student, and Electron remain outside this milestone.
