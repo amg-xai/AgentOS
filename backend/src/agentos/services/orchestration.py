@@ -47,6 +47,10 @@ class Orchestrator:
         self.artifacts = artifacts
         self._active: set[str] = set()
 
+    @property
+    def active_run_count(self) -> int:
+        return len(self._active)
+
     async def run(
         self, mission_id: str, expected_version: int, role: UserRole, actor: str = "local"
     ) -> Mission:

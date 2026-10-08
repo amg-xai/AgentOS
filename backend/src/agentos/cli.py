@@ -2,11 +2,13 @@
 
 import argparse
 import os
+import re
 from pathlib import Path
 
 import uvicorn
 from dotenv import load_dotenv
 
+from agentos.adapters.desktop import serve_desktop
 from agentos.adapters.diagnostics import diagnose
 from agentos.domain.workspace import WorkspaceSettings
 
@@ -33,6 +35,7 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--json", action="store_true", help="Print doctor results as JSON")
     parser.add_argument("--demo", action="store_true", help="Use isolated scripted workflow demos")
+    parser.add_argument("--desktop", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument(
         "--workflow",
         choices=("developer", "creator", "student"),
@@ -40,6 +43,11 @@ def main() -> None:
         help="Workflow to check with doctor",
     )
     args = parser.parse_args()
+    desktop_session = os.environ.get("AGENTOS_DESKTOP_SESSION", "")
+    if args.desktop and (
+        args.command != "serve" or re.fullmatch(r"[0-9a-f]{32}", desktop_session) is None
+    ):
+        parser.error("Desktop startup requires an owned launch session and serve command")
     if args.demo and args.command == "setup-sample":
         parser.error("Demo mode selects its sample without changing workspace configuration")
     root = args.root.resolve(strict=True)
@@ -72,4 +80,12 @@ def main() -> None:
     factory = "create_demo_app" if args.demo else "create_app"
     if args.demo:
         print("Offline demo: scripted responses, no model calls; separate .agentos/demo history.")
-    uvicorn.run(f"agentos.api.app:{factory}", factory=True, host="127.0.0.1", port=args.port)
+    if args.desktop:
+        from agentos.api.app import create_app
+
+        serve_desktop(
+            create_app(demo_root=root if args.demo else None, desktop_session=desktop_session),
+            args.port,
+        )
+    else:
+        uvicorn.run(f"agentos.api.app:{factory}", factory=True, host="127.0.0.1", port=args.port)

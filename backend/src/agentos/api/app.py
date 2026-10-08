@@ -80,6 +80,7 @@ def create_app(
     model: ResponsesExecutor | None = None,
     frontend_root: Path | None = None,
     demo_root: Path | None = None,
+    desktop_session: str | None = None,
 ) -> FastAPI:
     if demo_root is not None:
         if any(
@@ -276,6 +277,8 @@ def create_app(
     def status() -> dict[str, object]:
         return {
             "provider_configured": model is not None,
+            "desktop_session": desktop_session,
+            "active_runs": orchestrator.active_run_count,
             "model": model.settings.model if model else None,
             "workspace_configured": workspace is not None,
             "workspace_error": workspace_error,

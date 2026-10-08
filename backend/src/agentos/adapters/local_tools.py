@@ -90,6 +90,7 @@ class LocalWorkspaceTools:
                 [git, *args],
                 cwd=directory,
                 env=minimal_environment(),
+                stdin=subprocess.DEVNULL,
                 capture_output=True,
                 timeout=15,
                 check=False,
