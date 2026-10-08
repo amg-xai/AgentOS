@@ -35,9 +35,16 @@ export function MissionDetail({
         api<Approval[]>(`${base}/approvals`),
         api<unknown>(`${base}/run`),
       ]);
+      // Current review artifacts must remain inspectable beyond the history page.
+      const missing = [...new Set(p.flatMap((item) => item.payload?.artifact_refs ?? []))].filter(
+        (ref) => !a.some((item) => item.id === ref),
+      );
+      const reviewArtifacts = await Promise.all(
+        missing.map((ref) => api<Artifact>(`/artifacts/${encodeURIComponent(ref)}`)),
+      );
       setMission(m);
       setEvents(e);
-      setArtifacts(a);
+      setArtifacts([...a, ...reviewArtifacts]);
       setApprovals(p);
       setClaim(c);
       setArtifact(

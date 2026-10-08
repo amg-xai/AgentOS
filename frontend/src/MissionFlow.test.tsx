@@ -4,7 +4,7 @@ import { expect, test, vi } from 'vitest';
 import type { Mission } from './api';
 import { App } from './App';
 
-function workflow(initialFailed = false, brokenArtifact = false) {
+function workflow(initialFailed = false, brokenArtifact = false, reviewOutsidePage = false) {
   let mission: Mission = {
     id: 'mission-1',
     goal: 'Fix calculator addition',
@@ -116,19 +116,31 @@ function workflow(initialFailed = false, brokenArtifact = false) {
                   sha256: 'b'.repeat(64),
                   size: 42,
                 },
-                {
-                  id: 'diff-1',
-                  name: 'tested.diff',
-                  task_id: 'verify',
-                  sha256: 'a'.repeat(64),
-                  size: 42,
-                },
+                ...(!reviewOutsidePage
+                  ? [
+                      {
+                        id: 'diff-1',
+                        name: 'tested.diff',
+                        task_id: 'verify',
+                        sha256: 'a'.repeat(64),
+                        size: 42,
+                      },
+                    ]
+                  : []),
               ]
             : [],
         );
       if (path === '/artifacts/diff-1/content')
         return new Response('<script>untrusted artifact text</script>', {
           status: brokenArtifact ? 409 : 200,
+        });
+      if (path === '/artifacts/diff-1')
+        return respond({
+          id: 'diff-1',
+          name: 'tested.diff',
+          task_id: 'verify',
+          sha256: 'a'.repeat(64),
+          size: 42,
         });
       if (path === '/artifacts/upstream-1/content') return new Response('Earlier task proposal');
       if (path === '/memory') return respond({ id: 'saved-reference' }, 201);
@@ -189,4 +201,16 @@ test('artifact integrity failure is shown without rendering content', async () =
     'Artifact could not be loaded or failed its integrity check',
   );
   expect(screen.queryByText('<script>untrusted artifact text</script>')).not.toBeInTheDocument();
+});
+
+test('review artifacts remain inspectable outside the first history page', async () => {
+  workflow(false, false, true);
+  const user = userEvent.setup();
+  render(<App />);
+  await user.click(await screen.findByRole('button', { name: /Fix calculator addition/ }));
+  await user.click(await screen.findByRole('button', { name: 'Run mission' }));
+  expect(await screen.findByText('Review attempt 1: tested.diff')).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Inspect artifacts →' }));
+  expect(await screen.findByText('<script>untrusted artifact text</script>')).toBeInTheDocument();
+  expect(screen.getByLabelText('Result artifact')).toHaveValue('diff-1');
 });

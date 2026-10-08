@@ -136,3 +136,9 @@ databases. Tests cover missing/invalid settings, absent runners, malformed
 manifests, escaping/remote/missing assets, credential redaction, `.env` loading,
 and CLI exit codes. Live model verification is deferred at the user's request.
 Hosted backend checks now cover both Linux and Windows.
+
+The current suite passes 151 backend tests locally (two symlink skips on this
+Windows account) and nine React component tests. The client additionally fetches
+current approval artifact metadata when those artifacts are outside the first
+history page, with a regression test confirming they can still be inspected.
+Backend lint/format/types and frontend production build/format checks pass.
