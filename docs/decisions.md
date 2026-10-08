@@ -31,3 +31,17 @@ Keep implementation proposals and review notes out of new commits. Retain
 architecture, product contracts, setup instructions, and validation evidence as
 project documentation. Each implementation commit must form a coherent,
 reviewed milestone with relevant checks passing.
+
+## 2026-10-08: First local product workflow
+
+Use a configured Responses-compatible provider with strict structured outputs,
+selected immutable source snapshots, and registered local tools. Keep test argv
+arrays in server-side configuration; do not give models shell access. Scratch
+directories protect patch targets but are not an OS sandbox. The source project
+is preserved, and review accepts a result without applying or publishing it.
+
+Store workspace notes and source snapshots in a separately versioned SQLite
+database to preserve the mission database contract. Use explicit lexical memory
+retrieval first. Serve the built React client from the same loopback FastAPI
+origin. Keep local configuration, credentials, runtime data, and review material
+ignored; commit the client lockfile, launcher, sample project, and setup guide.

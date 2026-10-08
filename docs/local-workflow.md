@@ -27,8 +27,8 @@ the patch in a new application-owned scratch directory. Each test attempt gets a
 fresh directory from the snapshot. Source files are never targeted by patch
 application. Scratch directories are retained locally for inspection.
 
-**Scratch execution is not an OS security sandbox.** Test code runs with the
-server user's privileges and can access the host. Select only trusted projects
+**Scratch execution is not an OS security sandbox.** Tests and generated code run
+with the server user's privileges and can access the host. Select trusted projects
 and inspect configured commands. Network/process isolation and automatic scratch
 cleanup are deferred. This scope does not enable arbitrary model-driven commands,
 publishing, deployments, or changes to the original checkout.

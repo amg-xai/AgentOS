@@ -31,7 +31,7 @@ backend/
     api/
   tests/
 packages/              # Versioned role and agent manifests
-frontend/              # Added when API-backed workflows are usable
+frontend/              # React/TypeScript Mission Control, served at /app/
 docs/
 ```
 

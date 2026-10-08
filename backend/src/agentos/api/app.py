@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from agentos.adapters.artifacts import ArtifactStore
+from agentos.adapters.developer import DeveloperExecutor, register_local_tools
 from agentos.adapters.local_tools import LocalWorkspaceTools
 from agentos.adapters.manifests import load_registry
 from agentos.adapters.provider import ModelSettings, ResponsesExecutor
@@ -44,7 +45,7 @@ from agentos.domain.workspace import (
     WorkspaceSettings,
 )
 from agentos.services.approvals import ApprovalService
-from agentos.services.developer import DeveloperExecutor, developer_mission, register_local_tools
+from agentos.services.developer import developer_mission
 from agentos.services.execution import ExecutorRegistry
 from agentos.services.missions import MissionService
 from agentos.services.orchestration import Orchestrator
@@ -116,6 +117,7 @@ def create_app(
             return JSONResponse(status_code=415, content={"detail": "JSON requests are required"})
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "no-referrer"
         if request.url.path.startswith("/app"):
             response.headers["Content-Security-Policy"] = (

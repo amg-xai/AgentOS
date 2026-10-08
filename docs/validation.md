@@ -79,3 +79,38 @@ No real model provider or production tool is connected by default. Review accept
 an immutable staged result; it does not authorize an external/destructive action.
 High-impact tool dispatch remains disabled. The product still needs a real local
 Developer workflow, workspace memory, and Mission Control before acceptance testing.
+
+## Local Developer workflow and Mission Control
+
+Validated on Windows on 2026-10-08:
+
+- 135 backend tests passed; two symlink tests were skipped because this account
+  cannot create symlinks. Provider transport is mocked; filesystem reads, Git
+  patch checking/application, subprocess tests, SQLite persistence, and result
+  approvals run against real local adapters.
+- Coverage includes immutable source snapshots, source preservation, restart,
+  memory retrieval, provider failure and retry, denial, path/command restrictions,
+  timeouts, output limits, child credential removal, corrupted snapshots, unknown
+  workspace schemas, browser-origin/Host rejection, JSON-only writes, client
+  asset serving, and non-overwriting sample setup. Earlier migration, recovery,
+  concurrency, and approval integrity tests remain passing.
+- Eight React component tests passed in JSDOM. They exercise configuration and
+  connection states, viewer controls, creation failures, memory, a complete
+  create/run/inspect/accept flow, denial/retry, and artifact integrity failures.
+  Artifact contents are rendered as text rather than executable HTML.
+- TypeScript compilation, Vite production build, Prettier checks, backend Ruff
+  lint/format checks, and strict Mypy passed. Mypy was also checked with Linux's
+  platform definitions. The backend runtime is Python 3.14.7 locally; hosted
+  backend checks continue to use Python 3.11 on Linux.
+- The provider and scoped-workflow commits passed hosted backend CI. Separate
+  Mission Control CI now installs the committed npm lockfile and runs component
+  tests, TypeScript/production build, and formatting checks.
+
+**Remaining acceptance evidence:** No real model credentials are configured in
+this environment, so no live AI result is claimed. The browser security policy
+denied opening the loopback app; no alternate browser or policy workaround was
+used. JSDOM tests do not replace browser visual, responsive, or accessibility
+verification. Complete the real-provider and browser walkthrough in
+[getting-started.md](getting-started.md) before declaring the product acceptance
+ready. Scratch execution is not an OS sandbox; external integrations, remote
+auth, Electron packaging, and semantic embeddings remain outside this milestone.

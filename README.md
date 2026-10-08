@@ -14,7 +14,12 @@ The Developer workflow now connects a configured structured model provider to
 scoped source snapshots, scratch-only patch checking, and actual test execution.
 Workspace notes persist with lexical retrieval. Model and workspace configuration
 are explicit; the default application never silently runs test fixtures.
-The Mission Control client is the next part of this milestone.
+React/TypeScript Mission Control provides mission creation, execution history,
+artifact inspection, result approval/denial, retry, and workspace memory.
+
+Start with the [local setup and acceptance guide](docs/getting-started.md).
+Live AI acceptance still requires a configured model endpoint and credentials;
+automated model tests use mocked transport. Browser visual verification is pending.
 
 See [provider setup](docs/providers.md) and [local workflow scope](docs/local-workflow.md).
 
@@ -24,7 +29,7 @@ See [provider setup](docs/providers.md) and [local workflow scope](docs/local-wo
 - Build and review one milestone at a time, with tested, coherent commits.
 - Store local credentials in ignored environment files, never in Git.
 
-The proposed stack is Python/FastAPI with SQLite and React/TypeScript.
+The stack is Python/FastAPI with SQLite and React/TypeScript.
 Desktop packaging follows a working local web application.
 
 See [validation evidence](docs/validation.md) for the verified scope and runtime.
@@ -39,6 +44,7 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m uvicorn agentos.api.app:create_app --factory --host 127.0.0.1 --port 8000
 ```
 
+For the client, build `frontend/` and use the launcher in the setup guide.
 Open http://127.0.0.1:8000/docs for API documentation. Available read-only
 endpoints: `/health`, `/agents`, `/agents/{id}`, `/roles`, `/roles/{id}`.
 The health response identifies the current capability as `discovery`.
