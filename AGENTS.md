@@ -15,6 +15,9 @@ ARCHITECTURE.md before changing core behavior; supporting contracts live in docs
   checks, review the diff, and report limitations before committing.
 - Make small, coherent commits using the user's configured Git identity.
   Never add Codex signatures, attribution, or co-author trailers.
+- Keep proposals and review notes Git-ignored (docs/reviews/). Check staged
+  files before every commit. Publish coherent, tested milestones suitable for
+  mentor review; keep essential project documentation tracked.
 
 See docs/product.md for scope, docs/agents.md for agent contracts,
 docs/workflows.md for execution, docs/integrations.md for tools, and

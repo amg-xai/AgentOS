@@ -22,5 +22,12 @@ local commits must not be described as pushed until verified.
 
 Use the recommended Python/FastAPI and React/TypeScript direction. Start with
 agent and role contracts and registry loading. No existing stack is present to
-reuse. Defer LangGraph, vector storage, and Electron until needed. See
-implementation-plan.md for the feature review required by PLAN.md.
+reuse. Defer LangGraph, vector storage, and Electron until needed. Implementation
+proposals and review notes are local ignored documents rather than deliverables.
+
+## 2026-10-08: Presentation and review material
+
+Keep implementation proposals and review notes out of new commits. Retain
+architecture, product contracts, setup instructions, and validation evidence as
+project documentation. Each implementation commit must form a coherent,
+reviewed milestone with relevant checks passing.
