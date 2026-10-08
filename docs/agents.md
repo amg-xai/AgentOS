@@ -24,3 +24,12 @@ Creator bounds briefs to 8,000 characters and each generated outline/script to
 outputs. The script task owns `script.md` and `reviewed-outline.md`, so approval
 integrity checks cover both the result and the exact outline it used. Denial and
 retry regenerate the script without rerunning the completed outline.
+
+Student provides tool-free `student_notes` and `student_quiz` agents. The notes
+agent receives an 8,000-character study brief; its notes are bounded to 24,000
+characters. Quiz receives the brief and bound notes without workspace enrichment.
+Its structured output has 3–8 questions, each with a bounded prompt, exactly four
+choices, an answer index from 0 to 3, and an explanation. Unknown properties and
+invalid output fail before artifact creation. Questions and answers render into
+separate files; the quiz task also owns its input notes copy for review integrity.
+Retrying a failed or denied quiz preserves the completed notes and old artifacts.

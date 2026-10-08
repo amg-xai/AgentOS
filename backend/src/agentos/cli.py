@@ -35,7 +35,7 @@ def main() -> None:
     parser.add_argument("--demo", action="store_true", help="Use isolated scripted workflow demos")
     parser.add_argument(
         "--workflow",
-        choices=("developer", "creator"),
+        choices=("developer", "creator", "student"),
         default="developer",
         help="Workflow to check with doctor",
     )

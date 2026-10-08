@@ -69,3 +69,17 @@ Extend the explicit isolated demo with a fixed Creator scenario and persistent
 fixture labels. Content missions do not execute tests or display a test-pass badge.
 Live AI verification remains deferred; research, media production, publication,
 Student, and Electron remain outside this milestone.
+
+## 2026-10-09: Student study bundle
+
+Add two manifest-loaded, tool-free agents for supplied study material → notes →
+quiz and answer key → human review. Use structured questions with bounded text,
+exactly four choices, and a valid answer index, then render separate question and
+answer files. Bind review to both files plus the exact input notes; retain the
+existing database schema and permission/approval services.
+
+Student normal execution requires the configured provider but no Developer source
+or test runner. Add a fixed labelled stacks-and-queues scenario in explicit demo
+mode without constructing a model. Preserve all three roles' histories. Review
+does not establish independent correctness or exam readiness. Interactive scoring,
+web research, scheduling, and desktop packaging remain deferred.

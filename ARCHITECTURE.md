@@ -12,6 +12,7 @@ Normal startup never falls back to demo execution. Demo source fingerprints and
 its fixed goal prevent canned responses from being used for another project.
 The same explicit demo also offers fixed Creator outline/script fixtures with
 persistent provenance and no test execution for content missions.
+Student adds a fixed notes/quiz fixture in the same isolated demo history.
 
 ## Boundaries
 
@@ -114,3 +115,12 @@ field still describes Developer. Creator needs provider configuration in normal
 mode, but no Developer source/test configuration. Invalid Developer workspace
 settings are reported without preventing Creator from starting. Workflow-specific
 diagnostics are available through `doctor --workflow creator`.
+
+Student follows the same tool-free adapter pattern: supplied study material flows
+to notes, then dependency-bound notes flow to a structured multiple-choice quiz.
+Strict schemas bound question count, four choices, answer indices, and text lengths.
+The executor renders separate questions and answers; final review owns `quiz.md`,
+`answer-key.md`, and the exact `reviewed-notes.md` used. It adds no source or memory
+enrichment and needs no Developer workspace/test configuration. Existing mission
+schema 2, retries, artifact integrity, and approval services remain unchanged.
+`doctor --workflow student` checks its prerequisites without contacting a provider.

@@ -70,7 +70,7 @@ def client_assets_valid(directory: Path) -> bool:
 
 
 def diagnose(root: Path, *, demo: bool = False, workflow: str = "developer") -> SetupReport:
-    if workflow not in {"developer", "creator"}:
+    if workflow not in {"developer", "creator", "student"}:
         raise ValueError("Unknown workflow")
     checks: list[SetupCheck] = []
 
@@ -87,7 +87,9 @@ def diagnose(root: Path, *, demo: bool = False, workflow: str = "developer") -> 
         packages = Path("packages" if demo else os.environ.get("AGENTOS_PACKAGES", "packages"))
         registry = load_registry(packages if packages.is_absolute() else root / packages)
         required = (
-            {"creator_outline", "creator_script"}
+            {"student_notes", "student_quiz"}
+            if workflow == "student"
+            else {"creator_outline", "creator_script"}
             if workflow == "creator"
             else {"investigation", "code_helper", "testing"}
         )
@@ -126,7 +128,7 @@ def diagnose(root: Path, *, demo: bool = False, workflow: str = "developer") -> 
         )
     except ValueError:
         record("permissions", False, "AGENTOS_USER_ROLE must be viewer, operator, or admin.")
-    if workflow == "creator":
+    if workflow in {"creator", "student"}:
         if demo:
             try:
                 demo_workspace(root)

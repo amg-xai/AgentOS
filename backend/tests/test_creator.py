@@ -86,7 +86,7 @@ def test_creator_without_developer_workspace_restart_review_memory(creator_runti
     with TestClient(app()) as client:
         status = client.get("/status").json()
         readiness = {w["role_id"]: w["ready"] for w in status["workflows"]}
-        assert readiness == {"developer": False, "creator": True}
+        assert readiness == {"developer": False, "creator": True, "student": True}
         assert status["workflow_ready"] is False  # Legacy field still means Developer.
         assert not status["workspace_configured"]
         assert client.post("/workflows/developer", json={"goal": "Fix code"}).status_code == 409

@@ -24,6 +24,7 @@ from agentos.adapters.local_tools import LocalWorkspaceTools
 from agentos.adapters.manifests import load_registry
 from agentos.adapters.provider import ModelSettings, ResponsesExecutor
 from agentos.adapters.sqlite import SQLiteMissionRepository
+from agentos.adapters.student import STUDENT_DEMO_GOAL, StudentDemoGenerator, StudentExecutor
 from agentos.adapters.workspace import WorkspaceStore
 from agentos.domain.agents import AgentDefinition, AgentExecutor, StructuredGenerator
 from agentos.domain.artifacts import Artifact
@@ -53,6 +54,7 @@ from agentos.domain.workspace import (
     DeveloperMissionCreate,
     MemoryCreate,
     MemoryNote,
+    StudentMissionCreate,
     WorkspaceSettings,
 )
 from agentos.services.approvals import ApprovalService
@@ -62,6 +64,7 @@ from agentos.services.execution import ExecutorRegistry
 from agentos.services.missions import MissionService
 from agentos.services.orchestration import Orchestrator
 from agentos.services.registry import AgentRegistry
+from agentos.services.student import student_mission
 from agentos.services.tools import ToolRegistry
 
 
@@ -146,6 +149,12 @@ def create_app(
         )
         for agent_id in ("creator_outline", "creator_script"):
             bindings.register_agent(agent_id, creator)
+        student = StudentExecutor(
+            StudentDemoGenerator() if demo_root is not None else generator,
+            demo=demo_root is not None,
+        )
+        for agent_id in ("student_notes", "student_quiz"):
+            bindings.register_agent(agent_id, student)
 
     def workflow_status() -> list[dict[str, object]]:
         result: list[dict[str, object]] = []
@@ -163,6 +172,13 @@ def create_app(
                 "Brief → outline → script → human review",
                 "Only the supplied brief and outline are sent to the configured model.",
                 CREATOR_DEMO_GOAL,
+            ),
+            (
+                "student",
+                ("student_notes", "student_quiz"),
+                "Study brief → notes → quiz and answer key → human review",
+                "Only the supplied study brief and notes are sent to the configured model.",
+                STUDENT_DEMO_GOAL,
             ),
         ):
             try:
@@ -310,6 +326,14 @@ def create_app(
         if demo_root is not None and request.goal != CREATOR_DEMO_GOAL:
             raise StateConflict("Offline Creator demo supports only its fixed brief")
         return missions.create(creator_mission(request.goal))
+
+    @app.post("/workflows/student", status_code=201)
+    def create_student_mission(request: StudentMissionCreate) -> Mission:
+        require_operator(role)
+        require_workflow("student")
+        if demo_root is not None and request.goal != STUDENT_DEMO_GOAL:
+            raise StateConflict("Offline Student demo supports only its fixed study brief")
+        return missions.create(student_mission(request.goal))
 
     @app.get("/agents")
     def agents() -> list[AgentDefinition]:
