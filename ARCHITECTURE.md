@@ -1,8 +1,9 @@
 # Architecture
 
 Status: registry, role loading, persisted missions, explicit orchestration,
-result approvals, artifacts, tool contracts, and a local API implemented.
-Production model/tool adapters, workspace memory, and clients are planned.
+result approvals, artifacts, scoped local tools, a configurable model adapter,
+workspace memory, and React Mission Control are implemented. Live provider and
+browser acceptance verification remain outstanding.
 
 ## Boundaries
 

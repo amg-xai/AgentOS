@@ -66,7 +66,8 @@ automatic dependency installation or model-selected command execution occurs.
 4. Select **Run mission**. Follow task states and Activity. The two model-backed
    agents investigate and generate a patch; the testing agent runs the configured
    command in a fresh scratch checkout. The app does not silently substitute fixtures.
-5. Inspect `findings.md`, `proposed.diff`, `change-summary.md`, and `test-report.txt`.
+5. Inspect `findings.md`, `proposed.diff`, `change-summary.md`, `tested.diff`, and
+   `test-report.txt`. The review gate identifies its attempt and bound artifacts.
    Confirm the diff fixes subtraction and the actual report shows all three tests
    passing. Failed tests are labelled failed; accepting a result does not alter that.
 6. At the review gate, accept the result. The mission becomes completed without

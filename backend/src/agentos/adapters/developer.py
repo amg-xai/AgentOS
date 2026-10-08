@@ -52,6 +52,9 @@ class DeveloperExecutor:
                 outputs=outputs,
                 artifacts=(
                     ArtifactDraft(
+                        name="tested.diff", media_type="text/x-diff", content=inputs["diff"]
+                    ),
+                    ArtifactDraft(
                         name="test-report.txt", media_type="text/plain", content=outputs["report"]
                     ),
                 ),

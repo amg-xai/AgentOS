@@ -99,6 +99,8 @@ function workflow(initialFailed = false, brokenArtifact = false) {
                   task_id: 'verify',
                   payload_digest: 'digest-bound-to-result',
                   status: 'PENDING',
+                  task_attempt: mission.tasks[0].attempts,
+                  payload: { artifact_refs: ['diff-1'] },
                 },
               ]
             : [],
@@ -108,8 +110,15 @@ function workflow(initialFailed = false, brokenArtifact = false) {
           mission.tasks[0].outputs
             ? [
                 {
-                  id: 'diff-1',
+                  id: 'upstream-1',
                   name: 'proposed.diff',
+                  task_id: 'fix',
+                  sha256: 'b'.repeat(64),
+                  size: 42,
+                },
+                {
+                  id: 'diff-1',
+                  name: 'tested.diff',
                   task_id: 'verify',
                   sha256: 'a'.repeat(64),
                   size: 42,
@@ -121,6 +130,7 @@ function workflow(initialFailed = false, brokenArtifact = false) {
         return new Response('<script>untrusted artifact text</script>', {
           status: brokenArtifact ? 409 : 200,
         });
+      if (path === '/artifacts/upstream-1/content') return new Response('Earlier task proposal');
       if (path === '/memory') return respond({ id: 'saved-reference' }, 201);
       return respond([]);
     }),
@@ -141,8 +151,10 @@ test('create, execute, inspect artifact safely, save context, and accept the bou
   await user.click(screen.getByRole('button', { name: 'Create mission' }));
   await user.click(await screen.findByRole('button', { name: 'Run mission' }));
   expect(await screen.findByText('Tests passed')).toBeInTheDocument();
+  expect(screen.getByText('Review attempt 1: tested.diff')).toBeInTheDocument();
   await user.click(screen.getByRole('button', { name: 'Inspect artifacts →' }));
   expect(await screen.findByText('<script>untrusted artifact text</script>')).toBeInTheDocument();
+  expect(screen.getByLabelText('Result artifact')).toHaveValue('diff-1');
   expect(document.querySelector('pre script')).toBeNull();
   await user.click(screen.getByRole('button', { name: 'Save artifact reference to memory' }));
   expect(await screen.findByText('Saved to workspace memory.')).toBeInTheDocument();

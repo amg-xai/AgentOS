@@ -33,5 +33,8 @@ output; it cannot authorize tool side effects.
 
 SQLite's tool audit recorder checks the current execution claim, workspace, and
 RUNNING task scope. Claim tokens are internal execution context and are not
-persisted in audit details. No production tool executors or arbitrary HTTP tool
-dispatch endpoint are shipped yet. Tests use explicitly labelled toy executors.
+persisted in audit details. The Developer adapter now registers scoped source
+reads, scratch patch checks, and configured test execution. These tools are used
+through the same permission and audit boundary. No arbitrary HTTP tool dispatch
+endpoint is exposed. Scratch execution is not an OS sandbox; see
+[local workflow scope](local-workflow.md).

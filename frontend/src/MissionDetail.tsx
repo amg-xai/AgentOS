@@ -168,7 +168,23 @@ export function MissionDetail({
             Inspect the diff and test report. Acceptance records this result; it does not change the
             source project or publish anything.
           </p>
-          <button className="text-button" onClick={() => setTab('artifacts')}>
+          {p.payload?.artifact_refs && (
+            <p>
+              Review attempt {p.task_attempt}:{' '}
+              {p.payload.artifact_refs
+                .map((ref) => artifacts.find((a) => a.id === ref)?.name ?? ref)
+                .join(', ')}
+            </p>
+          )}
+          <button
+            className="text-button"
+            onClick={() => {
+              const review = artifacts.filter((a) => p.payload?.artifact_refs?.includes(a.id));
+              const preferred = review.find((a) => a.name === 'tested.diff') ?? review[0];
+              if (preferred) setArtifact(preferred.id);
+              setTab('artifacts');
+            }}
+          >
             Inspect artifacts →
           </button>
           <div className="approval-actions">
@@ -260,6 +276,9 @@ export function MissionDetail({
               <select id="artifact" value={artifact} onChange={(e) => setArtifact(e.target.value)}>
                 {artifacts.map((a) => (
                   <option key={a.id} value={a.id}>
+                    {approvals.some((p) => p.payload?.artifact_refs?.includes(a.id))
+                      ? 'Review: '
+                      : ''}
                     {a.name} · {a.task_id} · {a.size} bytes ·{' '}
                     {a.created_at ? date(a.created_at) : a.id.slice(0, 8)}
                   </option>

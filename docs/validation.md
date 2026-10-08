@@ -114,3 +114,17 @@ verification. Complete the real-provider and browser walkthrough in
 [getting-started.md](getting-started.md) before declaring the product acceptance
 ready. Scratch execution is not an OS sandbox; external integrations, remote
 auth, Electron packaging, and semantic embeddings remain outside this milestone.
+
+## Review bundle and bundled sample verification
+
+The Developer review result now owns both `tested.diff` and `test-report.txt`.
+Approval integrity checks therefore cover the tested patch directly. A damaged
+tested patch blocks acceptance while still allowing denial. Mission Control
+identifies the review attempt and covered artifacts, and opens the bound patch
+instead of an earlier task's proposal.
+
+The bundled Calculator project is covered by an integration check: reproduce
+its two failing tests, generate a controlled test patch through mocked model
+transport, execute all three tests successfully in scratch, restart, approve,
+and verify the original sample remains byte-for-byte unchanged. This is model
+transport test evidence, not a live AI acceptance result.

@@ -1,8 +1,13 @@
 """Real filesystem/Git/subprocess integration; only the model transport is mocked."""
 
 import asyncio
+import difflib
 import json
+import shutil
 import sqlite3
+import subprocess
+import sys
+from pathlib import Path
 
 import httpx
 import pytest
@@ -95,7 +100,7 @@ def test_complete_workflow_real_tools_restart_and_approval(tmp_path, workspace, 
         assert result["tasks"][2]["outputs"]["passed"] is True
         assert "Exit code: 0" in result["tasks"][2]["outputs"]["report"]
         artifacts = client.get(base + "/artifacts").json()
-        assert len(artifacts) == 4
+        assert len(artifacts) == 5
         diff = next(a for a in artifacts if a["name"] == "proposed.diff")
         assert client.get(f"/artifacts/{diff['id']}/content").text == PATCH
         assert (
@@ -301,3 +306,110 @@ def test_selected_symlink_is_rejected(tmp_path, workspace):
     config = WorkspaceSettings(**(workspace.model_dump() | {"files": ("link.py",)}))
     with pytest.raises(StateConflict):
         WorkspaceStore(tmp_path / "workspace.sqlite3").snapshot("mission", config)
+
+
+def test_review_binds_the_tested_patch_and_rejects_damage(tmp_path, workspace):
+    with TestClient(configured_app(tmp_path, workspace)) as client:
+        mission = client.post("/workflows/developer", json={"goal": "Fix addition"}).json()
+        base = f"/missions/{mission['id']}"
+        mission = client.post(base + "/run", json={"expected_version": 1}).json()
+        approval = client.get(base + "/approvals").json()[0]
+        artifacts = client.get(base + "/artifacts").json()
+        covered = [a for a in artifacts if a["id"] in approval["payload"]["artifact_refs"]]
+        assert {a["name"] for a in covered} == {"tested.diff", "test-report.txt"}
+        tested = next(a for a in covered if a["name"] == "tested.diff")
+        assert client.get(f"/artifacts/{tested['id']}/content").text == PATCH
+        path = tmp_path / "artifacts" / f"{tested['id']}.txt"
+        path.write_text("corrupted patch", encoding="utf-8")
+        payload = {
+            "expected_version": mission["version"],
+            "decision": "approve",
+            "payload_digest": approval["payload_digest"],
+        }
+        assert client.post(f"/approvals/{approval['id']}/decision", json=payload).status_code == 409
+        assert client.get(base).json()["status"] == "WAITING_APPROVAL"
+        denied = client.post(
+            f"/approvals/{approval['id']}/decision", json=payload | {"decision": "deny"}
+        )
+        assert denied.status_code == 200
+        assert denied.json()["status"] == "FAILED"
+
+
+def test_bundled_acceptance_project_bug_fix_restart_and_source_preservation(tmp_path):
+    source = Path(__file__).resolve().parents[2] / "samples" / "calculator"
+    original = {
+        name: (source / name).read_bytes()
+        for name in ("calculator.py", "test_calculator.py", "README.md")
+    }
+    baseline = tmp_path / "baseline"
+    shutil.copytree(source, baseline, ignore=shutil.ignore_patterns("__pycache__"))
+    bug = subprocess.run(
+        [sys.executable, "-m", "unittest", "discover", "-v"],
+        cwd=baseline,
+        env=minimal_environment(),
+        capture_output=True,
+        timeout=15,
+    )
+    assert bug.returncode != 0
+    assert "failures=2" in bug.stderr.decode()
+    config = WorkspaceSettings(
+        name="Bundled acceptance project",
+        repository=source,
+        files=tuple(original),
+        test_commands=(("python", "-m", "unittest", "discover", "-v"),),
+    )
+
+    def transport(request):
+        body = json.loads(request.content)
+        inputs = json.loads(body["input"])
+        text = inputs["source_files"]["calculator.py"]
+        patch = "".join(
+            difflib.unified_diff(
+                text.splitlines(keepends=True),
+                text.replace("return left - right", "return left + right").splitlines(
+                    keepends=True
+                ),
+                fromfile="a/calculator.py",
+                tofile="b/calculator.py",
+            )
+        )
+        outputs = (
+            {"findings": "The implementation subtracts; tests cover positive, negative, and zero."}
+            if body["text"]["format"]["name"] == "investigation"
+            else {"diff": patch, "summary": "Correct the operator without changing any tests."}
+        )
+        return httpx.Response(
+            200,
+            json={
+                "status": "completed",
+                "output": [
+                    {
+                        "type": "message",
+                        "content": [{"type": "output_text", "text": json.dumps(outputs)}],
+                    }
+                ],
+            },
+        )
+
+    with TestClient(configured_app(tmp_path, config, transport)) as client:
+        mission = client.post(
+            "/workflows/developer", json={"goal": "Fix the bundled sample without weakening tests"}
+        ).json()
+        base = f"/missions/{mission['id']}"
+        mission = client.post(base + "/run", json={"expected_version": 1}).json()
+        assert mission["status"] == "WAITING_APPROVAL", mission
+        assert mission["tasks"][2]["outputs"]["passed"] is True
+        assert "Ran 3 tests" in mission["tasks"][2]["outputs"]["report"]
+    with TestClient(configured_app(tmp_path, config, transport)) as client:
+        approval = client.get(base + "/approvals").json()[0]
+        result = client.post(
+            f"/approvals/{approval['id']}/decision",
+            json={
+                "expected_version": mission["version"],
+                "decision": "approve",
+                "payload_digest": approval["payload_digest"],
+            },
+        )
+        assert result.status_code == 200
+        assert result.json()["status"] == "COMPLETED"
+    assert original == {name: (source / name).read_bytes() for name in original}

@@ -34,7 +34,10 @@ cleanup are deferred. This scope does not enable arbitrary model-driven commands
 publishing, deployments, or changes to the original checkout.
 
 `POST /workflows/developer` builds the investigation → patch → tests/review graph.
-The result stops for human approval after actual testing. Inspect `passed` and
+The result stops for human approval after actual testing. Its review bundle owns
+`tested.diff` and `test-report.txt`, so approval verifies the exact tested patch
+as well as the report. The earlier `proposed.diff` remains investigation history.
+Inspect `passed` and
 the report: accepting a result records human acceptance, and does not convert a
 failing test into a pass. Denial fails the review task; retry reruns tests in fresh
 scratch. Existing recovery rules apply after interrupted runs.

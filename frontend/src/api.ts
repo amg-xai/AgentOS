@@ -51,6 +51,8 @@ export interface Approval {
   task_id: string;
   payload_digest: string;
   status: string;
+  task_attempt?: number;
+  payload?: { artifact_refs?: string[] };
 }
 export interface Activity {
   sequence: number;
