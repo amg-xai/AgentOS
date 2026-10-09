@@ -101,7 +101,9 @@ export function MissionDetail({
     setArtifactError('');
     setSaved(false);
     artifactText(artifact, controller.signal)
-      .then(setText)
+      .then((content) => {
+        if (!controller.signal.aborted) setText(content);
+      })
       .catch((e) => {
         if (!controller.signal.aborted) setArtifactError(errorMessage(e));
       })

@@ -383,3 +383,13 @@ History search is ready for offline interaction testing using the
 scan history; the compatible array API does not supply an exact filtered total or
 next-page token. Native/browser visual and screen-reader acceptance remain
 unverified under the existing browser restriction. Live model testing is deferred.
+
+## Artifact preview response ordering
+
+Validated on Windows on 2026-10-09: all 40 React/JSDOM tests pass. A regression
+holds an older artifact response body until a different artifact is selected and
+displayed, then verifies the canceled body cannot replace the current preview.
+The selected filename and download link continue to identify the current content.
+TypeScript/Vite production build and frontend Prettier pass. No API, storage,
+permission, or provider behavior changes. Native visual/accessibility acceptance
+remains manual; live model testing remains deferred.
