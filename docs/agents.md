@@ -12,8 +12,9 @@ Role manifests reference registered agents and declared tools. Validate missing
 references, duplicate ids, malformed schemas, and invalid permission values at
 load time. Activation selects capabilities; it never bypasses permission checks.
 
-Developer provides investigation, code changes, testing, and a tool-free planning
-agent. Normal routing uses declared capabilities, rather than canonical agent IDs;
+Developer provides investigation, code changes, testing, deterministic baseline
+testing, and a tool-free planning agent. Normal routing uses declared capabilities,
+rather than canonical agent IDs;
 the offline preset remains explicit. See [Developer planning](developer-planning.md).
 Its executor composes the structured generator with registered local tools and scoped project
 context. Creator provides `creator_outline` and `creator_script`, with no tools.

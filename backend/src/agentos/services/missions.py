@@ -100,6 +100,7 @@ class MissionService:
                     action="mission_planned",
                     details={
                         "planner_id": request.planning.planner_id,
+                        "contract_version": request.planning.contract_version,
                         "tasks": len(mission.tasks),
                     },
                 )

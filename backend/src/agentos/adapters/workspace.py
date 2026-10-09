@@ -3,11 +3,14 @@
 import hashlib
 import json
 import re
+import shutil
 import sqlite3
 import stat
+import sys
 from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 from uuid import uuid4
 
 from agentos.domain.missions import StateConflict
@@ -48,7 +51,7 @@ class WorkspaceStore:
         with closing(sqlite3.connect(path)) as conn, conn:
             conn.execute("BEGIN IMMEDIATE")
             version = conn.execute("PRAGMA user_version").fetchone()[0]
-            if version not in {0, 1}:
+            if version not in {0, 1, 2}:
                 raise RuntimeError("Unsupported workspace database version")
             if version == 0:
                 conn.execute("CREATE TABLE notes(id TEXT PRIMARY KEY, payload TEXT NOT NULL)")
@@ -56,7 +59,71 @@ class WorkspaceStore:
                     "CREATE TABLE snapshots(mission_id TEXT PRIMARY KEY, payload TEXT NOT NULL, "
                     "digest TEXT NOT NULL)"
                 )
-                conn.execute("PRAGMA user_version = 1")
+            if version < 2:
+                conn.execute(
+                    "CREATE TABLE recipes(mission_id TEXT PRIMARY KEY, payload TEXT NOT NULL, "
+                    "digest TEXT NOT NULL, source_digest TEXT NOT NULL)"
+                )
+                conn.execute("PRAGMA user_version = 2")
+
+    def execution_snapshot(
+        self, mission_id: str, settings: WorkspaceSettings
+    ) -> tuple[dict[str, str], dict[str, Any], str, str]:
+        """Atomically freeze source and resolved argv; never repair partial/damaged evidence."""
+        with closing(sqlite3.connect(self.path)) as conn, conn:
+            conn.execute("BEGIN IMMEDIATE")
+            source = conn.execute(
+                "SELECT payload, digest FROM snapshots WHERE mission_id = ?", (mission_id,)
+            ).fetchone()
+            stored = conn.execute(
+                "SELECT payload, digest, source_digest FROM recipes WHERE mission_id = ?",
+                (mission_id,),
+            ).fetchone()
+            if source or stored:
+                if not source or not stored:
+                    raise StateConflict("Frozen execution evidence is incomplete")
+                source_payload, source_digest = source
+                payload, digest, linked_digest = stored
+                if (
+                    hashlib.sha256(source_payload.encode()).hexdigest() != source_digest
+                    or linked_digest != source_digest
+                    or hashlib.sha256((source_digest + payload).encode()).hexdigest() != digest
+                ):
+                    raise StateConflict("Frozen execution integrity check failed")
+                files = json.loads(source_payload)
+                recipe = json.loads(payload)
+                if recipe["files"] != sorted(files):
+                    raise StateConflict("Frozen execution scope mismatch")
+                return files, recipe, source_digest, digest
+            files = read_workspace_source(settings)
+            commands = []
+            for configured in settings.test_commands:
+                runner = (
+                    sys.executable
+                    if configured[0] in {"python", "python3"}
+                    else shutil.which(configured[0])
+                )
+                if not runner or not Path(runner).is_file():
+                    raise StateConflict("Configured test runner is unavailable")
+                commands.append([str(Path(runner).resolve(strict=True)), *configured[1:]])
+            recipe = {
+                "files": sorted(files),
+                "commands": commands,
+                "timeout_seconds": settings.test_timeout_seconds,
+            }
+            source_payload = json.dumps(files, ensure_ascii=False, sort_keys=True)
+            source_digest = hashlib.sha256(source_payload.encode()).hexdigest()
+            payload = json.dumps(recipe, ensure_ascii=False, sort_keys=True)
+            digest = hashlib.sha256((source_digest + payload).encode()).hexdigest()
+            conn.execute(
+                "INSERT INTO snapshots VALUES (?, ?, ?)",
+                (mission_id, source_payload, source_digest),
+            )
+            conn.execute(
+                "INSERT INTO recipes VALUES (?, ?, ?, ?)",
+                (mission_id, payload, digest, source_digest),
+            )
+            return files, recipe, source_digest, digest
 
     def add_note(self, request: MemoryCreate) -> MemoryNote:
         note = MemoryNote(**request.model_dump(), id=uuid4().hex, created_at=datetime.now(UTC))

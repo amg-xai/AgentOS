@@ -5,6 +5,7 @@ Scratch directories protect source files, not the host OS. Run only trusted code
 
 import asyncio
 import hashlib
+import json
 import os
 import re
 import shutil
@@ -45,8 +46,20 @@ class LocalWorkspaceTools:
     def _read(self, context: ExecutionContext) -> dict[str, Any]:
         if context.workspace_id != "local":
             raise StateConflict("Unknown workspace")
-        files = self.store.snapshot(context.mission_id, self.settings)
+        files = (
+            self.store.execution_snapshot(context.mission_id, self.settings)[0]
+            if context.planning_version == 2
+            else self.store.snapshot(context.mission_id, self.settings)
+        )
         return {"files": files}
+
+    def _scratch(self, files: dict[str, str]) -> Path:
+        directory = Path(tempfile.mkdtemp(prefix="run-", dir=self.scratch))
+        for relative, content in files.items():
+            target = directory / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(content.encode("utf-8"))
+        return directory
 
     def _prepare(self, diff: str, context: ExecutionContext) -> Path:
         if len(diff.encode()) > 200_000 or not diff.strip():
@@ -75,11 +88,7 @@ class LocalWorkspaceTools:
                 raise StateConflict("Patch operation is outside the supported text edit scope")
         if not paths:
             raise StateConflict("Patch has no supported file headers")
-        directory = Path(tempfile.mkdtemp(prefix="run-", dir=self.scratch))
-        for relative, content in files.items():
-            target = directory / relative
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(content.encode("utf-8"))
+        directory = self._scratch(files)
         patch = directory / "agentos-proposed.patch"
         patch.write_bytes(diff.encode("utf-8"))
         git = shutil.which("git")
@@ -104,16 +113,34 @@ class LocalWorkspaceTools:
         return {"checked": True, "scratch_id": directory.name}
 
     async def test(self, inputs: dict[str, Any], context: ExecutionContext) -> dict[str, Any]:
+        if inputs.get("operation") == "baseline":
+            if context.planning_version != 2:
+                raise StateConflict("Baseline requires planning version 2")
+            return await asyncio.to_thread(self._test, None, context)
         return await asyncio.to_thread(self._test, inputs["diff"], context)
 
-    def _test(self, diff: str, context: ExecutionContext) -> dict[str, Any]:
-        directory = self._prepare(diff, context)
+    def _test(self, diff: str | None, context: ExecutionContext) -> dict[str, Any]:
+        files = self._read(context)["files"]
+        commands = self.settings.test_commands
+        timeout = self.settings.test_timeout_seconds
+        digests = []
+        if context.planning_version == 2:
+            files, recipe, source_digest, recipe_digest = self.store.execution_snapshot(
+                context.mission_id, self.settings
+            )
+            commands, timeout = recipe["commands"], recipe["timeout_seconds"]
+            digests = [f"Source SHA-256: {source_digest}", f"Recipe SHA-256: {recipe_digest}"]
+        directory = self._prepare(diff, context) if diff is not None else self._scratch(files)
         reports = [
-            f"Patch SHA-256: {hashlib.sha256(diff.encode()).hexdigest()}",
+            f"Patch SHA-256: {hashlib.sha256(diff.encode()).hexdigest()}"
+            if diff is not None
+            else "Baseline: immutable source without a patch",
             f"Scratch directory: {directory.name}",
+            *digests,
         ]
         passed = True
-        for configured in self.settings.test_commands:
+        outcomes = []
+        for configured in commands:
             command = list(configured)
             if command[0] in {"python", "python3"}:
                 command[0] = sys.executable
@@ -132,14 +159,12 @@ class LocalWorkspaceTools:
                 )
                 timed_out = False
                 output_limited = False
-                deadline = time.monotonic() + self.settings.test_timeout_seconds
+                deadline = time.monotonic() + timeout
                 try:
                     while process.poll() is None:
                         output_limited = os.fstat(output.fileno()).st_size > 1_000_000
                         if time.monotonic() >= deadline or output_limited:
-                            raise subprocess.TimeoutExpired(
-                                command, self.settings.test_timeout_seconds
-                            )
+                            raise subprocess.TimeoutExpired(command, timeout)
                         time.sleep(0.05)
                     code = process.wait()
                 except subprocess.TimeoutExpired:
@@ -162,11 +187,20 @@ class LocalWorkspaceTools:
                 output.seek(0)
                 text = output.read(32_001).decode("utf-8", errors="replace")
             passed = passed and code == 0 and not timed_out and not output_limited
+            outcomes.append(
+                {"exit_code": code, "timed_out": timed_out, "output_limited": output_limited}
+            )
             reports.append(
                 f"Command argv: {list(configured)!r}\nExit code: {code}\n"
                 f"Timed out: {timed_out}\nOutput limit exceeded: {output_limited}\n{text[:32000]}\n"
                 + ("[Output truncated]" if len(text) > 32000 else "")
             )
+        if diff is None:
+            return {
+                "baseline_passed": passed,
+                "baseline_report": "\n\n".join(reports),
+                "baseline_summary": json.dumps({"passed": passed, "outcomes": outcomes}),
+            }
         return {"passed": passed, "report": "\n\n".join(reports)}
 
 

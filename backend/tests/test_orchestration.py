@@ -64,12 +64,31 @@ class FixtureExecutor:
             raise RuntimeError("Secret provider error: API_KEY=do-not-persist")
         if agent.id == "investigation":
             return AgentResult(outputs={"findings": "Fixture evidence"})
+        if agent.id == "baseline_testing":
+            return AgentResult(
+                outputs={
+                    "baseline_passed": False,
+                    "baseline_report": "Fixture baseline",
+                    "baseline_summary": "Fixture baseline failed",
+                }
+            )
         if agent.id == "code_helper":
             diff = "--- a/example.py\n+++ b/example.py\n@@ -1 +1 @@\n-old\n+new\n"
             return AgentResult(
                 outputs={"diff": diff, "summary": "Fixture patch"},
                 artifacts=(
                     ArtifactDraft(name="proposed.diff", media_type="text/x-diff", content=diff),
+                ),
+            )
+        if context.planning_version == 2:
+            return AgentResult(
+                outputs={"passed": True, "report": "Fixture test evidence"},
+                artifacts=(
+                    ArtifactDraft(name="tested.diff", content=inputs["diff"]),
+                    ArtifactDraft(name="test-report.txt", content="Fixture test evidence"),
+                    ArtifactDraft(
+                        name="reviewed-baseline-report.txt", content=inputs["baseline_report"]
+                    ),
                 ),
             )
         return AgentResult(
@@ -84,7 +103,7 @@ class FixtureExecutor:
 
 def bindings(executor):
     registry = ExecutorRegistry()
-    for agent_id in ("investigation", "code_helper", "testing"):
+    for agent_id in ("investigation", "code_helper", "testing", "baseline_testing"):
         registry.register_agent(agent_id, executor)
     return registry
 

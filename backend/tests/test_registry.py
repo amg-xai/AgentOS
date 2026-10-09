@@ -11,6 +11,7 @@ def test_developer_membership(registry):
         "code_helper",
         "testing",
         "developer_planner",
+        "baseline_testing",
     ]
     assert all(a.provider is None for a in registry.agents())
 

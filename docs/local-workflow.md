@@ -52,6 +52,25 @@ the patch in a new application-owned scratch directory. Each test attempt gets a
 fresh directory from the snapshot. Source files are never targeted by patch
 application. Scratch directories are retained locally for inspection.
 
+New normal Developer missions use planning version 2. On first execution access,
+freeze selected source and the execution recipe in one workspace-store transaction.
+The additive version-2 workspace database migration preserves version-1 notes and
+snapshots. Recipes store selected file scope, configured argv with resolved absolute
+runner paths, and test deadlines, with a digest tied to the source digest. Baseline
+and patched reports record both digests and distinct scratch identities. Restart
+or retry uses the stored recipe even if workspace settings change; missing or
+damaged evidence fails without execution. Older missions and the offline preset
+keep their existing runner semantics and do not acquire invented baselines.
+
+The baseline uses fresh unpatched scratch. Patch generation receives only its
+bounded exit/outcome summary. Raw baseline logs remain local. Final review also
+owns an exact `reviewed-baseline-report.txt` copy, checked alongside the tested
+diff and patched report. Baseline failure is evidence, separate from patched
+test success. Only explicit passing patched tests can be accepted.
+
+Frozen recipes do not freeze runner binaries, dependencies, host state, or test
+intent. Inspect the diff and reports before accepting a result.
+
 **Scratch execution is not an OS security sandbox.** Tests and generated code run
 with the server user's privileges and can access the host. Select trusted projects
 and inspect configured commands. Network/process isolation and automatic scratch

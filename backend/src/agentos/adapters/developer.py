@@ -27,6 +27,18 @@ def register_local_tools(registry: ToolRegistry, workspace: LocalWorkspaceTools)
         schema: dict[str, Any] = {"type": "object", "additionalProperties": False}
         if method != "read":
             schema |= {"properties": {"diff": {"type": "string"}}, "required": ["diff"]}
+        if method == "test":
+            schema = {
+                "oneOf": [
+                    schema,
+                    {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "properties": {"operation": {"const": "baseline"}},
+                        "required": ["operation"],
+                    },
+                ]
+            }
         registry.register(
             ToolDefinition(
                 id=tool_id,
@@ -56,8 +68,35 @@ class DeveloperExecutor:
         self, agent: AgentDefinition, inputs: dict[str, Any], context: ExecutionContext
     ) -> AgentResult:
         kind = developer_kind(agent)
+        if kind == "developer_baseline":
+            outputs = await self.tools.execute(
+                "terminal", agent, self.role, {"operation": "baseline"}, context
+            )
+            return AgentResult(
+                outputs=outputs,
+                artifacts=(
+                    ArtifactDraft(
+                        name="baseline-report.txt",
+                        media_type="text/plain",
+                        content=outputs["baseline_report"],
+                    ),
+                ),
+            )
         if kind == "developer_test":
-            outputs = await self.tools.execute("terminal", agent, self.role, inputs, context)
+            outputs = await self.tools.execute(
+                "terminal", agent, self.role, {"diff": inputs["diff"]}, context
+            )
+            baseline = (
+                (
+                    ArtifactDraft(
+                        name="reviewed-baseline-report.txt",
+                        media_type="text/plain",
+                        content=inputs["baseline_report"],
+                    ),
+                )
+                if context.planning_version == 2
+                else ()
+            )
             return AgentResult(
                 outputs=outputs,
                 artifacts=(
@@ -67,6 +106,7 @@ class DeveloperExecutor:
                     ArtifactDraft(
                         name="test-report.txt", media_type="text/plain", content=outputs["report"]
                     ),
+                    *baseline,
                 ),
             )
         source = await self.tools.execute("filesystem", agent, self.role, {}, context)

@@ -154,6 +154,7 @@ export function MissionDetail({
       </section>
     );
   const test = mission.tasks.find((t) => typeof t.outputs?.passed === 'boolean');
+  const baseline = mission.tasks.find((t) => typeof t.outputs?.baseline_passed === 'boolean');
   const canRun = ['PENDING', 'RUNNING'].includes(mission.status) && !claim;
   const creator = mission.role_id === 'creator';
   const student = mission.role_id === 'student';
@@ -234,6 +235,17 @@ export function MissionDetail({
           </button>
         )}
       </div>
+      {baseline && mission.role_id === 'developer' && (
+        <div className={`test-result ${baseline.outputs?.baseline_passed ? 'pass' : 'fail'}`}>
+          <strong>
+            {baseline.outputs?.baseline_passed ? 'Baseline tests passed' : 'Baseline tests failed'}
+          </strong>
+          <p>
+            Actual tests on the immutable source before the proposed patch. See the baseline report
+            for evidence.
+          </p>
+        </div>
+      )}
       {test && mission.role_id === 'developer' && (
         <div className={`test-result ${test.outputs?.passed ? 'pass' : 'fail'}`}>
           <strong>{test.outputs?.passed ? 'Tests passed' : 'Tests failed'}</strong>

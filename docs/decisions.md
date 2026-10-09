@@ -141,3 +141,22 @@ transport by default until separately authorized. Defer Result Review History;
 the next product proof is live vertical-slice acceptance with baseline failure,
 actual patched tests, human review, and restart evidence. Original PLAN.md and
 the full Developer, Creator, and Student product scope remain unchanged.
+
+## 2026-10-09: Developer baseline and frozen test evidence
+
+Extend new normal plans to a server-controlled version-2 contract with 4–8 tasks:
+one deterministic baseline, investigation evidence, one patch, and one final tested
+human review. Retain version-1 saved graphs and the explicit offline preset. Reuse
+registered agents/tools, orchestrator, artifacts, and approvals. A failed baseline
+is valid completed evidence; only explicit passing patched tests permit acceptance.
+
+Atomically freeze selected source and resolved test recipes in an additive
+workspace-store migration. Link recipe integrity to the source digest; retries use
+stored scope, argv, runner paths, and deadlines. Send only bounded exit/outcome
+summary to patch generation. Final review owns and checks exact baseline, patched
+report, and tested-diff contents. Raw baseline logs stay local.
+
+This improves offline evidence while live acceptance remains separately gated.
+Frozen recipes do not freeze dependencies, binaries, host state, or test intent;
+scratch remains trusted-code execution rather than OS isolation. Original PLAN.md
+and the full role roadmap are unchanged; Result Review History stays deferred.

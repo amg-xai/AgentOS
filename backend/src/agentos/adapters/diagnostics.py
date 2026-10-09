@@ -103,7 +103,12 @@ def diagnose(root: Path, *, demo: bool = False, workflow: str = "developer") -> 
                     kinds.add(developer_kind(agent))
                 except ValueError:
                     continue
-            if kinds != {"developer_investigate", "developer_patch", "developer_test"}:
+            if kinds != {
+                "developer_investigate",
+                "developer_patch",
+                "developer_test",
+                "developer_baseline",
+            }:
                 raise ValueError("Package is missing supported planning capabilities")
         elif not required <= set(registry.role(workflow).agents):
             raise ValueError("Package is missing required workflow agents")

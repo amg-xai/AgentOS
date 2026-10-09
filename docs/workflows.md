@@ -78,6 +78,14 @@ requires explicit boolean `passed: true` in addition to the existing review
 integrity checks. Completion alone never establishes test success for historical
 or manually managed missions.
 
+Version-2 normal Developer plans also require baseline execution, bound baseline
+summary for patch generation, and bound baseline report for final review. A baseline
+task can complete with `baseline_passed: false`; final acceptance still requires
+`passed: true` from patched tests. Both outcomes and both reports remain inspectable.
+The review owns exact copies of the tested diff, baseline report, and patched report,
+and validates their contents before staging and accepting them. Version-1 saved
+plans and the offline preset retain their previous contracts.
+
 ## Interrupted run recovery
 
 GET `/missions/{id}/run` to inspect a durable claim. A normal run releases it;

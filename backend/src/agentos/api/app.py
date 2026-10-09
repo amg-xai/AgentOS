@@ -184,7 +184,11 @@ def create_app(
             (
                 "developer",
                 ("investigation", "code_helper", "testing"),
-                "Investigate → propose a patch → run tests → human review",
+                (
+                    "Investigate → propose a patch → run tests → human review"
+                    if demo_root is not None
+                    else "Baseline + investigation → patch → patched tests → human review"
+                ),
                 "Selected source files and relevant notes are sent to the configured model.",
                 DEMO_GOAL,
             ),
@@ -227,7 +231,13 @@ def create_app(
                             bindings.resolve(candidate)
                             kinds.add(kind)
                         if (
-                            kinds != {"developer_investigate", "developer_patch", "developer_test"}
+                            kinds
+                            != {
+                                "developer_investigate",
+                                "developer_patch",
+                                "developer_test",
+                                "developer_baseline",
+                            }
                             or planner is None
                         ):
                             raise StateConflict("Developer planning capabilities are unavailable")

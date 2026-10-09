@@ -9,7 +9,8 @@
       "investigation",
       "code_helper",
       "testing",
-      "developer_planner"
+      "developer_planner",
+      "baseline_testing"
     ],
     "tools": [
       "filesystem",

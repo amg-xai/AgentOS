@@ -45,11 +45,30 @@ class ApprovalService:
                 raise StateConflict("Artifact scope does not match the approval")
             if request.decision == "approve":
                 self.artifacts.read(artifact)
+        if (
+            request.decision == "approve"
+            and mission.planning
+            and mission.planning.contract_version == 2
+        ):
+            from agentos.services.planning import review_evidence
+
+            expected = review_evidence(mission, task, task.outputs or {})
+            actual = {
+                self.repository.artifact(ref).name: self.artifacts.read(
+                    self.repository.artifact(ref)
+                ).decode("utf-8")
+                for ref in task.artifact_refs
+            }
+            if len(task.artifact_refs) != len(expected) or actual != expected:
+                raise StateConflict("Review evidence does not match the tested result")
         now = datetime.now(UTC)
         approved = request.decision == "approve"
         if (
             approved
-            and task.requires_passed_tests
+            and (
+                task.requires_passed_tests
+                or (mission.planning is not None and mission.planning.contract_version == 2)
+            )
             and (task.outputs is None or task.outputs.get("passed") is not True)
         ):
             raise StateConflict("Tests must explicitly pass before accepting this result")

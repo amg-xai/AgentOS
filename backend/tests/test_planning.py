@@ -48,7 +48,7 @@ def test_valid_unsorted_plan_preserves_goal_constraints_objectives_and_bindings(
     data["tasks"] = list(reversed(data["tasks"]))
     result = compiled(registry, data)
     assert result.goal == "Fix addition; preserve negative sums"
-    assert len(result.tasks) == 4 and result.planning.rationale == data["rationale"]
+    assert len(result.tasks) == 5 and result.planning.rationale == data["rationale"]
     for task in result.tasks:
         if task.agent_id != "testing":
             assert task.inputs["goal"] == result.goal
@@ -58,19 +58,19 @@ def test_valid_unsorted_plan_preserves_goal_constraints_objectives_and_bindings(
     assert test.review_required and test.requires_passed_tests and not test.inputs
 
 
-@pytest.mark.parametrize("task_count", [4, 8])
+@pytest.mark.parametrize("task_count", [5, 8])
 def test_branching_plans_deliver_distinct_evidence_to_one_tested_patch(
     tmp_path, workspace, task_count
 ):
     data = plan_data()
-    investigate, patch, test = data["tasks"]
+    investigate, patch, baseline, test = data["tasks"]
     context = investigate | {
         "id": "inspect_tests",
         "objective": "Inspect test intent independently",
     }
     investigations = [investigate, context]
     upstream = investigate["id"]
-    for index in range(task_count - 4):
+    for index in range(task_count - 5):
         task = investigate | {
             "id": f"refine_{index}",
             "objective": f"Refine source evidence {index}",
@@ -79,12 +79,13 @@ def test_branching_plans_deliver_distinct_evidence_to_one_tested_patch(
         }
         investigations.append(task)
         upstream = task["id"]
-    patch["dependencies"] = [upstream, context["id"]]
+    patch["dependencies"] = [upstream, context["id"], "baseline"]
     patch["bindings"] = [
         {"input_key": "findings", "task_id": upstream, "output_key": "findings"},
         {"input_key": "context", "task_id": context["id"], "output_key": "findings"},
+        {"input_key": "baseline_summary", "task_id": "baseline", "output_key": "baseline_summary"},
     ]
-    data["tasks"] = list(reversed([*investigations, patch, test]))
+    data["tasks"] = list(reversed([*investigations, patch, baseline, test]))
     requests = []
 
     def transport(request):
@@ -113,7 +114,7 @@ def test_branching_plans_deliver_distinct_evidence_to_one_tested_patch(
         assert result["status"] == "WAITING_APPROVAL" and len(result["tasks"]) == task_count
         review = next(task for task in result["tasks"] if task["id"] == "verify")
         assert review["outputs"]["passed"] is True
-        assert sum(name == "investigation" for name, _ in requests) == task_count - 2
+        assert sum(name == "investigation" for name, _ in requests) == task_count - 3
         assert len(client.get(f"/missions/{mission['id']}/approvals").json()) == 1
     assert originals == {
         name: (workspace.repository / name).read_bytes() for name in workspace.files
@@ -160,7 +161,7 @@ def test_changed_input_contract_rejects_saved_plan_safely_before_execution(
 
 def invalid_data(case):
     data = copy.deepcopy(plan_data())
-    investigate, patch, test = data["tasks"]
+    investigate, patch, baseline, test = data["tasks"]
     if case == "cycle":
         investigate["dependencies"] = ["fix"]
         investigate["bindings"] = [{"input_key": "context", "task_id": "fix", "output_key": "diff"}]
@@ -299,6 +300,7 @@ def test_goals_change_decomposition_and_persist_planning_evidence(tmp_path, work
                 "developer_investigate",
                 "developer_patch",
                 "developer_test",
+                "developer_baseline",
             }
             assert "source_files" not in inputs and "repository" not in inputs
             return reply(plan_data(refine="negative" in inputs["goal"]))
@@ -309,7 +311,7 @@ def test_goals_change_decomposition_and_persist_planning_evidence(tmp_path, work
         refined = client.post(
             "/workflows/developer", json={"goal": "Fix addition preserving negative sums"}
         ).json()
-        assert len(simple["tasks"]) == 3 and len(refined["tasks"]) == 4
+        assert len(simple["tasks"]) == 4 and len(refined["tasks"]) == 5
         base = f"/missions/{refined['id']}"
         result = client.post(base + "/run", json={"expected_version": 1}).json()
         assert result["status"] == "WAITING_APPROVAL"
@@ -323,7 +325,8 @@ def test_goals_change_decomposition_and_persist_planning_evidence(tmp_path, work
             and inputs["constraints"] == refined["planning"]["constraints"]
         )
         assert any(
-            event["action"] == "mission_planned" for event in client.get(base + "/events").json()
+            event["action"] == "mission_planned" and event["details"]["contract_version"] == 2
+            for event in client.get(base + "/events").json()
         )
     reopened = SQLiteMissionRepository(tmp_path / "missions.sqlite3").get(refined["id"])
     assert reopened.planning.model_dump(mode="json") == refined["planning"]
@@ -430,7 +433,12 @@ def test_dependency_failure_blocks_patch_tests_and_review(tmp_path, workspace):
         mission = client.post("/workflows/developer", json={"goal": "Fix"}).json()
         base = f"/missions/{mission['id']}"
         result = client.post(base + "/run", json={"expected_version": 1}).json()
-        assert [task["status"] for task in result["tasks"]] == ["FAILED", "BLOCKED", "BLOCKED"]
+        assert [task["status"] for task in result["tasks"]] == [
+            "FAILED",
+            "BLOCKED",
+            "READY",
+            "BLOCKED",
+        ]
         assert client.get(base + "/approvals").json() == []
         assert client.get(base + "/artifacts").json() == []
 

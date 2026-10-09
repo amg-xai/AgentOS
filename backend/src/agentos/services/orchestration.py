@@ -121,6 +121,9 @@ class Orchestrator:
                             mission_id=mission.id,
                             task_id=task.id,
                             run_token=claim.token,
+                            planning_version=(
+                                mission.planning.contract_version if mission.planning else 1
+                            ),
                         ),
                     )
                     mission = self._finish(mission, task, result, claim.token, actor)
@@ -152,6 +155,18 @@ class Orchestrator:
         created: list[Artifact] = []
         if task.requires_passed_tests and type(result.outputs.get("passed")) is not bool:
             raise StateConflict("Test execution must record an explicit boolean outcome")
+        if mission.planning and mission.planning.contract_version == 2 and task.review_required:
+            from agentos.services.planning import review_evidence
+
+            expected = review_evidence(mission, task, result.outputs)
+            if (
+                result.artifact_refs
+                or len(result.artifacts) != len(expected)
+                or {draft.name: draft.content for draft in result.artifacts} != expected
+            ):
+                raise StateConflict(
+                    "Tested review must own the exact baseline, diff and test report"
+                )
         try:
             for artifact_id in result.artifact_refs:
                 existing = self.repository.artifact(artifact_id)

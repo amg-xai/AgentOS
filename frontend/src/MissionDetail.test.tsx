@@ -3,6 +3,77 @@ import userEvent from '@testing-library/user-event';
 import { expect, test, vi } from 'vitest';
 import { MissionDetail } from './MissionDetail';
 
+test.each([
+  { baselinePassed: false, patchedPassed: true, canWrite: true },
+  { baselinePassed: true, patchedPassed: false, canWrite: true },
+  { baselinePassed: true, patchedPassed: undefined, canWrite: true },
+  { baselinePassed: false, patchedPassed: true, canWrite: false },
+])(
+  'baseline and patched outcomes remain separate (%j)',
+  async ({ baselinePassed, patchedPassed, canWrite }) => {
+    const respond = (data: unknown) => new Response(JSON.stringify(data));
+    const fetchMock = vi.fn(async (path: string, _options?: RequestInit) => {
+      if (path === '/missions/baseline')
+        return respond({
+          id: 'baseline',
+          goal: 'Fix addition',
+          role_id: 'developer',
+          status: 'WAITING_APPROVAL',
+          version: 9,
+          tasks: [
+            {
+              id: 'baseline',
+              title: 'Record baseline',
+              agent_id: 'baseline_testing',
+              status: 'COMPLETED',
+              attempts: 1,
+              dependencies: [],
+              outputs: { baseline_passed: baselinePassed },
+              error: null,
+            },
+            {
+              id: 'verify',
+              title: 'Verify patch',
+              agent_id: 'testing',
+              status: 'WAITING_APPROVAL',
+              attempts: 1,
+              dependencies: ['baseline'],
+              outputs: patchedPassed === undefined ? {} : { passed: patchedPassed },
+              requires_passed_tests: true,
+              error: null,
+            },
+          ],
+          planning: {
+            contract_version: 2,
+            planner_id: 'developer_planner',
+            rationale: 'Record baseline before patch',
+            constraints: [],
+            objectives: { baseline: 'Test unpatched source', verify: 'Review patched tests' },
+          },
+        });
+      if (path.endsWith('/approvals'))
+        return respond([
+          { id: 'review', task_id: 'verify', status: 'PENDING', payload_digest: 'digest' },
+        ]);
+      if (path.endsWith('/run')) return respond(null);
+      return respond([]);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<MissionDetail id="baseline" canWrite={canWrite} onChange={async () => {}} />);
+    expect(
+      await screen.findByText(baselinePassed ? 'Baseline tests passed' : 'Baseline tests failed'),
+    ).toBeVisible();
+    if (patchedPassed === undefined) {
+      expect(screen.queryByText('Tests passed')).not.toBeInTheDocument();
+      expect(screen.queryByText('Tests failed')).not.toBeInTheDocument();
+    } else expect(screen.getByText(patchedPassed ? 'Tests passed' : 'Tests failed')).toBeVisible();
+    const accept = screen.getByRole('button', { name: 'Accept result' });
+    if (canWrite && patchedPassed === true) expect(accept).toBeEnabled();
+    else expect(accept).toBeDisabled();
+    expect(fetchMock.mock.calls.every(([, options]) => options?.method !== 'POST')).toBe(true);
+  },
+);
+
 test('a canceled artifact body cannot replace the currently selected preview', async () => {
   let finishOldBody!: (content: string) => void;
   let oldSignal: AbortSignal | undefined;

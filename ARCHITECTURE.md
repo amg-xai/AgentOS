@@ -11,6 +11,11 @@ the existing mission engine; it does not introduce another workflow runtime.
 Planning evidence persists with mission snapshots and audit events. New Developer
 tested results require explicit passing outcomes before human acceptance.
 
+New normal Developer plans use version 2 with deterministic baseline tests and
+separate baseline/patched outcomes. Version-1 saved plans and the offline preset
+retain their contracts. Final review owns the exact baseline report, patched report,
+and tested diff; staging and acceptance validate their contents.
+
 An explicitly selected offline Calculator demo reuses the same mission, tool,
 and approval services with scripted generation and actual local tests. Its
 databases, memory, artifacts, and scratch work live under `.agentos/demo/`.
@@ -106,6 +111,10 @@ registered local tools rather than granting a model arbitrary filesystem or
 shell access. Workspace configuration selects source files and test argv arrays.
 An immutable per-mission source snapshot and explicit notes live in a separately
 versioned workspace database. This leaves mission schema 2 and its history intact.
+Workspace schema 2 additively stores resolved per-mission test recipes, atomically
+frozen with the source snapshot and linked by integrity digests. Version-2 retries
+use stored scope, argv, runner paths, and deadlines after settings changes. This
+does not freeze dependencies, binaries, host state, or test intent.
 Scratch directories isolate patch targets from source files; they do not provide
 OS process isolation. See [local workflow details](docs/local-workflow.md).
 

@@ -87,6 +87,24 @@ def plan_data(refine=False):
             "review_required": True,
         },
     ]
+    baseline = {
+        "id": "baseline",
+        "title": "Record baseline tests",
+        "agent_id": "baseline_testing",
+        "objective": "Run unpatched configured tests",
+        "dependencies": [],
+        "bindings": [],
+        "review_required": False,
+    }
+    tasks[1]["dependencies"].append("baseline")
+    tasks[1]["bindings"].append(
+        {"input_key": "baseline_summary", "task_id": "baseline", "output_key": "baseline_summary"}
+    )
+    tasks[2]["dependencies"].append("baseline")
+    tasks[2]["bindings"].append(
+        {"input_key": "baseline_report", "task_id": "baseline", "output_key": "baseline_report"}
+    )
+    tasks.insert(2, baseline)
     if refine:
         tasks.insert(
             1,
@@ -158,10 +176,10 @@ def test_complete_workflow_real_tools_restart_and_approval(tmp_path, workspace, 
         assert run.status_code == 200, run.text
         result = run.json()
         assert result["status"] == "WAITING_APPROVAL", result
-        assert result["tasks"][2]["outputs"]["passed"] is True
-        assert "Exit code: 0" in result["tasks"][2]["outputs"]["report"]
+        assert result["tasks"][-1]["outputs"]["passed"] is True
+        assert "Exit code: 0" in result["tasks"][-1]["outputs"]["report"]
         artifacts = client.get(base + "/artifacts").json()
-        assert len(artifacts) == 5
+        assert len(artifacts) == 7
         diff = next(a for a in artifacts if a["name"] == "proposed.diff")
         assert client.get(f"/artifacts/{diff['id']}/content").text == PATCH
         assert (
@@ -176,7 +194,7 @@ def test_complete_workflow_real_tools_restart_and_approval(tmp_path, workspace, 
             == 201
         )
         events = client.get(base + "/events").json()
-        assert sum(e["action"] == "tool_completed" for e in events) == 4
+        assert sum(e["action"] == "tool_completed" for e in events) == 5
         assert "must-not-reach-tests" not in json.dumps(events)
     with TestClient(configured_app(tmp_path, workspace)) as client:
         assert len(client.get("/memory?query=addition").json()) == 2
@@ -382,7 +400,11 @@ def test_review_binds_the_tested_patch_and_rejects_damage(tmp_path, workspace):
         approval = client.get(base + "/approvals").json()[0]
         artifacts = client.get(base + "/artifacts").json()
         covered = [a for a in artifacts if a["id"] in approval["payload"]["artifact_refs"]]
-        assert {a["name"] for a in covered} == {"tested.diff", "test-report.txt"}
+        assert {a["name"] for a in covered} == {
+            "tested.diff",
+            "test-report.txt",
+            "reviewed-baseline-report.txt",
+        }
         tested = next(a for a in covered if a["name"] == "tested.diff")
         assert client.get(f"/artifacts/{tested['id']}/content").text == PATCH
         path = tmp_path / "artifacts" / f"{tested['id']}.txt"
@@ -466,8 +488,8 @@ def test_bundled_acceptance_project_bug_fix_restart_and_source_preservation(tmp_
         base = f"/missions/{mission['id']}"
         mission = client.post(base + "/run", json={"expected_version": 1}).json()
         assert mission["status"] == "WAITING_APPROVAL", mission
-        assert mission["tasks"][2]["outputs"]["passed"] is True
-        assert "Ran 3 tests" in mission["tasks"][2]["outputs"]["report"]
+        assert mission["tasks"][-1]["outputs"]["passed"] is True
+        assert "Ran 3 tests" in mission["tasks"][-1]["outputs"]["report"]
     with TestClient(configured_app(tmp_path, config, transport)) as client:
         approval = client.get(base + "/approvals").json()[0]
         result = client.post(
