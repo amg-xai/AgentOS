@@ -587,6 +587,14 @@ p {
   margin: 18px 0;
   overflow-wrap: anywhere;
 }
+.mission-plan,
+.task-plan-evidence {
+  overflow-wrap: anywhere;
+}
+.task-plan-evidence .text-button {
+  margin-top: 0;
+  text-align: left;
+}
 .memory-artifact {
   margin: 18px 0;
   overflow-wrap: anywhere;

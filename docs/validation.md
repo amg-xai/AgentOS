@@ -1,5 +1,19 @@
 # Backend validation
 
+## Developer planning evidence presentation follow-up
+
+Validated on Windows on 2026-10-09: all 81 frontend tests passed, along with the
+TypeScript/Vite production build and formatting checks. The existing plan
+inspector now presents constraints, planner ID, task objectives, exact assigned
+agent IDs, dependency input/output fields, and focus links to source tasks.
+Regressions cover Viewer inspection without writes, inert model text, branching
+input evidence, explicit tested-review requirements, and older missions without
+planning evidence. Long evidence text wraps within the existing layout.
+
+This presentation uses existing mission fields; backend execution, database,
+permissions, desktop request policy, and original PLAN.md are unchanged. Live
+calls remain disabled. Native/browser visual acceptance is still outstanding.
+
 ## Developer planning validation follow-up
 
 Validated on Windows on 2026-10-09: 303 backend tests passed, with three Windows

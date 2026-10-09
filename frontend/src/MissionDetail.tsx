@@ -182,8 +182,26 @@ export function MissionDetail({
         <details className="mission-plan">
           <summary>Inspect validated Developer plan</summary>
           <p>{mission.planning.rationale}</p>
-          <pre>{JSON.stringify(mission.planning, null, 2)}</pre>
-          <p>Agent assignments and dependencies are recorded in the Tasks tab.</p>
+          <p>
+            Planner: <code>{mission.planning.planner_id}</code>
+          </p>
+          <h3>Constraints extracted from your goal</h3>
+          {mission.planning.constraints.length ? (
+            <ul>
+              {mission.planning.constraints.map((constraint, index) => (
+                <li key={index}>{constraint}</li>
+              ))}
+            </ul>
+          ) : (
+            <p>No additional constraints were extracted. Review the original goal above.</p>
+          )}
+          <p>
+            Inspect each task's objective, assigned agent, and dependency inputs in the Tasks tab.
+          </p>
+          <details>
+            <summary>Inspect planning data</summary>
+            <pre>{JSON.stringify(mission.planning, null, 2)}</pre>
+          </details>
         </details>
       )}
       {claim && !busy ? (
@@ -372,6 +390,56 @@ export function MissionDetail({
                         ? t.dependencies.length > 0 && ` · after ${t.dependencies.join(', ')}`
                         : ' · prerequisites unavailable'}
                     </p>
+                    {mission.planning && (
+                      <div className="task-plan-evidence">
+                        <p>
+                          <strong>Objective:</strong>{' '}
+                          {mission.planning.objectives[t.id] ?? 'Objective unavailable'}
+                        </p>
+                        <p>
+                          Assigned agent: <code>{t.agent_id}</code>
+                        </p>
+                        {t.requires_passed_tests && (
+                          <p>Human review requires an explicit passing test outcome.</p>
+                        )}
+                        <details>
+                          <summary>Inspect dependency inputs</summary>
+                          {t.input_bindings === undefined ? (
+                            <p>Input bindings unavailable.</p>
+                          ) : Object.keys(t.input_bindings).length === 0 ? (
+                            <p>No dependency-bound inputs.</p>
+                          ) : (
+                            <ul>
+                              {Object.entries(t.input_bindings).map(([key, binding]) => {
+                                const source = mission.tasks.find(
+                                  (task) => task.id === binding.task_id,
+                                );
+                                return (
+                                  <li key={key}>
+                                    <code>{key}</code> receives <code>{binding.output_key}</code>{' '}
+                                    from{' '}
+                                    {source ? (
+                                      <button
+                                        className="text-button"
+                                        onClick={() => {
+                                          const detail = taskDetails.current.get(source.id);
+                                          detail?.focus();
+                                          detail?.scrollIntoView?.({ block: 'nearest' });
+                                        }}
+                                      >
+                                        {source.title} ({source.id})
+                                      </button>
+                                    ) : (
+                                      <span>Unavailable task ({binding.task_id})</span>
+                                    )}
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          )}
+                        </details>
+                      </div>
+                    )}
                     {t.error && <div className="task-error">{t.error}</div>}
                     {t.outputs && (
                       <details>

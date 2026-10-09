@@ -32,8 +32,11 @@ The mission snapshot stores `planning` evidence: planner ID, rationale,
 constraints, and task objectives. Task records store the actual assignments,
 dependencies, bindings, and required test boundary. Creation records a
 `mission_planned` audit event. Mission Control exposes the evidence under
-**Inspect validated Developer plan**, with assignments in Tasks and events in
-Activity. Evidence survives restart without a database schema migration.
+**Inspect validated Developer plan**, with a constraint list and the planner ID.
+Tasks show individual objectives, exact assigned agent IDs, and dependency inputs.
+Source-task links move focus to the task that supplies each bound output without
+executing work. Raw planning data remains available for detailed inspection;
+events appear in Activity. Evidence survives restart without a database migration.
 
 Final testing runs the configured subprocess commands in fresh scratch and
 records explicit boolean `passed` and the actual report. `requires_passed_tests`

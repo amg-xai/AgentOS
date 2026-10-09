@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, test, vi } from 'vitest';
 import { MissionDetail } from './MissionDetail';
@@ -122,3 +122,131 @@ test.each([true, false, undefined])(
     );
   },
 );
+
+test('Viewer can inspect goal constraints and task evidence without executing work', async () => {
+  const constraint = 'Preserve <script>test assertions</script>';
+  const objective = 'Fix <b>addition</b> without weakening tests';
+  const tasks = [
+    {
+      id: 'inspect_source',
+      title: 'Inspect source',
+      agent_id: 'source_reader',
+      dependencies: [],
+      input_bindings: {},
+    },
+    {
+      id: 'inspect_tests',
+      title: 'Inspect tests',
+      agent_id: 'test_reader',
+      dependencies: [],
+      input_bindings: {},
+    },
+    {
+      id: 'fix',
+      title: 'Generate patch',
+      agent_id: 'scoped_patch_agent',
+      dependencies: ['inspect_source', 'inspect_tests'],
+      input_bindings: {
+        findings: { task_id: 'inspect_source', output_key: 'findings' },
+        context: { task_id: 'inspect_tests', output_key: 'findings' },
+      },
+    },
+    {
+      id: 'verify',
+      title: 'Test patch',
+      agent_id: 'configured_tester',
+      dependencies: ['fix'],
+      input_bindings: { diff: { task_id: 'fix', output_key: 'diff' } },
+      requires_passed_tests: true,
+    },
+  ].map((task) => ({ ...task, status: 'PENDING', attempts: 0, outputs: null, error: null }));
+  const fetchMock = vi.fn(async (path: string, options?: RequestInit) => {
+    if (options?.method && options.method !== 'GET')
+      throw new Error('Inspection must be read-only');
+    if (path === '/missions/planned')
+      return new Response(
+        JSON.stringify({
+          id: 'planned',
+          goal: 'Fix addition',
+          role_id: 'developer',
+          status: 'PENDING',
+          version: 1,
+          tasks,
+          planning: {
+            planner_id: 'registered_planner',
+            rationale: 'Gather independent source and test evidence',
+            constraints: [constraint],
+            objectives: { fix: objective },
+          },
+        }),
+      );
+    return new Response(JSON.stringify(path.endsWith('/run') ? null : []));
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  const user = userEvent.setup();
+  render(<MissionDetail id="planned" canWrite={false} onChange={async () => {}} />);
+  await user.click(await screen.findByText('Inspect validated Developer plan'));
+  expect(screen.getByText(constraint)).toBeVisible();
+  expect(screen.getByText('registered_planner')).toBeVisible();
+  const patch = screen.getByRole('article', { name: 'Task detail: Generate patch (fix)' });
+  expect(patch).toHaveTextContent(objective);
+  expect(within(patch).getByText('scoped_patch_agent')).toBeVisible();
+  await user.click(within(patch).getByText('Inspect dependency inputs'));
+  expect(patch).toHaveTextContent(
+    'findings receives findings from Inspect source (inspect_source)',
+  );
+  expect(patch).toHaveTextContent('context receives findings from Inspect tests (inspect_tests)');
+  await user.click(within(patch).getByRole('button', { name: 'Inspect tests (inspect_tests)' }));
+  expect(
+    screen.getByRole('article', { name: 'Task detail: Inspect tests (inspect_tests)' }),
+  ).toHaveFocus();
+  expect(screen.getByText('Human review requires an explicit passing test outcome.')).toBeVisible();
+  expect(screen.queryByText('Tests passed')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Run mission' })).toBeDisabled();
+  expect(document.querySelector('.task-plan-evidence b')).toBeNull();
+  expect(document.querySelector('.mission-plan script')).toBeNull();
+  expect(
+    fetchMock.mock.calls.every(([, options]) => !options?.method || options.method === 'GET'),
+  ).toBe(true);
+});
+
+test('an older mission retains task inspection without invented planning evidence', async () => {
+  const fetchMock = vi.fn(
+    async (path: string) =>
+      new Response(
+        JSON.stringify(
+          path === '/missions/legacy'
+            ? {
+                id: 'legacy',
+                goal: 'Older mission',
+                role_id: 'developer',
+                status: 'COMPLETED',
+                version: 3,
+                tasks: [
+                  {
+                    id: 'fix',
+                    title: 'Legacy patch',
+                    agent_id: 'code_helper',
+                    status: 'COMPLETED',
+                    attempts: 1,
+                    dependencies: [],
+                    outputs: { summary: 'Saved patch' },
+                    error: null,
+                  },
+                ],
+              }
+            : path.endsWith('/run')
+              ? null
+              : [],
+        ),
+      ),
+  );
+  vi.stubGlobal('fetch', fetchMock);
+  const user = userEvent.setup();
+  render(<MissionDetail id="legacy" canWrite={false} onChange={async () => {}} />);
+  await user.click(await screen.findByText('Inspect task outputs'));
+  expect(screen.getByText(/Saved patch/)).toBeVisible();
+  expect(screen.queryByText('Inspect validated Developer plan')).not.toBeInTheDocument();
+  expect(screen.queryByText('Inspect dependency inputs')).not.toBeInTheDocument();
+  expect(screen.queryByText('Tests passed')).not.toBeInTheDocument();
+});

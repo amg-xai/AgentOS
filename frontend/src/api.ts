@@ -38,6 +38,7 @@ export interface Task {
   status: State;
   attempts: number;
   dependencies: string[];
+  input_bindings?: Record<string, { task_id: string; output_key: string }>;
   outputs: Record<string, unknown> | null;
   error: string | null;
   requires_passed_tests?: boolean;
