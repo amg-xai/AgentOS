@@ -93,7 +93,7 @@ class ExecutionContext(Definition):
     mission_id: Text
     task_id: Text
     run_token: str | None = None
-    planning_version: int = Field(default=1, strict=True, ge=1, le=2)
+    planning_version: int = Field(default=1, strict=True, ge=1, le=3)
     patch_revision: PatchRevisionContext | None = None
 
 

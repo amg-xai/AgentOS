@@ -7,7 +7,7 @@ import { overviewFixture } from './overview-fixture';
 
 // HTTP fixtures exercise the UI contract, not model generation or real tests.
 // Backend integration tests independently run scoped Git/tests and verify restart.
-function plannedWorkflow(firstRunPasses: boolean) {
+function plannedWorkflow(firstRunPasses: boolean, version: 2 | 3) {
   const goal = 'Fix calculator addition. Preserve all assertions and function signatures.';
   const definitions: Omit<Task, 'status' | 'attempts' | 'outputs' | 'error'>[] = [
     {
@@ -46,6 +46,25 @@ function plannedWorkflow(firstRunPasses: boolean) {
       },
     },
   ];
+  if (version === 3) {
+    definitions.splice(2, 0, {
+      id: 'issue',
+      title: 'Specify local issue',
+      agent_id: 'registered_issue',
+      dependencies: ['investigate', 'baseline'],
+      input_bindings: {
+        findings: { task_id: 'investigate', output_key: 'findings' },
+        baseline_summary: { task_id: 'baseline', output_key: 'baseline_summary' },
+      },
+    });
+    for (const task of definitions.filter((task) => ['fix', 'verify'].includes(task.id))) {
+      task.dependencies.push('issue');
+      task.input_bindings = {
+        ...task.input_bindings,
+        issue: { task_id: 'issue', output_key: 'issue' },
+      };
+    }
+  }
   const tasks = definitions.map((task): Task => ({
     ...task,
     status: task.dependencies.length ? 'PENDING' : 'READY',
@@ -63,7 +82,7 @@ function plannedWorkflow(firstRunPasses: boolean) {
     updated_at: '2026-10-09T12:00:00Z',
     tasks,
     planning: {
-      contract_version: 2,
+      contract_version: version,
       planner_id: 'registered_planner',
       rationale: 'Investigate the operator, preserve the tests, and compare test outcomes.',
       constraints: ['Preserve all assertions and function signatures.'],
@@ -117,6 +136,12 @@ function plannedWorkflow(firstRunPasses: boolean) {
         ['tested.diff', diff],
         ['test-report.txt', report],
         ['reviewed-baseline-report.txt', baselineReport],
+        ...(version === 3
+          ? [
+              ['reviewed-issue.json', '{"title":"Fixture local issue"}'],
+              ['reviewed-issue.md', 'Fixture issue proposal; acceptance criteria are proposed.'],
+            ]
+          : []),
       ].map(([name, text]) => {
         const id = `${name}-${attempt}`;
         content.set(id, text);
@@ -161,7 +186,8 @@ function plannedWorkflow(firstRunPasses: boolean) {
         payload_digest: `digest-${attempt}`,
         decision: body.decision,
       });
-      if (body.decision === 'approve') expect(mission.tasks[3].outputs?.passed).toBe(true);
+      if (body.decision === 'approve')
+        expect(mission.tasks.find((task) => task.id === 'verify')?.outputs?.passed).toBe(true);
       decisions.push(body.decision);
       const status = body.decision === 'approve' ? 'COMPLETED' : 'FAILED';
       mission = {
@@ -213,10 +239,15 @@ function plannedWorkflow(firstRunPasses: boolean) {
   return { goal, baselineReport, diff, decisions, fetchMock };
 }
 
-test.each([true, false])(
-  'planned Developer journey through review and reload (first run passes: %s)',
-  async (firstRunPasses) => {
-    const fixture = plannedWorkflow(firstRunPasses);
+test.each([
+  { firstRunPasses: true, version: 2 as const },
+  { firstRunPasses: false, version: 2 as const },
+  { firstRunPasses: true, version: 3 as const },
+  { firstRunPasses: false, version: 3 as const },
+])(
+  'planned Developer v$version journey through review and reload (passes: $firstRunPasses)',
+  async ({ firstRunPasses, version }) => {
+    const fixture = plannedWorkflow(firstRunPasses, version);
     const user = userEvent.setup();
     const view = render(<App />);
     await user.selectOptions(await screen.findByLabelText('Workflow'), 'developer');
@@ -263,7 +294,8 @@ test.each([true, false])(
     ).toBeVisible();
     expect(
       screen.getByText(
-        `Review attempt ${attempt}: tested.diff, test-report.txt, reviewed-baseline-report.txt`,
+        `Review attempt ${attempt}: tested.diff, test-report.txt, reviewed-baseline-report.txt` +
+          (version === 3 ? ', reviewed-issue.json, reviewed-issue.md' : ''),
       ),
     ).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Inspect artifacts →' }));
@@ -281,6 +313,16 @@ test.each([true, false])(
       `reviewed-baseline-report.txt-${attempt}`,
     );
     expect(await screen.findByText(fixture.baselineReport)).toBeVisible();
+    if (version === 3) {
+      await user.selectOptions(
+        screen.getByLabelText('Result artifact'),
+        `reviewed-issue.md-${attempt}`,
+      );
+      expect(
+        await screen.findByText('Fixture issue proposal; acceptance criteria are proposed.'),
+      ).toBeVisible();
+      expect(screen.getByText(/exact reviewed issue proposal/)).toBeVisible();
+    }
     await user.click(screen.getByRole('tab', { name: /activity/ }));
     expect(await screen.findByText('tool executed')).toBeVisible();
     expect(screen.getByText('verify · registered_tester')).toBeVisible();

@@ -9,7 +9,7 @@ from typing import Any, Literal
 from pydantic import Field
 
 from agentos.domain.agents import Definition, Identifier, Text
-from agentos.domain.missions import Task, VersionRequest
+from agentos.domain.missions import Mission, Task, TaskSpec, VersionRequest
 
 
 class UserRole(StrEnum):
@@ -32,8 +32,29 @@ def payload_digest(payload: dict[str, Any]) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
-def review_payload(task: Task) -> dict[str, Any]:
-    return {"outputs": task.outputs, "artifact_refs": list(task.artifact_refs)}
+def mission_plan_digest(mission: Mission) -> str:
+    payload: dict[str, Any] = {
+        "goal": mission.goal,
+        "planning": mission.planning.model_dump(mode="json") if mission.planning else None,
+        "tasks": [
+            t.model_dump(mode="json", include=set(TaskSpec.model_fields)) for t in mission.tasks
+        ],
+    }
+    if mission.planning and mission.planning.contract_version == 3:
+        payload.update(role_id=mission.role_id, workspace_id=mission.workspace_id)
+    return payload_digest(payload)
+
+
+def review_payload(task: Task, mission: Mission | None = None) -> dict[str, Any]:
+    payload: dict[str, Any] = {"outputs": task.outputs, "artifact_refs": list(task.artifact_refs)}
+    if (
+        mission
+        and mission.role_id == "developer"
+        and mission.planning
+        and (mission.planning.contract_version == 3)
+    ):
+        payload["plan_digest"] = mission_plan_digest(mission)
+    return payload
 
 
 class ApprovalStatus(StrEnum):

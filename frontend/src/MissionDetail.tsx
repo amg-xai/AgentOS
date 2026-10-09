@@ -67,7 +67,7 @@ export function MissionDetail({
       const revisionStatus =
         !demo &&
         m.role_id === 'developer' &&
-        m.planning?.contract_version === 2 &&
+        [2, 3].includes(m.planning?.contract_version ?? 0) &&
         m.status === 'FAILED' &&
         m.tasks.some((task) => task.requires_passed_tests && task.outputs?.passed === false)
           ? await api<PatchRevisionStatus>(`${base}/patch-revision`)
@@ -295,7 +295,9 @@ export function MissionDetail({
                       )
                     ? 'Inspect the script, reviewed outline, research, and supplied sources. Quotes establish provenance; source truth and interpretations require your review. Acceptance records this content; it does not publish or send it.'
                     : 'Inspect the script and its reviewed outline. Acceptance records this content; it does not publish or send it.'
-                : 'Inspect the diff and test report. Acceptance records this result; it does not change the source project or publish anything.'}
+                : mission.planning?.contract_version === 3
+                  ? 'Inspect the diff, actual test and baseline reports, and the exact reviewed issue proposal. Suggested reproduction steps and acceptance criteria do not prove coverage or correctness. Acceptance does not change the source project or publish anything.'
+                  : 'Inspect the diff and test report. Acceptance records this result; it does not change the source project or publish anything.'}
           </p>
           {p.payload?.artifact_refs && (
             <p>

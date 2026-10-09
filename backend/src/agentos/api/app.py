@@ -87,6 +87,7 @@ from agentos.services.planning import (
     compile_plan,
     developer_kind,
     registered_planner,
+    validate_planned_mission,
 )
 from agentos.services.registry import AgentRegistry
 from agentos.services.revisions import PatchRevisionService
@@ -228,7 +229,7 @@ def create_app(
                 (
                     "Investigate → propose a patch → run tests → human review"
                     if demo_root is not None
-                    else "Baseline + investigation → patch → patched tests → human review"
+                    else "Baseline + investigation → local issue → patch → tests → human review"
                 ),
                 "Selected source files and relevant notes are sent to the configured model.",
                 DEMO_GOAL,
@@ -278,6 +279,7 @@ def create_app(
                                 "developer_patch",
                                 "developer_test",
                                 "developer_baseline",
+                                "developer_issue",
                             }
                             or planner is None
                         ):
@@ -601,6 +603,15 @@ def create_app(
         if demo_root is not None:
             raise StateConflict("Use a fixed workflow scenario in offline demo mode")
         if any(
+            t.agent_id in {a.id for a in catalog.agents() if a.capability == "developer_issue"}
+            for t in request.tasks
+        ) and not (
+            request.role_id == "developer"
+            and request.planning
+            and request.planning.contract_version == 3
+        ):
+            raise StateConflict("Local issues require a validated version-3 Developer plan")
+        if any(
             t.agent_id in {a.id for a in catalog.agents() if a.capability == "creator_thumbnail"}
             for t in request.tasks
         ) and not (
@@ -613,6 +624,8 @@ def create_app(
             validate_creator_plan(request, catalog, bindings)
         if request.role_id == "student" and request.planning is not None:
             validate_student_plan(request, catalog, bindings)
+        if request.role_id == "developer" and request.planning is not None:
+            validate_planned_mission(request, catalog, bindings)
         return missions.create(request)
 
     @app.get("/missions")

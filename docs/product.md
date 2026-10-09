@@ -3,14 +3,17 @@
 The MVP provides one local workspace, role selection, an agent registry,
 mission creation, multi-agent execution, persisted state and memory, artifacts,
 history, and human approvals. The first complete workflow investigates a bug,
-proposes a fix, runs tests, presents a diff, and produces an approved artifact.
+specifies a local issue, proposes a fix, runs tests, presents exact evidence,
+and produces an approved artifact.
 
 Developer is the first functional package. Creator now demonstrates reuse of the
 same platform for a supplied brief, outline, and reviewed video script. Both have
 explicit offline scenarios for interaction testing; normal execution requires a
 configured model. Creator optionally researches pasted source text with exact-quote
 provenance checks and reviewed evidence copies. It does not fetch sources, fact-check,
-produce images/video, or publish. Student now provides supplied-material notes and a
+produce photographic imagery/video, or publish. Optional Creator thumbnails render
+bounded text and geometry into real PNGs, with frozen layout and upstream content
+review evidence. Student now provides supplied-material notes and a
 multiple-choice quiz with a separate answer key, including a fixed offline demo.
 Optional Student planning adds suggested study blocks within explicit time and
 session budgets, with the full notes/quiz/plan bundle reviewed together. Study review
@@ -28,8 +31,8 @@ Normal Creator creation now uses bounded goal-driven planning and registered
 capability selection on the same engine. Inspect its plan, original goal,
 constraints and dependency-linked content tasks before running. Outline refinements
 and supplied-source research feed one exact script review. This completes the
-planning/selection portion of that content slice; image/thumbnail artifacts and
-genuine live acceptance remain pending.
+planning/selection portion of that content slice and bounded graphic thumbnails;
+broader imagery and genuine live acceptance remain pending.
 
 Normal Student creation also uses bounded goal-driven decomposition and registered
 notes/quiz/Focus selection. Inspect the plan, run content work explicitly and review

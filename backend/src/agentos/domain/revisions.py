@@ -23,7 +23,7 @@ class DeveloperRevision(Definition):
     approval_id: Text
     payload_digest: Digest
     plan_digest: Digest
-    artifact_refs: tuple[Text, ...] = Field(min_length=3, max_length=3)
+    artifact_refs: tuple[Text, ...] = Field(min_length=3, max_length=5)
     artifact_hashes: dict[str, Digest]
 
 

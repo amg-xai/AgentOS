@@ -64,6 +64,16 @@ class Orchestrator:
         revisions.validate(mission)
         if any(
             t.agent_id
+            in {a.id for a in self.registry.agents() if a.capability == "developer_issue"}
+            for t in mission.tasks
+        ) and not (
+            mission.role_id == "developer"
+            and mission.planning
+            and mission.planning.contract_version == 3
+        ):
+            raise StateConflict("Local issues require a validated version-3 Developer plan")
+        if any(
+            t.agent_id
             in {a.id for a in self.registry.agents() if a.capability == "creator_thumbnail"}
             for t in mission.tasks
         ) and not (
@@ -85,6 +95,9 @@ class Orchestrator:
                 from agentos.services.planning import validate_planned_mission
 
                 validate_planned_mission(mission, self.registry, self.executors)
+                from agentos.services.planning import validate_issue_artifacts
+
+                validate_issue_artifacts(mission, self.repository, self.artifacts)
         from agentos.services.creator import has_sources, validate_source_mission
 
         if has_sources(mission) and mission.planning is None:
@@ -134,6 +147,9 @@ class Orchestrator:
                 )
                 task = next(t for t in mission.tasks if t.id == task.id)
                 try:
+                    from agentos.services.planning import validate_issue_artifacts
+
+                    validate_issue_artifacts(mission, self.repository, self.artifacts)
                     inputs = copy.deepcopy(task.inputs)
                     for key, binding in task.input_bindings.items():
                         dependency = next(t for t in mission.tasks if t.id == binding.task_id)
@@ -194,6 +210,21 @@ class Orchestrator:
         created: list[Artifact] = []
         from agentos.services.student import has_study_plan, study_review_evidence
 
+        if (
+            mission.role_id == "developer"
+            and mission.planning
+            and mission.planning.contract_version == 3
+            and self.registry.agent(task.agent_id).capability == "developer_issue"
+        ):
+            from agentos.domain.issue import issue_evidence
+
+            expected_issue = issue_evidence(result.outputs.get("issue"))
+            if (
+                result.artifact_refs
+                or len(result.artifacts) != len(expected_issue)
+                or {draft.name: draft.content for draft in result.artifacts} != expected_issue
+            ):
+                raise StateConflict("Issue must own exact structured and text evidence")
         if mission.role_id == "student" and mission.planning is not None:
             from agentos.services.student import student_review_evidence
             from agentos.services.student_planning import student_kind, validate_student_output
@@ -277,11 +308,12 @@ class Orchestrator:
         if (
             mission.role_id == "developer"
             and mission.planning
-            and mission.planning.contract_version == 2
+            and mission.planning.contract_version in (2, 3)
             and task.review_required
         ):
-            from agentos.services.planning import review_evidence
+            from agentos.services.planning import review_evidence, validate_issue_artifacts
 
+            validate_issue_artifacts(mission, self.repository, self.artifacts)
             expected = review_evidence(mission, task, result.outputs)
             if (
                 result.artifact_refs
@@ -321,7 +353,7 @@ class Orchestrator:
             )
             approval = None
             if task.review_required:
-                payload = review_payload(updated_task)
+                payload = review_payload(updated_task, updated)
                 approval = Approval(
                     id=uuid4().hex,
                     mission_id=mission.id,

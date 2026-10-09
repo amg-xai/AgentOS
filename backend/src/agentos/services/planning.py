@@ -8,6 +8,7 @@ from pydantic import Field
 
 from agentos.domain.agents import AgentDefinition, Permission
 from agentos.domain.base import Definition
+from agentos.domain.issue import IssueSpec, issue_evidence, issue_schema
 from agentos.domain.missions import (
     InputBinding,
     Mission,
@@ -15,11 +16,13 @@ from agentos.domain.missions import (
     MissionValidationError,
     PlanningEvidence,
     TaskSpec,
+    TaskStatus,
 )
 from agentos.domain.planning import PlanBinding as PlanBinding
 from agentos.domain.planning import PlanTask as PlanTask
 from agentos.services.execution import ExecutorRegistry
 from agentos.services.registry import AgentRegistry
+from agentos.services.runtime import ArtifactStorage, RuntimeRepository
 
 
 class DeveloperPlan(Definition):
@@ -34,7 +37,13 @@ class DeveloperPlanner(Protocol):
     async def plan(self, goal: str) -> tuple[DeveloperPlan, str]: ...
 
 
-Kind = Literal["developer_investigate", "developer_patch", "developer_test", "developer_baseline"]
+Kind = Literal[
+    "developer_investigate",
+    "developer_issue",
+    "developer_patch",
+    "developer_test",
+    "developer_baseline",
+]
 
 
 def registered_planner(registry: AgentRegistry) -> AgentDefinition:
@@ -53,6 +62,12 @@ def registered_planner(registry: AgentRegistry) -> AgentDefinition:
 
 def developer_kind(agent: AgentDefinition) -> Kind:
     contracts = {
+        "developer_issue": (
+            {"goal", "findings", "baseline_summary"},
+            {"issue": "object"},
+            set(),
+            {Permission.READ},
+        ),
         "developer_baseline": (
             {"goal"},
             {
@@ -93,9 +108,9 @@ def developer_kind(agent: AgentDefinition) -> Kind:
         {"goal", "objective", "constraints", "context"} if kind != "developer_test" else set()
     )
     if kind == "developer_patch":
-        allowed.add("baseline_summary")
+        allowed.update({"baseline_summary", "issue"})
     if kind == "developer_test":
-        allowed.add("baseline_report")
+        allowed.update({"baseline_report", "issue"})
     if kind == "developer_baseline":
         allowed.discard("context")
     properties = schema.get("properties", {})
@@ -111,7 +126,11 @@ def developer_kind(agent: AgentDefinition) -> Kind:
         or not set(properties) <= allowed
         or any(
             not isinstance(properties[key], dict)
-            or properties[key].get("type") != ("array" if key == "constraints" else "string")
+            or (
+                properties[key] != issue_schema()
+                if key == "issue"
+                else properties[key].get("type") != ("array" if key == "constraints" else "string")
+            )
             for key in properties
         )
         or output.get("type") != "object"
@@ -124,6 +143,10 @@ def developer_kind(agent: AgentDefinition) -> Kind:
             for key, value in outputs.items()
         )
         or set(agent.tools) != tools
+        or (
+            kind == "developer_issue"
+            and output.get("properties", {}).get("issue") != issue_schema()
+        )
         or not permissions <= set(agent.permissions)
         or Permission.DESTRUCTIVE in agent.permissions
         or not set(agent.permissions) <= permissions
@@ -138,6 +161,8 @@ def compile_plan(
     planner_id: str,
     registry: AgentRegistry,
     executors: ExecutorRegistry,
+    *,
+    contract_version: int = 3,
 ) -> MissionCreate:
     tasks = []
     for proposed in plan.tasks:
@@ -177,7 +202,7 @@ def compile_plan(
         goal=goal,
         tasks=tuple(tasks),
         planning=PlanningEvidence(
-            contract_version=2,
+            contract_version=contract_version,
             planner_id=planner_id,
             rationale=plan.rationale,
             constraints=plan.constraints,
@@ -212,8 +237,8 @@ def validate_planned_mission(
     role = registry.role("developer")
     evidence = PlanningEvidence.model_validate(request.planning.model_dump())
     version = evidence.contract_version
-    if version == 2 and len(request.tasks) < 4:
-        raise MissionValidationError("Version 2 requires at least four tasks")
+    if len(request.tasks) < {1: 3, 2: 4, 3: 5}[version]:
+        raise MissionValidationError("Planning version requires more tasks")
     planner = registered_planner(registry)
     if planner.id != request.planning.planner_id:
         raise MissionValidationError("Planning evidence does not match the registered planner")
@@ -230,13 +255,16 @@ def validate_planned_mission(
     if (
         list(kinds.values()).count("developer_patch") != 1
         or list(kinds.values()).count("developer_test") != 1
-        or list(kinds.values()).count("developer_baseline") != (1 if version == 2 else 0)
+        or list(kinds.values()).count("developer_baseline") != (1 if version in (2, 3) else 0)
+        or list(kinds.values()).count("developer_issue") != (1 if version == 3 else 0)
         or "developer_investigate" not in kinds.values()
     ):
         raise MissionValidationError("Plan requires exactly one patch and one test/review task")
     consumed = set()
     for task in request.tasks:
         kind = kinds[task.id]
+        if "issue" in task.inputs:
+            raise MissionValidationError("Issue evidence must come from a dependency binding")
         if kind != "developer_test":
             if (
                 task.inputs.get("goal") != request.goal
@@ -253,12 +281,25 @@ def validate_planned_mission(
                 "Test/result task requires explicit outcome and human review"
             )
         keys = set(task.input_bindings)
-        patch_required = {"findings", "baseline_summary"} if version == 2 else {"findings"}
-        test_required = {"diff", "baseline_report"} if version == 2 else {"diff"}
+        patch_required = {"findings", "baseline_summary"} if version in (2, 3) else {"findings"}
+        test_required = {"diff", "baseline_report"} if version in (2, 3) else {"diff"}
+        if version == 3:
+            patch_required.add("issue")
+            test_required.add("issue")
         if (
             (
                 kind == "developer_patch"
-                and (not patch_required <= keys or not keys <= patch_required | {"context"})
+                and (
+                    not patch_required <= keys
+                    or not keys <= patch_required | ({"context"} if version != 3 else set())
+                )
+            )
+            or (
+                kind == "developer_issue"
+                and (
+                    not {"findings", "baseline_summary"} <= keys
+                    or not keys <= {"findings", "baseline_summary", "context"}
+                )
             )
             or (kind == "developer_test" and keys != test_required)
             or (kind == "developer_investigate" and not keys <= {"context"})
@@ -269,7 +310,9 @@ def validate_planned_mission(
             raise MissionValidationError("Every dependency must supply supported evidence")
         resolved = dict(task.inputs)
         for key, binding in task.input_bindings.items():
-            if key in {"baseline_summary", "baseline_report"}:
+            if key == "issue":
+                expected_kind, expected_output = "developer_issue", "issue"
+            elif key in {"baseline_summary", "baseline_report"}:
                 expected_kind, expected_output = "developer_baseline", key
             elif kind == "developer_test":
                 expected_kind, expected_output = "developer_patch", "diff"
@@ -280,10 +323,25 @@ def validate_planned_mission(
                     "Binding source/output does not match executor contract"
                 )
             source_schema = registry.agent(by_id[binding.task_id].agent_id).output_schema
-            if source_schema["properties"][binding.output_key].get("type") != "string":
+            if (
+                key != "issue"
+                and source_schema["properties"][binding.output_key].get("type") != "string"
+            ):
                 raise MissionValidationError("Binding requires string evidence")
             consumed.add(binding.task_id)
-            resolved[key] = "validated upstream evidence"
+            resolved[key] = (
+                {
+                    "title": "Validated proposal",
+                    "problem": "Evidence",
+                    "observed_behavior": "Evidence",
+                    "expected_behavior": "Goal",
+                    "suggested_reproduction_steps": ["Suggested step"],
+                    "proposed_acceptance_criteria": ["Proposed criterion"],
+                    "limitations": [],
+                }
+                if key == "issue"
+                else "validated upstream evidence"
+            )
         try:
             Draft202012Validator(registry.agent(task.agent_id).input_schema).validate(resolved)
         except SchemaValidationError:
@@ -293,10 +351,26 @@ def validate_planned_mission(
     terminal = {key for key in by_id if key not in consumed}
     if len(terminal) != 1 or kinds[next(iter(terminal))] != "developer_test":
         raise MissionValidationError("Every planned task must lead to the final tested review")
+    if version == 3:
+        issue = next(t for t in request.tasks if kinds[t.id] == "developer_issue")
+        patch = next(t for t in request.tasks if kinds[t.id] == "developer_patch")
+        test = next(t for t in request.tasks if kinds[t.id] == "developer_test")
+        if (
+            any(
+                patch.input_bindings[key] != issue.input_bindings[key]
+                for key in ("findings", "baseline_summary")
+            )
+            or patch.input_bindings["issue"] != test.input_bindings["issue"]
+            or test.input_bindings["baseline_report"].task_id
+            != issue.input_bindings["baseline_summary"].task_id
+        ):
+            raise MissionValidationError(
+                "Issue, patch and tests must share exact upstream evidence"
+            )
 
 
 def review_evidence(mission: Mission, task: TaskSpec, outputs: dict[str, Any]) -> dict[str, str]:
-    """Version-2 review owns exact upstream evidence, independent of executor implementation."""
+    """Developer v2/v3 review owns exact dependency-bound evidence."""
     by_id = {item.id: item for item in mission.tasks}
     bound = {}
     for key in ("diff", "baseline_report"):
@@ -308,8 +382,48 @@ def review_evidence(mission: Mission, task: TaskSpec, outputs: dict[str, Any]) -
     report = outputs.get("report")
     if not isinstance(report, str) or not report:
         raise MissionValidationError("Tested review is missing its test report")
-    return {
+    evidence = {
         "tested.diff": bound["diff"],
         "test-report.txt": report,
         "reviewed-baseline-report.txt": bound["baseline_report"],
     }
+    if mission.planning and mission.planning.contract_version == 3:
+        binding = task.input_bindings["issue"]
+        source = by_id[binding.task_id]
+        if source.outputs is None:
+            raise MissionValidationError("Tested review is missing issue evidence")
+        evidence.update(issue_evidence(source.outputs.get(binding.output_key), reviewed=True))
+    return evidence
+
+
+def validate_issue_artifacts(
+    mission: Mission, repository: RuntimeRepository, artifacts: ArtifactStorage
+) -> None:
+    """Retained issue output must still match the immutable evidence used by patching."""
+    if (
+        mission.role_id != "developer"
+        or not mission.planning
+        or (mission.planning.contract_version != 3)
+    ):
+        return
+    test = next(task for task in mission.tasks if task.review_required)
+    binding = test.input_bindings["issue"]
+    issue = next(task for task in mission.tasks if task.id == binding.task_id)
+    if issue.status != TaskStatus.COMPLETED:
+        return
+    value = (issue.outputs or {}).get(binding.output_key)
+    try:
+        canonical = IssueSpec.model_validate(value).model_dump(mode="json")
+    except ValueError:
+        raise MissionValidationError("Retained issue output violates its bounded schema") from None
+    if value != canonical:
+        raise MissionValidationError("Issue output differs from its canonical evidence")
+    expected = issue_evidence(canonical)
+    actual = {}
+    for ref in issue.artifact_refs:
+        artifact = repository.artifact(ref)
+        if artifact.mission_id != mission.id or artifact.task_id != issue.id:
+            raise MissionValidationError("Issue artifact scope does not match its task")
+        actual[artifact.name] = artifacts.read(artifact).decode("utf-8")
+    if len(issue.artifact_refs) != len(expected) or actual != expected:
+        raise MissionValidationError("Issue output does not match its frozen artifacts")

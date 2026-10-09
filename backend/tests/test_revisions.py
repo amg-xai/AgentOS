@@ -122,7 +122,7 @@ def test_revision_real_tests_restart_and_fresh_review(tmp_path, workspace):
         for line in failed["tasks"][-1]["outputs"]["report"].splitlines():
             if line.startswith(("Source SHA-256:", "Recipe SHA-256:")):
                 assert line in result["tasks"][-1]["outputs"]["report"]
-        assert [t["attempts"] for t in result["tasks"]] == [1, 2, 1, 2]
+        assert [t["attempts"] for t in result["tasks"]] == [1, 2, 1, 1, 2]
         replay = client.post(
             f"/approvals/{old['id']}/decision",
             json={

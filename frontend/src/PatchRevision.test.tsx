@@ -3,9 +3,14 @@ import userEvent from '@testing-library/user-event';
 import { expect, test, vi } from 'vitest';
 import { MissionDetail } from './MissionDetail';
 
-test.each([true, false])(
-  'revision requires feedback and an explicit run (operator=%s)',
-  async (canWrite) => {
+test.each([
+  { canWrite: true, version: 2 },
+  { canWrite: false, version: 2 },
+  { canWrite: true, version: 3 },
+  { canWrite: false, version: 3 },
+])(
+  'v$version revision requires feedback and an explicit run (operator=$canWrite)',
+  async ({ canWrite, version }) => {
     let reset = false;
     let reject = true;
     const respond = (value: unknown, status = 200) =>
@@ -37,7 +42,7 @@ test.each([true, false])(
           version: reset ? 13 : 12,
           status: reset ? 'RUNNING' : 'FAILED',
           planning: {
-            contract_version: 2,
+            contract_version: version,
             planner_id: 'planner',
             rationale: 'Preserve tests',
             constraints: [],

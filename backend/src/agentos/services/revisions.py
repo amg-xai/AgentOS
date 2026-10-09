@@ -7,10 +7,12 @@ from agentos.domain.governance import (
     Approval,
     ApprovalStatus,
     UserRole,
+    mission_plan_digest,
     payload_digest,
     require_operator,
     review_payload,
 )
+from agentos.domain.issue import issue_evidence
 from agentos.domain.missions import (
     Mission,
     MissionNotFound,
@@ -19,27 +21,23 @@ from agentos.domain.missions import (
     PatchRevisionRequest,
     StateConflict,
     Task,
-    TaskSpec,
     TaskStatus,
 )
 from agentos.domain.revisions import DeveloperRevision, PatchRevisionContext, PatchRevisionStatus
 from agentos.services.execution import ExecutorRegistry
 from agentos.services.missions import refresh_dependencies
-from agentos.services.planning import developer_kind, review_evidence, validate_planned_mission
+from agentos.services.planning import (
+    developer_kind,
+    review_evidence,
+    validate_issue_artifacts,
+    validate_planned_mission,
+)
 from agentos.services.registry import AgentRegistry
 from agentos.services.runtime import ArtifactStorage, RuntimeRepository
 
 
 def plan_digest(mission: Mission) -> str:
-    return payload_digest(
-        {
-            "goal": mission.goal,
-            "planning": mission.planning.model_dump(mode="json") if mission.planning else None,
-            "tasks": [
-                t.model_dump(mode="json", include=set(TaskSpec.model_fields)) for t in mission.tasks
-            ],
-        }
-    )
+    return mission_plan_digest(mission)
 
 
 class PatchRevisionService:
@@ -60,10 +58,11 @@ class PatchRevisionService:
             self.demo
             or mission.role_id != "developer"
             or not mission.planning
-            or mission.planning.contract_version != 2
+            or mission.planning.contract_version not in (2, 3)
         ):
-            raise StateConflict("Patch revision requires a normal version-2 Developer mission")
+            raise StateConflict("Patch revision requires a normal version-2/3 Developer mission")
         validate_planned_mission(mission, self.registry, self.executors)
+        validate_issue_artifacts(mission, self.repository, self.artifacts)
         patch = next(
             t
             for t in mission.tasks
@@ -79,6 +78,7 @@ class PatchRevisionService:
     def _evidence(self, mission: Mission, test: Task, approval: Approval) -> dict[str, str]:
         outputs = approval.payload.get("outputs")
         refs = approval.payload.get("artifact_refs")
+        count = 5 if mission.planning and mission.planning.contract_version == 3 else 3
         if (
             approval.mission_id != mission.id
             or approval.task_id != test.id
@@ -87,9 +87,10 @@ class PatchRevisionService:
             or not isinstance(outputs, dict)
             or outputs.get("passed") is not False
             or not isinstance(refs, list)
-            or len(refs) != 3
+            or len(refs) != count
             or any(not isinstance(ref, str) for ref in refs)
-            or len(set(refs)) != 3
+            or len(set(refs)) != count
+            or (count == 5 and approval.payload.get("plan_digest") != plan_digest(mission))
         ):
             raise StateConflict("Revision needs an explicitly denied failed-test result")
         contents: dict[str, str] = {}
@@ -104,8 +105,18 @@ class PatchRevisionService:
             contents[artifact.name] = self.artifacts.read(artifact).decode("utf-8")
         baseline_binding = test.input_bindings["baseline_report"]
         baseline = next(t for t in mission.tasks if t.id == baseline_binding.task_id)
+        expected_names = {"tested.diff", "test-report.txt", "reviewed-baseline-report.txt"}
+        issue_files = {}
+        if count == 5:
+            binding = test.input_bindings["issue"]
+            issue = next(t for t in mission.tasks if t.id == binding.task_id)
+            issue_files = issue_evidence(
+                (issue.outputs or {}).get(binding.output_key), reviewed=True
+            )
+            expected_names.update(issue_files)
         if (
-            set(contents) != {"tested.diff", "test-report.txt", "reviewed-baseline-report.txt"}
+            set(contents) != expected_names
+            or any(contents.get(name) != value for name, value in issue_files.items())
             or not contents["tested.diff"]
             or contents["test-report.txt"] != outputs.get("report")
             or baseline.outputs is None
@@ -177,7 +188,7 @@ class PatchRevisionService:
         if len(candidates) != 1:
             raise StateConflict("The current failed attempt has no unique human denial")
         approval = candidates[0]
-        if approval.payload != review_payload(test):
+        if approval.payload != review_payload(test, mission):
             raise StateConflict("The current failed result differs from its denial")
         contents = self._evidence(mission, test, approval)
         if contents != review_evidence(mission, test, test.outputs):

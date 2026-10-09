@@ -1,5 +1,27 @@
 # Decisions and baseline
 
+## 2026-10-10: Developer local issue evidence
+
+Original PLAN.md section 1 and Phase 8 name an Issue Agent between investigation
+and fixing. Implement that local report step through a registered tool-free
+READ-only capability and the existing structured generator. New normal Developer
+plans use server-controlled v3 with 5–8 planner-selected tasks; original goal and
+constraints reach issue and patch. Strict structured bindings preserve shared
+findings/baseline/issue sources with the existing three-binding limit.
+
+Frozen source/test recipes, scoped tools, explicit actual test outcomes, the
+orchestrator and approvals are reused. Final review owns five exact diff/report/
+issue files and binds the plan digest. Retained issue outputs must match their
+immutable original artifacts. Only explicit passing patched tests can be accepted;
+proposed reproduction/criteria are not proof. Revisions retain issue/upstream work
+and reopen only patch/testing, with the existing two-cycle limit. Saved Developer
+v1/v2, Creator v1/v2, Student v1 and fixed demos retain their contracts.
+
+No live calls, provider changes, external tickets, original-checkout modification,
+publication or deployment are added. This completes the local issue stage, not
+genuine AI acceptance or the full three-role roadmap. Live validation remains
+separately gated; deferred history/memory milestones remain deferred.
+
 ## 2026-10-08: Start from the supplied plan
 
 Inspection of D:\AgentOS found only PLAN.md. There is no existing frontend,

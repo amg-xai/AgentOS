@@ -35,9 +35,9 @@ from agentos.services.planning import developer_kind, validate_planned_mission
 workspace = workspace_fixture
 
 
-def context():
+def context(version=2):
     return ExecutionContext(
-        workspace_id="local", mission_id="frozen", task_id="baseline", planning_version=2
+        workspace_id="local", mission_id="frozen", task_id="baseline", planning_version=version
     )
 
 
@@ -90,7 +90,7 @@ def test_invalid_baseline_plans_are_rejected_before_calls(registry, case):
     assert executor.calls == []
 
 
-@pytest.mark.parametrize("version", [0, 3, True, "2"])
+@pytest.mark.parametrize("version", [0, 4, True, "2"])
 def test_unknown_or_noninteger_contract_versions_rejected(version):
     with pytest.raises(ValidationError):
         PlanningEvidence(planner_id="developer_planner", rationale="test", contract_version=version)
@@ -136,7 +136,10 @@ def test_saved_version_two_cannot_downgrade_before_claim(registry, tmp_path):
         ("print('x' * 2000000)\n", False, "Output limit exceeded: True"),
     ],
 )
-def test_baseline_actual_outcomes_and_sanitized_summary(tmp_path, workspace, script, passed, flag):
+@pytest.mark.parametrize("version", [2, 3])
+def test_baseline_actual_outcomes_and_sanitized_summary(
+    tmp_path, workspace, script, passed, flag, version
+):
     (workspace.repository / "runner.py").write_text(script)
     settings = WorkspaceSettings(
         **(
@@ -148,7 +151,9 @@ def test_baseline_actual_outcomes_and_sanitized_summary(tmp_path, workspace, scr
             }
         )
     )
-    result = asyncio.run(tools(tmp_path, settings).test({"operation": "baseline"}, context()))
+    result = asyncio.run(
+        tools(tmp_path, settings).test({"operation": "baseline"}, context(version))
+    )
     assert result["baseline_passed"] is passed
     assert flag in result["baseline_report"]
     summary = json.loads(result["baseline_summary"])
@@ -158,8 +163,13 @@ def test_baseline_actual_outcomes_and_sanitized_summary(tmp_path, workspace, scr
     assert len(result["baseline_summary"]) < 2000
 
 
-def test_restart_uses_identical_source_and_recipe_despite_settings_changes(tmp_path, workspace):
-    baseline = asyncio.run(tools(tmp_path, workspace).test({"operation": "baseline"}, context()))
+@pytest.mark.parametrize("version", [2, 3])
+def test_restart_uses_identical_source_and_recipe_despite_settings_changes(
+    tmp_path, workspace, version
+):
+    baseline = asyncio.run(
+        tools(tmp_path, workspace).test({"operation": "baseline"}, context(version))
+    )
     changed = WorkspaceSettings(
         **(
             workspace.model_dump()
@@ -171,7 +181,7 @@ def test_restart_uses_identical_source_and_recipe_despite_settings_changes(tmp_p
         )
     )
     (workspace.repository / "calculator.py").write_text("changed original source\n")
-    result = asyncio.run(tools(tmp_path, changed).test({"diff": PATCH}, context()))
+    result = asyncio.run(tools(tmp_path, changed).test({"diff": PATCH}, context(version)))
     assert baseline["baseline_passed"] is False and result["passed"] is True
     for prefix in ("Source SHA-256:", "Recipe SHA-256:"):
         assert (
@@ -185,9 +195,12 @@ def test_restart_uses_identical_source_and_recipe_despite_settings_changes(tmp_p
 
 
 @pytest.mark.parametrize("damage", ["recipe", "snapshot", "missing_recipe", "missing_snapshot"])
-def test_damaged_frozen_evidence_prevents_subprocess_execution(tmp_path, workspace, damage):
+@pytest.mark.parametrize("version", [2, 3])
+def test_damaged_frozen_evidence_prevents_subprocess_execution(
+    tmp_path, workspace, damage, version
+):
     runner = tools(tmp_path, workspace)
-    asyncio.run(runner.read({}, context()))
+    asyncio.run(runner.read({}, context(version)))
     with sqlite3.connect(runner.store.path) as conn:
         if damage.startswith("missing"):
             conn.execute(
@@ -201,7 +214,7 @@ def test_damaged_frozen_evidence_prevents_subprocess_execution(tmp_path, workspa
             )
     with patch("agentos.adapters.local_tools.subprocess.Popen") as spawn:
         with pytest.raises(StateConflict, match="integrity|incomplete"):
-            asyncio.run(runner.test({"operation": "baseline"}, context()))
+            asyncio.run(runner.test({"operation": "baseline"}, context(version)))
         spawn.assert_not_called()
 
 
@@ -284,8 +297,8 @@ def test_review_copy_exactness_restart_damage_and_denial_retry(tmp_path, workspa
             json={"expected_version": denied["version"], "action": "retry"},
         ).json()
         rerun = client.post(base + "/run", json={"expected_version": retried["version"]}).json()
-        assert [task["attempts"] for task in rerun["tasks"]] == [1, 1, 1, 2]
-        assert len(client.get(base + "/artifacts").json()) == 10
+        assert [task["attempts"] for task in rerun["tasks"]] == [1, 1, 1, 1, 2]
+        assert len(client.get(base + "/artifacts").json()) == 16
         assert len(client.get(base + "/approvals?pending_only=false").json()) == 2
         assert (
             client.post(

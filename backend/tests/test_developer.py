@@ -1,6 +1,7 @@
 """Real filesystem/Git/subprocess integration; only the model transport is mocked."""
 
 import asyncio
+import copy
 import difflib
 import json
 import shutil
@@ -127,15 +128,53 @@ def plan_data(refine=False):
     }
 
 
+ISSUE = {
+    "title": "Addition subtracts",
+    "problem": "Positive sums are incorrect",
+    "observed_behavior": "add(2, 3) returns -1",
+    "expected_behavior": "add(2, 3) returns 5; preserve negative sums",
+    "suggested_reproduction_steps": ["Run the configured addition test"],
+    "proposed_acceptance_criteria": ["Addition tests pass without weakening assertions"],
+    "limitations": ["Coverage is limited to configured tests"],
+}
+
+
+def issue_plan(data=None):
+    """Upgrade an injected legacy fixture, never production mission data."""
+    data = copy.deepcopy(data if data is not None else plan_data())
+    patch = next(t for t in data["tasks"] if t["agent_id"] == "code_helper")
+    test = next(t for t in data["tasks"] if t["agent_id"] == "testing")
+    issue = {
+        "id": "specify",
+        "title": "Specify the local issue",
+        "agent_id": "issue_specification",
+        "objective": "Preserve goal and evidence in a local issue proposal",
+        "dependencies": list(patch["dependencies"]),
+        "bindings": copy.deepcopy(patch["bindings"]),
+        "review_required": False,
+    }
+    patch["bindings"] = [b for b in patch["bindings"] if b["input_key"] != "context"]
+    patch["dependencies"] = list(dict.fromkeys(b["task_id"] for b in patch["bindings"]))
+    for task in (patch, test):
+        task["dependencies"].append(issue["id"])
+        task["bindings"].append(
+            {"input_key": "issue", "task_id": issue["id"], "output_key": "issue"}
+        )
+    data["tasks"].insert(-1, issue)
+    return data
+
+
 def model_transport(request):
     body = json.loads(request.content)
     inputs = json.loads(body["input"])
     agent = body["text"]["format"]["name"]
-    if agent != "developer_planner":
+    if agent not in {"developer_planner", "issue_specification"}:
         assert "calculator.py" in inputs["source_files"]
     outputs = (
-        plan_data()
+        issue_plan()
         if agent == "developer_planner"
+        else {"issue": ISSUE}
+        if agent == "issue_specification"
         else {"findings": "calculator.py subtracts instead of adding"}
         if agent == "investigation"
         else {"diff": PATCH, "summary": "Correct addition without changing tests"}
@@ -179,7 +218,7 @@ def test_complete_workflow_real_tools_restart_and_approval(tmp_path, workspace, 
         assert result["tasks"][-1]["outputs"]["passed"] is True
         assert "Exit code: 0" in result["tasks"][-1]["outputs"]["report"]
         artifacts = client.get(base + "/artifacts").json()
-        assert len(artifacts) == 7
+        assert len(artifacts) == 11
         diff = next(a for a in artifacts if a["name"] == "proposed.diff")
         assert client.get(f"/artifacts/{diff['id']}/content").text == PATCH
         assert (
@@ -404,6 +443,8 @@ def test_review_binds_the_tested_patch_and_rejects_damage(tmp_path, workspace):
             "tested.diff",
             "test-report.txt",
             "reviewed-baseline-report.txt",
+            "reviewed-issue.json",
+            "reviewed-issue.md",
         }
         tested = next(a for a in covered if a["name"] == "tested.diff")
         assert client.get(f"/artifacts/{tested['id']}/content").text == PATCH
@@ -448,7 +489,10 @@ def test_bundled_acceptance_project_bug_fix_restart_and_source_preservation(tmp_
     )
 
     def transport(request):
-        if json.loads(request.content)["text"]["format"]["name"] == "developer_planner":
+        if json.loads(request.content)["text"]["format"]["name"] in {
+            "developer_planner",
+            "issue_specification",
+        }:
             return model_transport(request)
         body = json.loads(request.content)
         inputs = json.loads(body["input"])
@@ -488,7 +532,7 @@ def test_bundled_acceptance_project_bug_fix_restart_and_source_preservation(tmp_
         base = f"/missions/{mission['id']}"
         mission = client.post(base + "/run", json={"expected_version": 1}).json()
         assert mission["status"] == "WAITING_APPROVAL", mission
-        assert mission["planning"]["contract_version"] == 2
+        assert mission["planning"]["contract_version"] == 3
         baseline = next(task for task in mission["tasks"] if task["id"] == "baseline")
         assert baseline["status"] == "COMPLETED"
         assert baseline["outputs"]["baseline_passed"] is False
@@ -515,6 +559,8 @@ def test_bundled_acceptance_project_bug_fix_restart_and_source_preservation(tmp_
             "tested.diff",
             "test-report.txt",
             "reviewed-baseline-report.txt",
+            "reviewed-issue.json",
+            "reviewed-issue.md",
         }
         reviewed_baseline = next(a for a in covered if a["name"] == "reviewed-baseline-report.txt")
         assert client.get(f"/artifacts/{reviewed_baseline['id']}/content").text == baseline_report

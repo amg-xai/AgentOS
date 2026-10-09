@@ -48,7 +48,7 @@ class LocalWorkspaceTools:
             raise StateConflict("Unknown workspace")
         files = (
             self.store.execution_snapshot(context.mission_id, self.settings)[0]
-            if context.planning_version == 2
+            if context.planning_version in (2, 3)
             else self.store.snapshot(context.mission_id, self.settings)
         )
         return {"files": files}
@@ -114,8 +114,8 @@ class LocalWorkspaceTools:
 
     async def test(self, inputs: dict[str, Any], context: ExecutionContext) -> dict[str, Any]:
         if inputs.get("operation") == "baseline":
-            if context.planning_version != 2:
-                raise StateConflict("Baseline requires planning version 2")
+            if context.planning_version not in (2, 3):
+                raise StateConflict("Baseline requires Developer planning version 2 or 3")
             return await asyncio.to_thread(self._test, None, context)
         return await asyncio.to_thread(self._test, inputs["diff"], context)
 
@@ -124,7 +124,7 @@ class LocalWorkspaceTools:
         commands = self.settings.test_commands
         timeout = self.settings.test_timeout_seconds
         digests = []
-        if context.planning_version == 2:
+        if context.planning_version in (2, 3):
             files, recipe, source_digest, recipe_digest = self.store.execution_snapshot(
                 context.mission_id, self.settings
             )

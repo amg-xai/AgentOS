@@ -13,6 +13,7 @@ from agentos.domain.agents import (
 )
 from agentos.domain.artifacts import ArtifactDraft
 from agentos.domain.governance import UserRole
+from agentos.domain.issue import IssueSpec, issue_evidence
 from agentos.domain.tools import ToolDefinition
 from agentos.services.planning import developer_kind
 from agentos.services.tools import ToolRegistry
@@ -68,6 +69,20 @@ class DeveloperExecutor:
         self, agent: AgentDefinition, inputs: dict[str, Any], context: ExecutionContext
     ) -> AgentResult:
         kind = developer_kind(agent)
+        if kind == "developer_issue":
+            outputs = await self.model.generate(agent, inputs)
+            issue = IssueSpec.model_validate(outputs["issue"])
+            return AgentResult(
+                outputs={"issue": issue.model_dump(mode="json")},
+                artifacts=tuple(
+                    ArtifactDraft(
+                        name=name,
+                        media_type="text/plain" if name.endswith(".json") else "text/markdown",
+                        content=content,
+                    )
+                    for name, content in issue_evidence(issue).items()
+                ),
+            )
         if kind == "developer_baseline":
             outputs = await self.tools.execute(
                 "terminal", agent, self.role, {"operation": "baseline"}, context
@@ -94,7 +109,7 @@ class DeveloperExecutor:
                         content=inputs["baseline_report"],
                     ),
                 )
-                if context.planning_version == 2
+                if context.planning_version in (2, 3)
                 else ()
             )
             return AgentResult(
@@ -107,6 +122,22 @@ class DeveloperExecutor:
                         name="test-report.txt", media_type="text/plain", content=outputs["report"]
                     ),
                     *baseline,
+                    *(
+                        tuple(
+                            ArtifactDraft(
+                                name=name,
+                                media_type="text/plain"
+                                if name.endswith(".json")
+                                else "text/markdown",
+                                content=content,
+                            )
+                            for name, content in issue_evidence(
+                                inputs["issue"], reviewed=True
+                            ).items()
+                        )
+                        if context.planning_version == 3
+                        else ()
+                    ),
                 ),
             )
         source = await self.tools.execute("filesystem", agent, self.role, {}, context)

@@ -36,7 +36,7 @@ class ApprovalService:
             or task.attempts != approval.task_attempt
             or request.payload_digest != approval.payload_digest
             or payload_digest(approval.payload) != approval.payload_digest
-            or payload_digest(review_payload(task)) != approval.payload_digest
+            or payload_digest(review_payload(task, mission)) != approval.payload_digest
         ):
             raise StateConflict("Approval is stale, already decided, or its payload does not match")
         for artifact_id in task.artifact_refs:
@@ -129,10 +129,11 @@ class ApprovalService:
             request.decision == "approve"
             and mission.role_id == "developer"
             and mission.planning
-            and mission.planning.contract_version == 2
+            and mission.planning.contract_version in (2, 3)
         ):
-            from agentos.services.planning import review_evidence
+            from agentos.services.planning import review_evidence, validate_issue_artifacts
 
+            validate_issue_artifacts(mission, self.repository, self.artifacts)
             expected = review_evidence(mission, task, task.outputs or {})
             actual = {
                 self.repository.artifact(ref).name: self.artifacts.read(
@@ -151,7 +152,7 @@ class ApprovalService:
                 or (
                     mission.role_id == "developer"
                     and mission.planning is not None
-                    and mission.planning.contract_version == 2
+                    and mission.planning.contract_version in (2, 3)
                 )
             )
             and (task.outputs is None or task.outputs.get("passed") is not True)

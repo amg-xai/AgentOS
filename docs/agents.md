@@ -12,13 +12,17 @@ Role manifests reference registered agents and declared tools. Validate missing
 references, duplicate ids, malformed schemas, and invalid permission values at
 load time. Activation selects capabilities; it never bypasses permission checks.
 
-Developer provides investigation, code changes, testing, deterministic baseline
-testing, and a tool-free planning agent. Normal routing uses declared capabilities,
-rather than canonical agent IDs;
+Developer provides investigation, local issue specification, code changes, testing,
+deterministic baseline testing, and a tool-free planning agent. Normal routing uses
+declared capabilities, rather than canonical agent IDs;
 the offline preset remains explicit. See [Developer planning](developer-planning.md).
-Its executor composes the structured generator with registered local tools and scoped project
-context. Creator provides a tool-free planner plus `creator_research`, `creator_outline`, and
-`creator_script`. Optional supplied sources add verified research outputs to
+Its executor composes the structured generator with registered local tools and scoped project context.
+The Developer Issue Agent uses bound evidence only; suggested reproduction/criteria
+are local proposals, never test-pass flags or commands.
+
+Creator provides a tool-free planner plus `creator_research`, `creator_outline`, and
+`creator_script`, plus optional `creator_thumbnail` and its tool-free planner.
+Optional supplied sources add verified research outputs to
 the outline/script inputs; saved unplanned brief-only missions retain their existing inputs.
 Both packages share the execution registry, mission engine, artifacts,
 and approval services; manifest discovery itself never runs an agent.

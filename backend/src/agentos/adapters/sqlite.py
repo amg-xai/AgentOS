@@ -282,7 +282,7 @@ class SQLiteMissionRepository:
                 task is None
                 or task.status != TaskStatus.WAITING_APPROVAL
                 or task.attempts != approval.task_attempt
-                or payload_digest(review_payload(task)) != approval.payload_digest
+                or payload_digest(review_payload(task, mission)) != approval.payload_digest
             ):
                 connection.execute(
                     "UPDATE approvals SET status = 'STALE' WHERE id = ?", (approval.id,)
@@ -320,7 +320,7 @@ class SQLiteMissionRepository:
                     or approval.task_attempt != task.attempts
                     or approval.status != ApprovalStatus.PENDING
                     or payload_digest(approval.payload) != approval.payload_digest
-                    or payload_digest(review_payload(task)) != approval.payload_digest
+                    or payload_digest(review_payload(task, mission)) != approval.payload_digest
                 ):
                     raise StateConflict("Approval scope or payload does not match the waiting task")
                 connection.execute(

@@ -98,7 +98,7 @@ def dependency_order(tasks: tuple[TaskSpec, ...]) -> list[str]:
 
 
 class PlanningEvidence(Definition):
-    contract_version: int = Field(default=1, strict=True, ge=1, le=2)
+    contract_version: int = Field(default=1, strict=True, ge=1, le=3)
     planner_id: Identifier
     rationale: str = Field(min_length=1, max_length=4000)
     constraints: tuple[Annotated[str, Field(min_length=1, max_length=1000)], ...] = Field(

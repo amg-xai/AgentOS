@@ -78,13 +78,18 @@ requires explicit boolean `passed: true` in addition to the existing review
 integrity checks. Completion alone never establishes test success for historical
 or manually managed missions.
 
-Version-2 normal Developer plans also require baseline execution, bound baseline
+Version-2/3 normal Developer plans also require baseline execution, bound baseline
 summary for patch generation, and bound baseline report for final review. A baseline
 task can complete with `baseline_passed: false`; final acceptance still requires
 `passed: true` from patched tests. Both outcomes and both reports remain inspectable.
 The review owns exact copies of the tested diff, baseline report, and patched report,
 and validates their contents before staging and accepting them. Version-1 saved
 plans and the offline preset retain their previous contracts.
+Version 3 inserts a capability-selected local Issue Agent after investigation.
+Its structured proposal binds the same findings/baseline used by patching and the
+same issue used by testing. Final review also owns exact JSON/text issue copies;
+retained issue output must match its original immutable artifacts before dispatch,
+review or revision. Explicit revision retains the issue and reopens only patch/tests.
 
 ## Interrupted run recovery
 

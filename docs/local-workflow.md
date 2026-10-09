@@ -81,15 +81,18 @@ publishing, deployments, or changes to the original checkout.
 Developer capabilities. See [planning contracts](developer-planning.md) for the
 supported graph shapes, validation, preserved goal, and inspectable evidence.
 The result stops for human approval after actual testing. Its review bundle owns
-`tested.diff`, `test-report.txt`, and, for version-2 normal plans,
+`tested.diff`, `test-report.txt`, and, for version-2/3 normal plans,
 `reviewed-baseline-report.txt`, so approval verifies the exact tested patch and both
 reports. The earlier `proposed.diff` remains investigation history.
+Version 3 also owns `reviewed-issue.json` and `reviewed-issue.md`: the exact bounded
+local issue proposal used for the patch. Its suggested reproduction and acceptance
+criteria do not establish passing tests, coverage or correctness.
 Inspect `passed` and the report: new planned and demo results cannot be accepted
 unless tests explicitly pass. Older/manual completion does not establish passing
 tests. Denial fails the review task; retry reruns tests in fresh
 scratch. Existing recovery rules apply after interrupted runs.
 
-Normal version-2 missions also support an explicit bounded replacement after human
+Normal version-2/3 missions also support an explicit bounded replacement after human
 denial of failed tests. **Revise patch** records feedback and resets only patch/testing;
 it does not run. The next explicit run generates a full replacement against the
 original frozen snapshot and tests it with the original recipe. Two cycles maximum,

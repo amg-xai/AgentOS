@@ -8,7 +8,7 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
-from test_developer import PATCH, configured_app, model_transport, plan_data
+from test_developer import ISSUE, PATCH, configured_app, issue_plan, model_transport, plan_data
 from test_developer import workspace as workspace_fixture
 from test_orchestration import FixtureExecutor, bindings
 
@@ -40,6 +40,7 @@ def compiled(registry, data=None, executors=None):
         "developer_planner",
         registry,
         executors or bindings(FixtureExecutor()),
+        contract_version=2,
     )
 
 
@@ -58,7 +59,7 @@ def test_valid_unsorted_plan_preserves_goal_constraints_objectives_and_bindings(
     assert test.review_required and test.requires_passed_tests and not test.inputs
 
 
-@pytest.mark.parametrize("task_count", [5, 8])
+@pytest.mark.parametrize("task_count", [6, 8])
 def test_branching_plans_deliver_distinct_evidence_to_one_tested_patch(
     tmp_path, workspace, task_count
 ):
@@ -70,7 +71,7 @@ def test_branching_plans_deliver_distinct_evidence_to_one_tested_patch(
     }
     investigations = [investigate, context]
     upstream = investigate["id"]
-    for index in range(task_count - 5):
+    for index in range(task_count - 6):
         task = investigate | {
             "id": f"refine_{index}",
             "objective": f"Refine source evidence {index}",
@@ -94,10 +95,13 @@ def test_branching_plans_deliver_distinct_evidence_to_one_tested_patch(
         name = body["text"]["format"]["name"]
         requests.append((name, inputs))
         if name == "developer_planner":
-            return reply(data)
+            return reply(issue_plan(data))
         if name == "investigation":
             return reply({"findings": inputs["objective"]})
-        assert inputs["context"] == context["objective"]
+        if name == "issue_specification":
+            assert inputs["context"] == context["objective"]
+            return reply({"issue": ISSUE})
+        assert inputs["issue"] == ISSUE
         assert inputs["findings"] == next(
             task["objective"] for task in investigations if task["id"] == upstream
         )
@@ -114,7 +118,7 @@ def test_branching_plans_deliver_distinct_evidence_to_one_tested_patch(
         assert result["status"] == "WAITING_APPROVAL" and len(result["tasks"]) == task_count
         review = next(task for task in result["tasks"] if task["id"] == "verify")
         assert review["outputs"]["passed"] is True
-        assert sum(name == "investigation" for name, _ in requests) == task_count - 3
+        assert sum(name == "investigation" for name, _ in requests) == task_count - 4
         assert len(client.get(f"/missions/{mission['id']}/approvals").json()) == 1
     assert originals == {
         name: (workspace.repository / name).read_bytes() for name in workspace.files
@@ -301,9 +305,10 @@ def test_goals_change_decomposition_and_persist_planning_evidence(tmp_path, work
                 "developer_patch",
                 "developer_test",
                 "developer_baseline",
+                "developer_issue",
             }
             assert "source_files" not in inputs and "repository" not in inputs
-            return reply(plan_data(refine="negative" in inputs["goal"]))
+            return reply(issue_plan(plan_data(refine="negative" in inputs["goal"])))
         return model_transport(request)
 
     with TestClient(configured_app(tmp_path, workspace, transport)) as client:
@@ -311,7 +316,7 @@ def test_goals_change_decomposition_and_persist_planning_evidence(tmp_path, work
         refined = client.post(
             "/workflows/developer", json={"goal": "Fix addition preserving negative sums"}
         ).json()
-        assert len(simple["tasks"]) == 4 and len(refined["tasks"]) == 5
+        assert len(simple["tasks"]) == 5 and len(refined["tasks"]) == 6
         base = f"/missions/{refined['id']}"
         result = client.post(base + "/run", json={"expected_version": 1}).json()
         assert result["status"] == "WAITING_APPROVAL"
@@ -325,7 +330,7 @@ def test_goals_change_decomposition_and_persist_planning_evidence(tmp_path, work
             and inputs["constraints"] == refined["planning"]["constraints"]
         )
         assert any(
-            event["action"] == "mission_planned" and event["details"]["contract_version"] == 2
+            event["action"] == "mission_planned" and event["details"]["contract_version"] == 3
             for event in client.get(base + "/events").json()
         )
     reopened = SQLiteMissionRepository(tmp_path / "missions.sqlite3").get(refined["id"])
@@ -350,10 +355,12 @@ def test_renamed_registered_agents_route_by_capability_not_hardcoded_ids(
         body = json.loads(request.content)
         name = body["text"]["format"]["name"]
         if name == rename["developer_planner"]:
-            data = plan_data()
+            data = issue_plan()
             for task in data["tasks"]:
                 task["agent_id"] = rename[task["agent_id"]]
             return reply(data)
+        if name == rename["issue_specification"]:
+            return reply({"issue": ISSUE})
         return reply(
             {"findings": "The implementation subtracts"}
             if name == rename["investigation"]
@@ -437,6 +444,7 @@ def test_dependency_failure_blocks_patch_tests_and_review(tmp_path, workspace):
             "FAILED",
             "BLOCKED",
             "READY",
+            "BLOCKED",
             "BLOCKED",
         ]
         assert client.get(base + "/approvals").json() == []

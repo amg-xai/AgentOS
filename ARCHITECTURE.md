@@ -9,7 +9,7 @@ Opted-in normal Creator missions use Creator planning version 2: script preparat
 followed by a registered graphic-layout agent and local PNG rendering. The same
 orchestrator stages the image, frozen rendering receipt and exact bound text for
 human review. Acceptance verifies stored evidence without rerendering. Default
-Creator v1 plans and fixed demos retain their contracts. Developer v2 test-result
+Creator v1 plans and fixed demos retain their contracts. Developer v2/v3 test-result
 semantics remain guarded by role. See [Creator workflow](docs/creator-workflow.md).
 
 Normal Developer creation now uses a registered tool-free planner and validated
@@ -18,10 +18,15 @@ the existing mission engine; it does not introduce another workflow runtime.
 Planning evidence persists with mission snapshots and audit events. New Developer
 tested results require explicit passing outcomes before human acceptance.
 
-New normal Developer plans use version 2 with deterministic baseline tests and
-separate baseline/patched outcomes. Version-1 saved plans and the offline preset
-retain their contracts. Final review owns the exact baseline report, patched report,
-and tested diff; staging and acceptance validate their contents.
+New normal Developer plans use version 3 with deterministic baseline tests and
+separate baseline/patched outcomes and a tool-free registered local Issue Agent.
+The issue binds investigation/baseline evidence; patch and testing use that same
+structured proposal. Final review owns the exact baseline report, patched report,
+tested diff and JSON/text issue copies. Issue output is checked against its frozen
+artifacts before downstream dispatch, review and revision. V3 review also binds
+goal/scope/planning/task definitions through a digest. Suggested reproduction and
+criteria do not prove test success or coverage. Saved Developer v1/v2 plans and
+the offline preset retain their contracts; no storage migration is introduced.
 
 An explicitly selected offline Calculator demo reuses the same mission, tool,
 and approval services with scripted generation and actual local tests. Its
@@ -91,7 +96,7 @@ version, task attempt, digest, and artifact integrity before completing the task
 It never reruns the executor or grants permission to an external tool. Denied
 results fail and can be retried only explicitly.
 
-Normal version-2 Developer missions may explicitly replace a patch after human
+Normal version-2/3 Developer missions may explicitly replace a patch after human
 denial of failed tests, with at most two cycles. A revision service validates the
 current denied attempt and exact evidence, then atomically records bounded history
 and reopens patch/testing through the existing version/claim-checked repository.
@@ -146,7 +151,7 @@ and retry/recovery services. No additional database migration is required.
 
 New normal Creator missions use bounded capability-driven planning (contract version 1)
 and compile into the same Mission/TaskSpec/InputBinding engine. Role-aware preflight
-keeps Developer v1/v2 test boundaries intact. Creator plans support one to four
+keeps Developer v1/v2/v3 test boundaries intact. Creator plans support one to four
 outline/refinement tasks, optional supplied-source research, and one final script
 review. Bound task references resolve exact final evidence without canonical IDs.
 Goal/constraints/objectives persist and reach execution; planning sees only source

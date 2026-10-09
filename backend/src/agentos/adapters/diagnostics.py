@@ -108,6 +108,7 @@ def diagnose(root: Path, *, demo: bool = False, workflow: str = "developer") -> 
                 "developer_patch",
                 "developer_test",
                 "developer_baseline",
+                "developer_issue",
             }:
                 raise ValueError("Package is missing supported planning capabilities")
         elif workflow == "creator" and not demo:

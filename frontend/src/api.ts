@@ -73,7 +73,7 @@ export interface Mission {
   updated_at: string;
   tasks: Task[];
   planning?: {
-    contract_version?: 1 | 2;
+    contract_version?: 1 | 2 | 3;
     planner_id: string;
     rationale: string;
     constraints: string[];

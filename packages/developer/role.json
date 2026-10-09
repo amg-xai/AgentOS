@@ -10,7 +10,8 @@
       "code_helper",
       "testing",
       "developer_planner",
-      "baseline_testing"
+      "baseline_testing",
+      "issue_specification"
     ],
     "tools": [
       "filesystem",

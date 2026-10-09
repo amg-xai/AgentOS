@@ -1,12 +1,35 @@
 # Bounded Developer planning
 
 Normal `POST /workflows/developer` uses the registered, tool-free planner to turn
-the original natural-language goal into 4–8 dependency-linked tasks. It selects
+the original natural-language goal into 5–8 dependency-linked tasks. It selects
 agent IDs from installed Developer capability descriptions and IO contracts.
 There is no fallback to the demo or fixed decomposition if planning fails.
 
-New plans use server-controlled `contract_version: 2`. Version-1 saved missions
-default to their existing 3–8 task contract. The model cannot select the version.
+New plans use server-controlled `contract_version: 3`. Saved version-1 and version-2
+missions retain their 3–8 and 4–8 task contracts. The model cannot select the version.
+
+Version 3 adds exactly one registered, tool-free READ-only `developer_issue` task
+between investigation and patch generation. It binds primary findings and baseline
+summary, optionally a second investigation's findings as context. Patch binds the
+same primary findings and baseline summary plus the issue; final testing binds
+patch diff, the same baseline report and the same issue. There are 1–4 investigations,
+one baseline, one issue, one patch and one final tested review, with at most three
+bindings per task. Task and agent IDs remain planner-selected; all tasks feed review.
+
+The Issue Agent uses only supplied goal/constraints/objective and bound evidence,
+without file, memory, web or tool enrichment. Its strict `IssueSpec` bounds title to
+160 characters, problem/observed/expected behavior to 4,000 each, suggested reproduction
+and proposed acceptance criteria to 1–8 entries of 1,000 characters, and limitations
+to 0–8 entries of 1,000 characters. Extra fields/non-text outputs fail execution.
+Local `issue.json` and `issue.md` are proposals, not proof of reproduction, test
+coverage, correctness or passing tests. No external ticket is created.
+
+Final v3 review owns five exact files: `tested.diff`, `test-report.txt`,
+`reviewed-baseline-report.txt`, `reviewed-issue.json`, and `reviewed-issue.md`.
+Staging and acceptance compare dependency-bound contents, scope, integrity, attempt
+and payload digest. V3 payloads additionally bind the goal, workspace/role, planning
+evidence and task definitions through a plan digest. V2 keeps its three-file bundle
+and previous payload shape. Final acceptance always requires explicit `passed: true`.
 
 Supported version-2 plans contain exactly one baseline task and investigation
 evidence feeding exactly one patch task and exactly one final test/result review
@@ -64,7 +87,7 @@ To change the goal or source, create a new mission. Missing or malformed
 test outcomes fail execution without a result approval. Manual actions cannot
 replace planned executor results; only retry is allowed.
 
-For normal version-2 missions, an Operator/Admin can explicitly deny a failed-test
+For normal version-2/3 missions, an Operator/Admin can explicitly deny a failed-test
 result and request **Revise patch** with nonblank feedback (at most 2,000 characters).
 Two revision cycles are allowed after the initial patch. `GET /missions/{id}/patch-revision`
 reports eligibility; POST requires the current mission version, denied approval ID,
@@ -72,7 +95,7 @@ payload digest, and feedback. Pending review, active claims, stale attempts, dam
 evidence, passing-but-denied results, legacy/manual missions, and demo graphs are
 ineligible. The request runs no model or tools; select **Run mission** separately.
 
-Only patch and final testing are reopened. Investigation, baseline, original goal,
+Only patch and final testing are reopened. Investigation, baseline, issue in v3, original goal,
 constraints, graph, assignments, source snapshot, and frozen test recipe are retained.
 The registered patch agent receives the exact prior diff and feedback as untrusted
 context, alongside the original inputs. Raw test logs and runner arguments stay local.
