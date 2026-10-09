@@ -46,6 +46,18 @@ class ApprovalService:
             if request.decision == "approve":
                 self.artifacts.read(artifact)
         from agentos.services.creator import has_sources, source_review_evidence
+        from agentos.services.student import has_study_plan, study_review_evidence
+
+        if request.decision == "approve" and has_study_plan(mission):
+            expected_study = study_review_evidence(mission, task.outputs or {})
+            actual_study = {
+                self.repository.artifact(ref).name: self.artifacts.read(
+                    self.repository.artifact(ref)
+                ).decode("utf-8")
+                for ref in task.artifact_refs
+            }
+            if len(task.artifact_refs) != len(expected_study) or actual_study != expected_study:
+                raise StateConflict("Student review evidence does not match its study inputs")
 
         if request.decision == "approve" and has_sources(mission):
             expected_creator = source_review_evidence(mission, task.outputs or {})

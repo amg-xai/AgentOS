@@ -1,5 +1,6 @@
 export interface Workflow {
   source_research_ready?: boolean;
+  study_planning_ready?: boolean;
   role_id: string;
   name: string;
   ready: boolean;
@@ -12,6 +13,10 @@ export interface SourceText {
   id: string;
   label: string;
   body: string;
+}
+export interface StudySettings {
+  total_minutes: number;
+  max_session_minutes: number;
 }
 export interface Status {
   workflows?: Workflow[];

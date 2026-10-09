@@ -8,6 +8,7 @@ from pydantic import Field, field_validator
 
 from agentos.domain.base import Definition, Text
 from agentos.domain.creator import SourceText, validate_sources
+from agentos.domain.student import StudySettings
 
 
 def scoped_path(value: str) -> str:
@@ -85,3 +86,4 @@ class CreatorMissionCreate(Definition):
 
 class StudentMissionCreate(Definition):
     goal: Annotated[str, Field(min_length=1, max_length=8000)]
+    study_settings: StudySettings | None = None

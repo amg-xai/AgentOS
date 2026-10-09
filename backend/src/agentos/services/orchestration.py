@@ -64,6 +64,10 @@ class Orchestrator:
 
         if has_sources(mission):
             validate_source_mission(mission, self.registry, self.executors)
+        from agentos.services.student import has_study_plan, validate_study_mission
+
+        if has_study_plan(mission):
+            validate_study_mission(mission, self.registry, self.executors)
         if mission.version != expected_version:
             raise StateConflict("Mission version is stale")
         if mission.status in {
@@ -133,13 +137,17 @@ class Orchestrator:
                     mission = self._finish(mission, task, result, claim.token, actor)
                 except Exception as exc:
                     # Keep raw provider errors/inputs (which may contain secrets) out of audit logs.
+                    from agentos.domain.student import StudyPlanningError
+
                     mission = lifecycle.act(
                         mission.id,
                         task.id,
                         TaskActionRequest(
                             expected_version=mission.version,
                             action=TaskAction.FAIL,
-                            error=f"Execution failed ({type(exc).__name__}); check configuration",
+                            error=exc.safe_message
+                            if isinstance(exc, StudyPlanningError)
+                            else f"Execution failed ({type(exc).__name__}); check configuration",
                         ),
                         actor,
                     )
@@ -157,6 +165,25 @@ class Orchestrator:
         self, mission: Mission, task: Task, result: AgentResult, token: str, actor: str
     ) -> Mission:
         created: list[Artifact] = []
+        from agentos.services.student import has_study_plan, study_review_evidence
+
+        if has_study_plan(mission):
+            from agentos.domain.student import Quiz
+
+            if task.id == "notes":
+                notes = result.outputs.get("notes")
+                if not isinstance(notes, str) or not notes.strip() or len(notes) > 24000:
+                    raise StateConflict("Study planning requires bounded nonblank notes")
+            if task.id == "quiz":
+                Quiz.model_validate(result.outputs)
+            if task.review_required:
+                expected_study = study_review_evidence(mission, result.outputs)
+                if (
+                    result.artifact_refs
+                    or len(result.artifacts) != len(expected_study)
+                    or {draft.name: draft.content for draft in result.artifacts} != expected_study
+                ):
+                    raise StateConflict("Study review must own the exact complete evidence bundle")
         if task.requires_passed_tests and type(result.outputs.get("passed")) is not bool:
             raise StateConflict("Test execution must record an explicit boolean outcome")
         from agentos.services.creator import has_sources, source_review_evidence

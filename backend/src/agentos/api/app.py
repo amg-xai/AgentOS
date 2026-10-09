@@ -76,7 +76,7 @@ from agentos.services.planning import (
     registered_planner,
 )
 from agentos.services.registry import AgentRegistry
-from agentos.services.student import student_mission
+from agentos.services.student import has_study_plan, student_mission, validate_study_mission
 from agentos.services.tools import ToolRegistry
 
 
@@ -175,7 +175,7 @@ def create_app(
             StudentDemoGenerator() if demo_root is not None else generator,
             demo=demo_root is not None,
         )
-        for agent_id in ("student_notes", "student_quiz"):
+        for agent_id in ("student_notes", "student_quiz", "student_focus"):
             bindings.register_agent(agent_id, student)
 
     def workflow_status() -> list[dict[str, object]]:
@@ -249,6 +249,26 @@ def create_app(
                 except (KeyError, StateConflict, MissionValidationError):
                     reason = "Required workflow agents or executors are unavailable."
             source_research_ready = False
+            study_planning_ready = False
+            if role_id == "student" and not reason and demo_root is None:
+                from agentos.domain.student import StudySettings
+
+                try:
+                    validate_study_mission(
+                        student_mission(
+                            "Check study planning support",
+                            StudySettings(total_minutes=60, max_session_minutes=25),
+                        ),
+                        catalog,
+                        bindings,
+                    )
+                    study_planning_ready = True
+                    steps = "Notes → quiz → optional study plan → human review"
+                    notice = (
+                        "Your brief, notes, quiz and optional time settings are sent to the model."
+                    )
+                except StateConflict:
+                    pass
             if role_id == "creator" and not reason and demo_root is None:
                 try:
                     from agentos.domain.creator import SourceText
@@ -285,6 +305,11 @@ def create_app(
                     **(
                         {"source_research_ready": source_research_ready}
                         if role_id == "creator"
+                        else {}
+                    ),
+                    **(
+                        {"study_planning_ready": study_planning_ready}
+                        if role_id == "student"
                         else {}
                     ),
                 }
@@ -439,9 +464,14 @@ def create_app(
     def create_student_mission(request: StudentMissionCreate) -> Mission:
         require_operator(role)
         require_workflow("student")
-        if demo_root is not None and request.goal != STUDENT_DEMO_GOAL:
+        if demo_root is not None and (
+            request.goal != STUDENT_DEMO_GOAL or request.study_settings is not None
+        ):
             raise StateConflict("Offline Student demo supports only its fixed study brief")
-        return missions.create(student_mission(request.goal))
+        mission = student_mission(request.goal, request.study_settings)
+        if request.study_settings is not None:
+            validate_study_mission(mission, catalog, bindings)
+        return missions.create(mission)
 
     @app.get("/agents")
     def agents() -> list[AgentDefinition]:
@@ -499,7 +529,7 @@ def create_app(
         require_operator(role)
         managed = repository.get(mission_id)
         if (
-            managed.planning is not None or has_sources(managed)
+            managed.planning is not None or has_sources(managed) or has_study_plan(managed)
         ) and request.action != TaskAction.RETRY:
             raise StateConflict(
                 "Planned missions use executor results; only explicit retry is allowed"

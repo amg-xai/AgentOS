@@ -176,3 +176,20 @@ digest. Source text remains exact, bounded, and inspectable after restart. Denie
 script retries preserve completed research/outline. Live acceptance remains gated;
 no source fetching, media production, or publication is added. Original PLAN.md
 and full role scope are preserved; Result Review History remains deferred.
+
+## 2026-10-09: Optional bounded Student study planning
+
+Implement original PLAN.md's Focus/Study Planner as an optional tool-free manifest
+agent. New opted-in missions use notes → quiz → study_plan with one final review;
+legacy notes/quiz requests, saved missions, and fixed demos retain their contracts.
+Time settings are explicit, strict and persisted; no deadline is inferred. Validate
+session/total effort, unique valid references and full quiz-question coverage before
+staging. Completion establishes content evidence, not tests or exam readiness.
+
+Preflight enforces graph, assignments, permissions, bindings and supported schemas.
+Final review owns exact notes, quiz/key, structured/readable plan and settings copies;
+acceptance combines evidence comparison with existing artifact/attempt/digest checks.
+Reuse current execution, persistence, retry/recovery and review services. Add no
+calendar, timer, notifications, grading, research access, or database migration.
+Live AI/native visual acceptance remains pending; Result Review History stays deferred
+and original full role scope remains intact.

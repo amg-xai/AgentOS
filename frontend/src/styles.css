@@ -936,6 +936,23 @@ form > button {
   padding: 22px;
   margin-bottom: 24px;
 }
+.study-settings {
+  margin: 16px 0;
+  min-width: 0;
+  border: 1px solid #d9e1d1;
+  border-radius: 6px;
+}
+.study-settings .study-plan-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.study-settings input[type='checkbox'] {
+  display: inline-block;
+  width: auto;
+  padding: 0;
+  margin: 0;
+}
 .create-panel .section-heading {
   margin-bottom: 0;
 }

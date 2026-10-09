@@ -1,7 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { api, date, errorMessage } from './api';
-import type { Agent, Mission, Overview, Role, Status, SourceText, Workflow } from './api';
+import type {
+  Agent,
+  Mission,
+  Overview,
+  Role,
+  Status,
+  SourceText,
+  Workflow,
+  StudySettings,
+} from './api';
+import { StudySettingsForm } from './StudySettingsForm';
 import { CreatorSources } from './CreatorSources';
 
 import { Badge, ErrorNotice } from './components';
@@ -24,6 +34,7 @@ export function App() {
   const [creating, setCreating] = useState(false);
   const [goal, setGoal] = useState('');
   const [sources, setSources] = useState<SourceText[]>([]);
+  const [studySettings, setStudySettings] = useState<StudySettings | null>(null);
   const [roleId, setRoleId] = useState('developer');
   const [busy, setBusy] = useState(false);
   const [offset, setOffset] = useState(0);
@@ -52,6 +63,7 @@ export function App() {
           setCreating(false);
           setGoal('');
           setSources([]);
+          setStudySettings(null);
           setError('');
           setOverview(null);
           setMissions([]);
@@ -87,6 +99,7 @@ export function App() {
           setCreating(false);
           setGoal('');
           setSources([]);
+          setStudySettings(null);
           setError('');
           setOverview(null);
           setMissions([]);
@@ -152,6 +165,7 @@ export function App() {
       if (first) {
         modeGeneration.current++;
         setSources([]);
+        setStudySettings(null);
         setRoleId(first.role_id);
         setGoal(first.demo_goal ?? '');
       }
@@ -160,6 +174,7 @@ export function App() {
   function selectRole(value: string) {
     modeGeneration.current++;
     setSources([]);
+    setStudySettings(null);
     setRoleId(value);
     setGoal(demo ? (workflows.find((item) => item.role_id === value)?.demo_goal ?? '') : '');
   }
@@ -179,9 +194,24 @@ export function App() {
       ) {
         throw new Error('Provide nonblank source labels and text within 48,000 total characters.');
       }
+      if (
+        roleId === 'student' &&
+        studySettings &&
+        (!Number.isInteger(studySettings.total_minutes) ||
+          studySettings.total_minutes < 10 ||
+          studySettings.total_minutes > 240 ||
+          !Number.isInteger(studySettings.max_session_minutes) ||
+          studySettings.max_session_minutes < 10 ||
+          studySettings.max_session_minutes > 60)
+      ) {
+        throw new Error('Use whole minutes: 10–240 available and 10–60 per session.');
+      }
       const mission = await api<Mission>(`/workflows/${encodeURIComponent(roleId)}`, {
         goal: goal.trim(),
         ...(sourceContext ? { sources } : {}),
+        ...(roleId === 'student' && !demo && workflow.study_planning_ready && studySettings
+          ? { study_settings: studySettings }
+          : {}),
       });
       if (generation !== modeGeneration.current) return;
       setOffset(0);
@@ -189,6 +219,7 @@ export function App() {
       setCreating(false);
       setGoal('');
       setSources([]);
+      setStudySettings(null);
       await refresh(0);
     } catch (e) {
       if (generation === modeGeneration.current) setError(errorMessage(e));
@@ -199,6 +230,7 @@ export function App() {
   function openMission(id: string) {
     modeGeneration.current++;
     setSources([]);
+    setStudySettings(null);
     setSelected(id);
     setPage('missions');
     setCreating(false);
@@ -298,6 +330,7 @@ export function App() {
                 onClick={() => {
                   modeGeneration.current++;
                   setSources([]);
+                  setStudySettings(null);
                   setGoal(demo ? (workflow?.demo_goal ?? '') : '');
                   setCreating(true);
                 }}
@@ -439,6 +472,13 @@ export function App() {
                           <CreatorSources
                             sources={sources}
                             onChange={setSources}
+                            disabled={busy || !canWrite}
+                          />
+                        )}
+                        {!demo && roleId === 'student' && workflow?.study_planning_ready && (
+                          <StudySettingsForm
+                            settings={studySettings}
+                            onChange={setStudySettings}
                             disabled={busy || !canWrite}
                           />
                         )}

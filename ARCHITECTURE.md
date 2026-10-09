@@ -143,6 +143,12 @@ The executor renders separate questions and answers; final review owns `quiz.md`
 enrichment and needs no Developer workspace/test configuration. Existing mission
 schema 2, retries, artifact integrity, and approval services remain unchanged.
 `doctor --workflow student` checks its prerequisites without contacting a provider.
+Optional time-budgeted planning adds a registered tool-free Focus agent after quiz.
+For this graph, final review moves to study_plan and owns six exact content/settings
+copies. Graph/schema/permission preflight, strict question validation, aggregate time
+and reference checks, staging, and acceptance reuse the existing engine and stores.
+Legacy notes/quiz and fixed demo graphs remain unchanged; no migration is needed.
+See [Student workflow](docs/student-workflow.md).
 
 ## Desktop lifecycle
 

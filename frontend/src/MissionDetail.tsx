@@ -258,7 +258,9 @@ export function MissionDetail({
           <h3>The result is ready for your review</h3>
           <p>
             {student
-              ? 'Inspect the quiz, answer key, and reviewed notes. Acceptance records review of this material; it does not verify correctness or exam readiness.'
+              ? mission.tasks.some((task) => task.agent_id === 'student_focus')
+                ? 'Inspect the study plan, original time settings, quiz, answer key, and reviewed notes. Durations are suggested effort. Acceptance records content review; it does not verify correctness, completed study, or exam readiness.'
+                : 'Inspect the quiz, answer key, and reviewed notes. Acceptance records review of this material; it does not verify correctness or exam readiness.'
               : creator
                 ? mission.tasks.some((task) => task.agent_id === 'creator_research')
                   ? 'Inspect the script, reviewed outline, research, and supplied sources. Quotes establish provenance; source truth and interpretations require your review. Acceptance records this content; it does not publish or send it.'
@@ -279,7 +281,15 @@ export function MissionDetail({
               const review = artifacts.filter((a) => p.payload?.artifact_refs?.includes(a.id));
               const preferred =
                 review.find(
-                  (a) => a.name === (student ? 'quiz.md' : creator ? 'script.md' : 'tested.diff'),
+                  (a) =>
+                    a.name ===
+                    (student
+                      ? mission.tasks.some((task) => task.agent_id === 'student_focus')
+                        ? 'study-plan.md'
+                        : 'quiz.md'
+                      : creator
+                        ? 'script.md'
+                        : 'tested.diff'),
                 ) ?? review[0];
               if (preferred) setArtifact(preferred.id);
               setTab('artifacts');

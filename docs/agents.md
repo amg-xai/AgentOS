@@ -40,3 +40,9 @@ Retrying a failed or denied quiz preserves the completed notes and old artifacts
 
 Creator supplied-source schema limits, provenance checks, owned review copies, and
 capability preflight are documented in [Creator workflow](creator-workflow.md).
+
+Student also registers tool-free `student_focus` for optional bounded study effort.
+It receives the original goal/time settings and bound notes/questions. Strict
+outputs enforce session/total budgets and valid complete quiz references. The
+planner attempt owns the six-file final review bundle. Legacy notes/quiz contracts
+are preserved. See [Student workflow](student-workflow.md).

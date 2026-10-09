@@ -76,4 +76,66 @@ separate artifacts for convenient study, not an access-control boundary.
 
 Live AI quality remains deferred. Browser visual, responsive, and screen-reader
 acceptance remains unverified. Interactive answering/scoring, research, citations,
-scheduled study sessions, focus planning, and Electron packaging are deferred.
+calendar scheduling and standalone Electron packaging remain deferred.
+Optional bounded study planning is described below.
+
+## Optional bounded study planning
+
+In normal mode with planning support, select **Include a study plan** before
+creating a Student mission. Set available study minutes (10–240) and maximum
+minutes per session (10–60), both whole numbers. Defaults are 60 and 25 minutes.
+No budget or deadline is inferred from your brief. The fixed demo retains its
+existing notes/quiz scenario and rejects custom settings.
+
+API clients may POST this body to `/workflows/student`:
+
+```json
+{
+  "goal": "Prepare stacks and queues using these supplied facts: ...",
+  "study_settings": {"total_minutes": 60, "max_session_minutes": 25}
+}
+```
+
+Omitting `study_settings`, or passing null, preserves the existing notes/quiz
+workflow. `/status.workflows` exposes optional `study_planning_ready` for Student.
+Packages without the Focus agent or its supported executor contracts keep ordinary
+notes/quiz creation available; opted-in requests fail before persistence.
+
+The opted-in graph is notes → quiz → study_plan, with the planner also directly
+depending on notes. The original goal and time settings persist as task inputs.
+Focus receives the bound notes and structured questions without project, memory,
+or web enrichment. Quiz is intermediate content in this graph; the single final
+human review covers the complete study bundle. Old missions retain their original
+quiz review boundary. Neither completed intermediate tasks nor acceptance establish
+correctness, elapsed study effort, software test outcomes, or exam readiness.
+
+The Focus agent proposes a nonblank summary (up to 1,000 characters), 1–12 study
+blocks, and up to eight limitations of 500 characters each. Blocks use review_notes,
+practice_quiz, or recall; each has a nonblank objective of up to 500 characters,
+5–60 whole minutes, and 1–8 unique one-based quiz references. All referenced questions
+must exist and every supplied question must be covered. Each block fits the original
+session limit and the summed durations cannot exceed the original total budget.
+This validates proposed effort and references, not semantic coverage or fact quality.
+Time-budget failures are recorded with fixed messages, without raw model content.
+
+At the final review, inspect the current attempt's six owned files:
+
+- `study-plan.md`: readable proposed effort and original time settings.
+- `study-plan.json`: structured planner output.
+- `reviewed-study-settings.json`: exact time settings.
+- `reviewed-notes.md`: exact notes used.
+- `quiz.md`: questions and choices.
+- `answer-key.md`: answers and explanations for those same questions.
+
+Staging and acceptance verify exact contents against persisted evidence in addition
+to existing scope, attempt, hashes, version, and approval digest checks. Missing or
+tampered evidence cannot be accepted. Viewer can inspect and download but cannot
+mutate. Denial/retry repeats only the planner, preserving completed notes/quiz and
+prior evidence. Upstream failures block planning until explicitly retried. Restart
+preserves the same settings, content, and review records.
+
+The plan suggests sequential effort; it creates no timer, calendar entry, reminder,
+grading record, or automatic background work. Research remains future roadmap work.
+Live model calls stay disabled until separately authorized; implementation verification
+uses injected transport and does not establish real model quality. Original PLAN.md
+and the full Developer/Creator/Student scope remain unchanged.

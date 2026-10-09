@@ -112,3 +112,10 @@ script also depending on research. Preflight enforces the source graph and
 tool-free contracts. Research validates exact-quote provenance before releasing
 dependents. Final staging and approval validate four owned evidence copies;
 retry preserves completed upstream tasks. [Details](creator-workflow.md).
+
+Optional Student study planning compiles notes → quiz → study_plan, with direct
+notes/quiz bindings into Focus. Final review applies to the complete plan-bearing
+bundle, while old/plain missions keep quiz review. Preflight and completion validate
+supported graphs/contracts, bounded time allocation and quiz references; staging
+and acceptance verify six exact owned copies. Retry preserves completed upstream
+content. [Details](student-workflow.md).

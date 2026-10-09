@@ -14,6 +14,8 @@ from agentos.domain.agents import (
 )
 from agentos.domain.artifacts import ArtifactDraft
 from agentos.domain.missions import StateConflict
+from agentos.domain.student import StudySettings, study_evidence
+from agentos.domain.student import render_quiz as render_questions
 
 STUDENT_DEMO_GOAL = (
     "Prepare study notes and a three-question quiz using only these facts: "
@@ -63,21 +65,7 @@ class StudentDemoGenerator:
 
 
 def render_quiz(questions: list[dict[str, Any]], *, demo: bool) -> tuple[str, str]:
-    provenance = f"{DEMO_LABEL}\n\n" if demo else ""
-    quiz = [
-        provenance + "# Study quiz\n\nQuestions only. See answer-key.md after attempting them.\n"
-    ]
-    key = [provenance + "# Answer key\n\nReview these answers against your supplied material.\n"]
-    for number, question in enumerate(questions, start=1):
-        quiz.append(f"\n## {number}. {question['prompt']}\n")
-        for index, choice in enumerate(question["choices"]):
-            quiz.append(f"{chr(65 + index)}. {choice}\n")
-        answer = question["answer_index"]
-        key.append(
-            f"\n## {number}. {chr(65 + answer)} — {question['choices'][answer]}\n\n"
-            f"{question['explanation']}\n"
-        )
-    return "".join(quiz), "".join(key)
+    return render_questions(questions, provenance=f"{DEMO_LABEL}\n\n" if demo else "")
 
 
 class StudentExecutor:
@@ -88,10 +76,33 @@ class StudentExecutor:
     async def execute(
         self, agent: AgentDefinition, inputs: dict[str, Any], context: ExecutionContext
     ) -> AgentResult:
-        if agent.id not in {"student_notes", "student_quiz"} or agent.role != "student":
+        if (
+            agent.id not in {"student_notes", "student_quiz", "student_focus"}
+            or agent.role != "student"
+        ):
             raise StateConflict("Agent is outside the Student workflow")
+        if agent.id == "student_focus":
+            if self.demo:
+                raise StateConflict("Offline Student demo does not support study planning")
+            settings = StudySettings.model_validate(inputs["study_settings"])
+            from agentos.domain.student import Quiz
+
+            Quiz(questions=inputs["questions"])
         outputs = await self.generator.generate(agent, inputs)
         Draft202012Validator(agent.output_schema).validate(outputs)
+        if agent.id == "student_focus":
+            evidence = study_evidence(settings, inputs["notes"], inputs["questions"], outputs)
+            return AgentResult(
+                outputs=outputs,
+                artifacts=tuple(
+                    ArtifactDraft(
+                        name=name,
+                        content=content,
+                        media_type="text/plain" if name.endswith(".json") else "text/markdown",
+                    )
+                    for name, content in evidence.items()
+                ),
+            )
         artifacts: tuple[ArtifactDraft, ...]
         if agent.id == "student_notes":
             artifacts = (

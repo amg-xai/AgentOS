@@ -12,9 +12,11 @@ configured model. Creator optionally researches pasted source text with exact-qu
 provenance checks and reviewed evidence copies. It does not fetch sources, fact-check,
 produce images/video, or publish. Student now provides supplied-material notes and a
 multiple-choice quiz with a separate answer key, including a fixed offline demo.
-Study review records acceptance of the bundle, without asserting correctness or
-exam readiness. Interactive answering, scoring, research, and study scheduling are
-deferred. Do not advertise placeholder packages as functional.
+Optional Student planning adds suggested study blocks within explicit time and
+session budgets, with the full notes/quiz/plan bundle reviewed together. Study review
+records acceptance without asserting correctness or exam readiness. Interactive
+answering, scoring, research, and calendar scheduling remain deferred.
+Do not advertise placeholder packages as functional.
 
 Normal Developer missions now use [bounded goal-driven planning](developer-planning.md).
 Live calls remain disabled pending explicit acceptance authorization. Real AI

@@ -7,7 +7,8 @@
     "description": "Supplied study material to notes and a reviewed quiz with answer key.",
     "agents": [
       "student_notes",
-      "student_quiz"
+      "student_quiz",
+      "student_focus"
     ],
     "tools": []
   }

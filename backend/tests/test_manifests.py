@@ -82,4 +82,4 @@ def test_failed_load_does_not_change_existing_registry(manifests, registry):
     rewrite(manifests, "agents.json", lambda d: d["agents"].append(d["agents"][0]))
     with pytest.raises(ManifestError):
         load_registry(manifests)
-    assert len(registry.agents()) == 10
+    assert len(registry.agents()) == 11
