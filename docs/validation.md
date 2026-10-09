@@ -398,3 +398,23 @@ The overview review-order fixture now derives its tied timestamp from the latest
 review created by that test, rather than assuming a fixed date remains newer than
 the system clock. Both hosted backend jobs exposed this time-dependent assertion;
 the correction preserves the original bounded-history and tie-order checks.
+
+## Task dependency inspection
+
+Validated on Windows on 2026-10-09: all 61 React/JSDOM tests pass, including 21
+dependency checks. These cover unsorted branch/merge graphs, isolated roots,
+stable snapshot ordering, all eight recorded task states, named prerequisites,
+incomplete counts, duplicate titles, keyboard inspection, Viewer read-only access,
+and explicit retry/approval refreshes without implicit execution. Missing or
+malformed prerequisites, duplicate ids/edges, self-dependencies, and cycles report
+an unavailable layout. Existing details and failure evidence remain inspectable.
+Empty graphs have explicit copy; an iterative 10,000-task layout check verifies
+deep graphs avoid recursion. Earlier three-role workflows, review integrity,
+artifact downloads, memory, search, history, and response-order checks pass.
+
+TypeScript/Vite production build and frontend Prettier pass. This frontend-only
+view adds no API, storage, execution, or permission changes and uses the same
+mission snapshot as task details. It is ready for offline interaction testing in
+the Tasks tab; see the [Mission Control guide](mission-control.md#inspect-task-dependencies).
+Native/browser visual, responsive, and screen-reader acceptance remain manual
+under the existing browser restriction. Live model testing remains deferred.

@@ -583,6 +583,64 @@ p {
   padding: 20px 0;
   border-bottom: 1px solid #edf0e8;
 }
+.task-dependencies {
+  margin: 18px 0;
+  overflow-wrap: anywhere;
+}
+.task-dependencies h3 {
+  font-size: 13px;
+}
+.dependency-stages,
+.dependency-tasks {
+  list-style: none;
+  padding: 0;
+}
+.dependency-stages > li {
+  border-left: 2px solid #d8e0d2;
+  padding-left: 12px;
+  margin: 16px 0;
+}
+.dependency-stages h4 {
+  font-size: 11px;
+  margin: 8px 0;
+}
+.dependency-tasks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 10px;
+}
+.dependency-tasks > li {
+  min-width: 0;
+  padding: 12px;
+  background: #f6f8f2;
+  border: 1px solid #edf0e8;
+  border-radius: 6px;
+  font-size: 11px;
+}
+.dependency-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.dependency-title button {
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.dependency-tasks p {
+  margin: 8px 0;
+}
+.dependency-prerequisites {
+  padding-left: 18px;
+}
+.dependency-prerequisites li {
+  margin: 6px 0;
+}
+.task:focus {
+  outline: 2px solid #518146;
+  outline-offset: 3px;
+}
 .task:last-child {
   border-bottom: none;
   padding-bottom: 0;

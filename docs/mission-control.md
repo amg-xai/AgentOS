@@ -63,6 +63,31 @@ domain mission-status calculation, stopping after the requested matching page.
 Cost grows with the history searched. No schema migration, search index, provider
 call, audit event, execution, or permission change is introduced.
 
+## Inspect task dependencies
+
+Open a mission's **Tasks** tab to see **Task dependencies** above the detailed
+task list. Stages represent dependency depth: roots have no prerequisites, and
+each later stage follows its deepest prerequisite. Tasks at the same depth keep
+their original snapshot order. Stage grouping does not promise simultaneous
+execution; the current orchestrator executes ready tasks sequentially.
+
+Each card shows the task title/id, assigned agent, recorded status, and named
+direct prerequisites with their statuses. The incomplete count includes every
+prerequisite whose recorded state is not COMPLETED. The view does not recalculate
+readiness or override the task's recorded state. A recorded RUNNING state does
+not establish worker liveness. Existing polling updates the overview and details
+from the same mission snapshot, including after explicit retries and reviews.
+
+Activate a task title, by click or keyboard, to move focus to its detailed task
+entry below. Identifiers distinguish tasks with the same title. Viewer access is
+read-only; inspecting dependencies never runs or retries work, cancels a mission,
+or accepts an approval. Existing controls remain in their original locations.
+
+Empty missions have explicit copy. If ids/prerequisites are invalid or a cycle is
+present, the dependency layout reports unavailable and preserves task detail
+inspection. Backend validation remains the authority for executable graphs. The
+view introduces no API or storage changes and uses no external graph library.
+
 ## Interpret activity correctly
 
 **Active runs on this server** is a current in-memory observation from this API

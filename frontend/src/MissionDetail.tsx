@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { api, artifactText, date, errorMessage, label } from './api';
 import type { Activity, Approval, Artifact, Mission } from './api';
 import { Badge, ErrorNotice } from './components';
+import { TaskDependencies } from './TaskDependencies';
 export function MissionDetail({
   id,
   canWrite,
@@ -21,6 +22,7 @@ export function MissionDetail({
   const [tab, setTab] = useState<'tasks' | 'artifacts' | 'activity'>('tasks');
   const tabs = ['tasks', 'artifacts', 'activity'] as const;
   const tabId = useId();
+  const taskDetails = useRef(new Map<string, HTMLElement>());
   const tabButtons = useRef<Partial<Record<(typeof tabs)[number], HTMLButtonElement | null>>>({});
   const [artifact, setArtifact] = useState<string>('');
   const [text, setText] = useState('');
@@ -317,42 +319,63 @@ export function MissionDetail({
         tabIndex={0}
       >
         {tab === 'tasks' && (
-          <div className="task-list">
-            {mission.tasks.map((t, index) => (
-              <article className="task" key={t.id}>
-                <span className={`task-number ${t.status.toLowerCase()}`}>
-                  {t.status === 'COMPLETED' ? '✓' : index + 1}
-                </span>
-                <div>
-                  <div className="task-title">
-                    <h3>{t.title}</h3>
-                    <Badge state={t.status} />
+          <>
+            <TaskDependencies
+              tasks={mission.tasks}
+              onInspect={(taskId) => {
+                const detail = taskDetails.current.get(taskId);
+                detail?.focus();
+                detail?.scrollIntoView?.({ block: 'nearest' });
+              }}
+            />
+            <div className="task-list">
+              {mission.tasks.map((t, index) => (
+                <article
+                  className="task"
+                  key={t.id}
+                  tabIndex={-1}
+                  aria-label={`Task detail: ${t.title} (${t.id})`}
+                  ref={(element) => {
+                    if (element) taskDetails.current.set(t.id, element);
+                    else taskDetails.current.delete(t.id);
+                  }}
+                >
+                  <span className={`task-number ${t.status.toLowerCase()}`}>
+                    {t.status === 'COMPLETED' ? '✓' : index + 1}
+                  </span>
+                  <div>
+                    <div className="task-title">
+                      <h3>{t.title}</h3>
+                      <Badge state={t.status} />
+                    </div>
+                    <p>
+                      {t.agent_id.replaceAll('_', ' ')} · attempt {t.attempts}
+                      {Array.isArray(t.dependencies)
+                        ? t.dependencies.length > 0 && ` · after ${t.dependencies.join(', ')}`
+                        : ' · prerequisites unavailable'}
+                    </p>
+                    {t.error && <div className="task-error">{t.error}</div>}
+                    {t.outputs && (
+                      <details>
+                        <summary>Inspect task outputs</summary>
+                        <pre>{JSON.stringify(t.outputs, null, 2)}</pre>
+                      </details>
+                    )}
+                    {t.status === 'FAILED' && (
+                      <button
+                        disabled={busy || !canWrite || !!claim}
+                        onClick={() =>
+                          void action(`/missions/${id}/tasks/${t.id}/actions`, { action: 'retry' })
+                        }
+                      >
+                        Retry task
+                      </button>
+                    )}
                   </div>
-                  <p>
-                    {t.agent_id.replaceAll('_', ' ')} · attempt {t.attempts}
-                    {t.dependencies.length > 0 && ` · after ${t.dependencies.join(', ')}`}
-                  </p>
-                  {t.error && <div className="task-error">{t.error}</div>}
-                  {t.outputs && (
-                    <details>
-                      <summary>Inspect task outputs</summary>
-                      <pre>{JSON.stringify(t.outputs, null, 2)}</pre>
-                    </details>
-                  )}
-                  {t.status === 'FAILED' && (
-                    <button
-                      disabled={busy || !canWrite || !!claim}
-                      onClick={() =>
-                        void action(`/missions/${id}/tasks/${t.id}/actions`, { action: 'retry' })
-                      }
-                    >
-                      Retry task
-                    </button>
-                  )}
-                </div>
-              </article>
-            ))}
-          </div>
+                </article>
+              ))}
+            </div>
+          </>
         )}
       </div>
       <div
