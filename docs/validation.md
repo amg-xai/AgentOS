@@ -393,3 +393,8 @@ The selected filename and download link continue to identify the current content
 TypeScript/Vite production build and frontend Prettier pass. No API, storage,
 permission, or provider behavior changes. Native visual/accessibility acceptance
 remains manual; live model testing remains deferred.
+
+The overview review-order fixture now derives its tied timestamp from the latest
+review created by that test, rather than assuming a fixed date remains newer than
+the system clock. Both hosted backend jobs exposed this time-dependent assertion;
+the correction preserves the original bounded-history and tie-order checks.

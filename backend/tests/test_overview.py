@@ -176,7 +176,13 @@ def test_recent_artifacts_are_bounded_and_reviews_have_stable_tie_order(runtime)
     assert result.recent_artifacts[0].mission_id == ids[-1]
     assert len(result.recent_reviews) == 10
     # Equal timestamps use ids to resolve ordering, independent of insertion.
-    tied = [snapshot(TaskStatus.WAITING_APPROVAL, index=9999) for _ in range(2)]
+    newest = max(review.updated_at for review in result.recent_reviews)
+    tied = [
+        snapshot(TaskStatus.WAITING_APPROVAL).model_copy(
+            update={"updated_at": newest + timedelta(seconds=1)}
+        )
+        for _ in range(2)
+    ]
     for mission in tied:
         runtime.repository.create(mission, [])
     result = runtime.repository.overview(())
