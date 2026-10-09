@@ -110,6 +110,18 @@ def diagnose(root: Path, *, demo: bool = False, workflow: str = "developer") -> 
                 "developer_baseline",
             }:
                 raise ValueError("Package is missing supported planning capabilities")
+        elif workflow == "creator" and not demo:
+            from agentos.services.creator_planning import creator_kind, registered_creator_planner
+
+            registered_creator_planner(registry)
+            creator_kinds = set()
+            for candidate in registry.role_agents("creator"):
+                try:
+                    creator_kinds.add(creator_kind(candidate))
+                except ValueError:
+                    continue
+            if not {"creator_outline", "creator_script"} <= creator_kinds:
+                raise ValueError("Creator package is missing supported planning capabilities")
         elif not required <= set(registry.role(workflow).agents):
             raise ValueError("Package is missing required workflow agents")
         record(

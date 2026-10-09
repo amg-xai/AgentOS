@@ -4,6 +4,7 @@ import json
 
 import httpx
 import pytest
+from creator_plan_fixture import creator_plan
 from fastapi.testclient import TestClient
 from test_creator import GOAL, OUTLINE, SCRIPT, decide
 
@@ -45,6 +46,26 @@ def runtime(tmp_path, monkeypatch):
         body = json.loads(request.content)
         agent = body["text"]["format"]["name"]
         inputs = json.loads(body["input"])
+        if agent == "creator_planner":
+            return httpx.Response(
+                200,
+                json={
+                    "status": "completed",
+                    "output": [
+                        {
+                            "type": "message",
+                            "content": [
+                                {
+                                    "type": "output_text",
+                                    "text": json.dumps(
+                                        creator_plan(sources=bool(inputs["sources"]))
+                                    ),
+                                }
+                            ],
+                        }
+                    ],
+                },
+            )
         expected = {"goal": GOAL, "sources": [SOURCE]}
         if agent != "creator_research":
             expected.update(outputs["creator_research"])
@@ -76,7 +97,10 @@ def runtime(tmp_path, monkeypatch):
 
 
 def start(client):
-    response = client.post("/workflows/creator", json={"goal": GOAL, "sources": [SOURCE]})
+    response = client.post(
+        "/missions",
+        json=creator_mission(GOAL, (SourceText.model_validate(SOURCE),)).model_dump(mode="json"),
+    )
     assert response.status_code == 201, response.text
     base = f"/missions/{response.json()['id']}"
     response = client.post(base + "/run", json={"expected_version": 1})

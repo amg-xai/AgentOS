@@ -2,6 +2,7 @@ import json
 
 import httpx
 import pytest
+from creator_plan_fixture import creator_plan
 from fastapi.testclient import TestClient
 from test_demo import demo_root as demo_fixture
 from test_demo import originals
@@ -12,6 +13,7 @@ from agentos.adapters.diagnostics import diagnose
 from agentos.adapters.provider import ModelSettings, ResponsesExecutor
 from agentos.api.app import create_app
 from agentos.domain.governance import UserRole
+from agentos.services.creator import creator_mission
 from agentos.services.execution import ExecutorRegistry
 
 demo_root = demo_fixture
@@ -32,6 +34,21 @@ def creator_runtime(tmp_path, monkeypatch):
         body = json.loads(request.content)
         agent = body["text"]["format"]["name"]
         inputs = json.loads(body["input"])
+        if agent == "creator_planner":
+            return httpx.Response(
+                200,
+                json={
+                    "status": "completed",
+                    "output": [
+                        {
+                            "type": "message",
+                            "content": [
+                                {"type": "output_text", "text": json.dumps(creator_plan())}
+                            ],
+                        }
+                    ],
+                },
+            )
         assert inputs == (
             {"goal": GOAL} if agent == "creator_outline" else {"goal": GOAL, "outline": OUTLINE}
         )
@@ -60,7 +77,8 @@ def creator_runtime(tmp_path, monkeypatch):
 
 
 def start(client):
-    response = client.post("/workflows/creator", json={"goal": GOAL})
+    # Saved legacy graph compatibility; new planning journeys are tested separately.
+    response = client.post("/missions", json=creator_mission(GOAL).model_dump(mode="json"))
     assert response.status_code == 201, response.text
     mission = response.json()
     base = f"/missions/{mission['id']}"

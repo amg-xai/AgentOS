@@ -17,9 +17,9 @@ testing, and a tool-free planning agent. Normal routing uses declared capabiliti
 rather than canonical agent IDs;
 the offline preset remains explicit. See [Developer planning](developer-planning.md).
 Its executor composes the structured generator with registered local tools and scoped project
-context. Creator provides tool-free `creator_research`, `creator_outline`, and
+context. Creator provides a tool-free planner plus `creator_research`, `creator_outline`, and
 `creator_script`. Optional supplied sources add verified research outputs to
-the outline/script inputs; brief-only requests retain their existing inputs.
+the outline/script inputs; saved unplanned brief-only missions retain their existing inputs.
 Both packages share the execution registry, mission engine, artifacts,
 and approval services; manifest discovery itself never runs an agent.
 
@@ -46,3 +46,9 @@ It receives the original goal/time settings and bound notes/questions. Strict
 outputs enforce session/total budgets and valid complete quiz references. The
 planner attempt owns the six-file final review bundle. Legacy notes/quiz contracts
 are preserved. See [Student workflow](student-workflow.md).
+
+Normal Creator planning selects registered research/outline/script capabilities,
+not canonical IDs. Optional objective/constraints/context input fields preserve
+legacy input compatibility. Strict capability/schema/permission checks happen at
+compilation and before claiming execution. The planner has no tools or permissions;
+content agents retain tool-free READ metadata. See [Creator planning](creator-workflow.md).

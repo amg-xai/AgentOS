@@ -194,7 +194,7 @@ export function MissionDetail({
       <ErrorNotice message={refreshError || error} />
       {mission.planning && (
         <details className="mission-plan">
-          <summary>Inspect validated Developer plan</summary>
+          <summary>Inspect validated {creator ? 'Creator' : 'Developer'} plan</summary>
           <p>{mission.planning.rationale}</p>
           <p>
             Planner: <code>{mission.planning.planner_id}</code>
@@ -275,7 +275,11 @@ export function MissionDetail({
                 ? 'Inspect the study plan, original time settings, quiz, answer key, and reviewed notes. Durations are suggested effort. Acceptance records content review; it does not verify correctness, completed study, or exam readiness.'
                 : 'Inspect the quiz, answer key, and reviewed notes. Acceptance records review of this material; it does not verify correctness or exam readiness.'
               : creator
-                ? mission.tasks.some((task) => task.agent_id === 'creator_research')
+                ? mission.tasks.some(
+                    (task) =>
+                      task.agent_id === 'creator_research' ||
+                      'evidence' in (task.input_bindings ?? {}),
+                  )
                   ? 'Inspect the script, reviewed outline, research, and supplied sources. Quotes establish provenance; source truth and interpretations require your review. Acceptance records this content; it does not publish or send it.'
                   : 'Inspect the script and its reviewed outline. Acceptance records this content; it does not publish or send it.'
                 : 'Inspect the diff and test report. Acceptance records this result; it does not change the source project or publish anything.'}

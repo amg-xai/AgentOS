@@ -211,3 +211,24 @@ and fail preflight on damaged revision references. Provider failure remains an
 explicit retry; there is no automatic correction loop. Demo/legacy graphs keep
 their behavior. Original PLAN.md and all three roles retain their intended scope;
 live acceptance is still disabled pending separate authorization.
+
+## 2026-10-09: Bounded goal-driven Creator planning
+
+Replace fixed normal Creator creation with a tool-free registered planner and
+capability-selected research/outline/script assignments on the existing engine.
+Bound plans to 2–6 tasks, one final script review, one to four outlines/refinements,
+and exactly one research task when sources are supplied. Preserve original goal,
+constraints, objectives and exact source text. Planning sees source IDs/labels;
+content agents receive the bodies they require, without workspace enrichment.
+
+Move shared plan binding/task primitives to the domain without changing Developer
+contracts. Creator planning version 1 uses existing persisted evidence; role-aware
+preflight and review keep Developer tests distinct from content acceptance. Validate
+schema/capability/permissions, every dependency binding, mandatory review and exact
+owned evidence before staging/acceptance. Reuse approvals, claims, retries, artifacts
+and audit; no migration or second engine. Legacy graphs and fixed demos persist.
+
+Live model acceptance remains separately gated. Image/thumbnail artifacts, broader
+Student work, semantic memory and other original PLAN.md requirements remain pending;
+full Developer/Creator/Student scope is unchanged. Result Review History and Developer
+memory-context evidence stay deferred.

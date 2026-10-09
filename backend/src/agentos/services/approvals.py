@@ -45,7 +45,11 @@ class ApprovalService:
                 raise StateConflict("Artifact scope does not match the approval")
             if request.decision == "approve":
                 self.artifacts.read(artifact)
-        from agentos.services.creator import has_sources, source_review_evidence
+        from agentos.services.creator import (
+            creator_review_evidence,
+            has_sources,
+            source_review_evidence,
+        )
         from agentos.services.student import has_study_plan, study_review_evidence
 
         if request.decision == "approve" and has_study_plan(mission):
@@ -59,8 +63,16 @@ class ApprovalService:
             if len(task.artifact_refs) != len(expected_study) or actual_study != expected_study:
                 raise StateConflict("Student review evidence does not match its study inputs")
 
-        if request.decision == "approve" and has_sources(mission):
-            expected_creator = source_review_evidence(mission, task.outputs or {})
+        if (
+            request.decision == "approve"
+            and mission.role_id == "creator"
+            and (has_sources(mission) or mission.planning)
+        ):
+            expected_creator = (
+                creator_review_evidence(mission, task, task.outputs or {})
+                if mission.planning
+                else source_review_evidence(mission, task.outputs or {})
+            )
             actual_creator = {
                 self.repository.artifact(ref).name: self.artifacts.read(
                     self.repository.artifact(ref)
@@ -74,6 +86,7 @@ class ApprovalService:
                 raise StateConflict("Creator review evidence does not match its sources")
         if (
             request.decision == "approve"
+            and mission.role_id == "developer"
             and mission.planning
             and mission.planning.contract_version == 2
         ):
@@ -94,7 +107,11 @@ class ApprovalService:
             approved
             and (
                 task.requires_passed_tests
-                or (mission.planning is not None and mission.planning.contract_version == 2)
+                or (
+                    mission.role_id == "developer"
+                    and mission.planning is not None
+                    and mission.planning.contract_version == 2
+                )
             )
             and (task.outputs is None or task.outputs.get("passed") is not True)
         ):

@@ -127,15 +127,24 @@ does not freeze dependencies, binaries, host state, or test intent.
 Scratch directories isolate patch targets from source files; they do not provide
 OS process isolation. See [local workflow details](docs/local-workflow.md).
 
-Creator is a separate manifest package with three tool-free agents. Its graph binds
+Creator is a separate manifest package with a tool-free planner and three content agents. Its graph binds
 the outline output into the script task and requires review of the script plus
-an exact copy of the outline used. The executor sends only the supplied brief
-and outline to the structured generator, without project-file or memory enrichment.
+an exact copy of the outline used. The executor sends supplied content and bound
+planning/dependency context to the structured generator, without project-file or memory enrichment.
 Optional pasted sources add a research task and bound evidence to the existing
 graph. Exact quotes are checked before task completion; final review owns sources,
 research, outline, and script copies. See [Creator workflow](docs/creator-workflow.md).
 It uses the existing mission schema, artifact store, approval integrity checks,
 and retry/recovery services. No additional database migration is required.
+
+New normal Creator missions use bounded capability-driven planning (contract version 1)
+and compile into the same Mission/TaskSpec/InputBinding engine. Role-aware preflight
+keeps Developer v1/v2 test boundaries intact. Creator plans support one to four
+outline/refinement tasks, optional supplied-source research, and one final script
+review. Bound task references resolve exact final evidence without canonical IDs.
+Goal/constraints/objectives persist and reach execution; planning sees only source
+IDs/labels. Legacy graphs and fixed demos retain their contracts. No live calls are
+enabled by this change. See [Creator contracts](docs/creator-workflow.md).
 
 API startup binds executors separately from manifest discovery. `/status` exposes
 readiness for each installed supported workflow; its legacy `workflow_ready`

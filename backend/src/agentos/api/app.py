@@ -23,7 +23,7 @@ from agentos.adapters.demo import (
 from agentos.adapters.developer import DeveloperExecutor, register_local_tools
 from agentos.adapters.local_tools import LocalWorkspaceTools
 from agentos.adapters.manifests import load_registry
-from agentos.adapters.planning import StructuredDeveloperPlanner
+from agentos.adapters.planning import StructuredCreatorPlanner, StructuredDeveloperPlanner
 from agentos.adapters.provider import ModelSettings, ProviderFailure, ResponsesExecutor
 from agentos.adapters.sqlite import SQLiteMissionRepository
 from agentos.adapters.student import STUDENT_DEMO_GOAL, StudentDemoGenerator, StudentExecutor
@@ -65,7 +65,14 @@ from agentos.domain.workspace import (
     WorkspaceSettings,
 )
 from agentos.services.approvals import ApprovalService
-from agentos.services.creator import creator_mission, has_sources, validate_source_mission
+from agentos.services.creator import creator_mission, has_sources
+from agentos.services.creator_planning import (
+    CreatorPlanner,
+    compile_creator_plan,
+    creator_kind,
+    registered_creator_planner,
+    validate_creator_plan,
+)
 from agentos.services.developer import developer_mission
 from agentos.services.execution import ExecutorRegistry
 from agentos.services.missions import MissionService
@@ -97,6 +104,7 @@ def create_app(
     demo_root: Path | None = None,
     desktop_session: str | None = None,
     planner: DeveloperPlanner | None = None,
+    creator_planner: CreatorPlanner | None = None,
 ) -> FastAPI:
     if demo_root is not None:
         if any(
@@ -111,6 +119,7 @@ def create_app(
                 package_root,
                 frontend_root,
                 planner,
+                creator_planner,
             )
         ):
             raise ValueError("Demo mode uses its own isolated startup configuration")
@@ -167,13 +176,21 @@ def create_app(
             bindings.register_agent(candidate.id, developer)
     if planner is None and demo_root is None and generator is not None and workspace is not None:
         planner = StructuredDeveloperPlanner(generator, catalog, workspace)
+    if creator_planner is None and demo_root is None and generator is not None:
+        creator_planner = StructuredCreatorPlanner(generator, catalog)
     if executors is None and generator is not None:
         creator = CreatorExecutor(
             CreatorDemoGenerator() if demo_root is not None else generator,
             demo=demo_root is not None,
         )
-        for agent_id in ("creator_outline", "creator_script", "creator_research"):
-            bindings.register_agent(agent_id, creator)
+        for candidate in catalog.agents():
+            if candidate.role != "creator":
+                continue
+            try:
+                creator_kind(candidate, legacy=True)
+            except StateConflict:
+                continue
+            bindings.register_agent(candidate.id, creator)
         student = StudentExecutor(
             StudentDemoGenerator() if demo_root is not None else generator,
             demo=demo_root is not None,
@@ -244,6 +261,21 @@ def create_app(
                             or planner is None
                         ):
                             raise StateConflict("Developer planning capabilities are unavailable")
+                    elif role_id == "creator" and demo_root is None:
+                        registered_creator_planner(catalog)
+                        creator_kinds = set()
+                        for candidate in catalog.role_agents("creator"):
+                            try:
+                                creator_capability = creator_kind(candidate)
+                                bindings.resolve(candidate)
+                            except StateConflict:
+                                continue
+                            creator_kinds.add(creator_capability)
+                        if (
+                            not {"creator_outline", "creator_script"} <= creator_kinds
+                            or creator_planner is None
+                        ):
+                            raise StateConflict("Creator planning capabilities are unavailable")
                     else:
                         if not set(agents) <= set(package.agents):
                             raise StateConflict("Package is missing required workflow agents")
@@ -273,22 +305,12 @@ def create_app(
                 except StateConflict:
                     pass
             if role_id == "creator" and not reason and demo_root is None:
-                try:
-                    from agentos.domain.creator import SourceText
-
-                    validate_source_mission(
-                        creator_mission(
-                            "Check source support",
-                            (SourceText(id="sample", label="Sample", body="Evidence"),),
-                        ),
-                        catalog,
-                        bindings,
-                    )
-                    source_research_ready = True
-                except StateConflict:
-                    pass
+                source_research_ready = "creator_research" in creator_kinds
+                steps = "Goal-driven plan → outlines → script → human review"
             if source_research_ready:
-                steps = "Optional source research → outline → script → human review"
+                steps = (
+                    "Goal-driven plan → optional source research → outlines → script → human review"
+                )
                 notice = (
                     "Only your brief and optional pasted source text are sent to the model. "
                     "Quotes are checked for provenance; source truth and interpretations "
@@ -456,14 +478,29 @@ def create_app(
         return missions.create(compiled)
 
     @app.post("/workflows/creator", status_code=201)
-    def create_creator_mission(request: CreatorMissionCreate) -> Mission:
+    async def create_creator_mission(request: CreatorMissionCreate) -> Mission:
         require_operator(role)
         require_workflow("creator")
         if demo_root is not None and (request.goal != CREATOR_DEMO_GOAL or request.sources):
             raise StateConflict("Offline Creator demo supports only its fixed brief")
-        mission = creator_mission(request.goal, request.sources)
-        if request.sources:
-            validate_source_mission(mission, catalog, bindings)
+        if demo_root is not None:
+            return missions.create(creator_mission(request.goal))
+        if creator_planner is None:
+            raise StateConflict("Creator planning is unavailable")
+        if (
+            request.sources
+            and not next(w for w in workflow_status() if w["role_id"] == "creator")[
+                "source_research_ready"
+            ]
+        ):
+            raise StateConflict("Creator supplied-source research is unavailable")
+        try:
+            plan, planner_id = await creator_planner.plan(request)
+            mission = compile_creator_plan(request, plan, planner_id, catalog, bindings)
+        except (ValueError, KeyError, SchemaValidationError):
+            raise MissionValidationError(
+                "Creator plan rejected: invalid graph, capability or IO contract"
+            ) from None
         return missions.create(mission)
 
     @app.post("/workflows/student", status_code=201)
@@ -506,6 +543,8 @@ def create_app(
         require_operator(role)
         if demo_root is not None:
             raise StateConflict("Use a fixed workflow scenario in offline demo mode")
+        if request.role_id == "creator" and request.planning is not None:
+            validate_creator_plan(request, catalog, bindings)
         return missions.create(request)
 
     @app.get("/missions")

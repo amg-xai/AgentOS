@@ -113,6 +113,14 @@ tool-free contracts. Research validates exact-quote provenance before releasing
 dependents. Final staging and approval validate four owned evidence copies;
 retry preserves completed upstream tasks. [Details](creator-workflow.md).
 
+New normal Creator missions first compile a bounded goal-driven plan, using
+registered capabilities and 2–6 dependency-linked tasks. Optional source research
+and one to four outlines/refinements lead to one script review. Original goal,
+constraints, objectives and bindings persist and reach generation. Role-aware
+preflight validates the plan before run claims, and final staging/approval owns
+exact bound evidence. Saved fixed graphs and demos remain compatible. Creator
+completion establishes reviewed content, not a passing test result.
+
 Optional Student study planning compiles notes → quiz → study_plan, with direct
 notes/quiz bindings into Focus. Final review applies to the complete plan-bearing
 bundle, while old/plain missions keep quiz review. Preflight and completion validate

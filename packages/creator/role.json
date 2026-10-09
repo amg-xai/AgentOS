@@ -8,7 +8,8 @@
     "agents": [
       "creator_outline",
       "creator_script",
-      "creator_research"
+      "creator_research",
+      "creator_planner"
     ],
     "tools": []
   }

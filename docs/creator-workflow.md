@@ -1,6 +1,6 @@
 # Creator workflow
 
-Creator turns a supplied content brief into an outline and a short video script,
+Creator plans a supplied content goal into bounded outline work and a short video script,
 then pauses for human review. It uses the same mission engine, durable history,
 artifacts, memory references, and approval checks as Developer.
 
@@ -38,6 +38,11 @@ Calculator fixture. Custom briefs require normal mode.
 
 ## Use a configured model
 
+New normal missions use a registered tool-free Creator planner. Creation invokes
+structured planning; running the mission separately invokes its content agents.
+Live calls remain disabled until explicitly authorized. Invalid planning produces
+an error without creating a mission; normal mode never substitutes a fixed graph.
+
 Configure the ignored `.env` file as described in [providers.md](providers.md).
 Creator requires a Responses-compatible structured model, but no Developer
 workspace configuration, Git commands, source selection, or test runner.
@@ -48,7 +53,8 @@ workspace configuration, Git commands, source selection, or test runner.
 ```
 
 Choose Creator, create a mission with your brief, then run and review it as above.
-Brief-only missions send the supplied brief and generated outline to the model.
+Planned missions send the original goal, extracted constraints and task objectives
+to content generation, with dependency-bound outline context where required.
 Optional pasted sources add research before the outline and script. Workspace
 notes can store artifact references but are not automatically added to Creator
 requests. Briefs are limited to 8,000 characters and generated outline/script
@@ -95,8 +101,9 @@ must reference supplied text and each quote must match a literal substring.
 These checks establish provenance, not source truth or interpretation correctness.
 Invalid research fails its task and blocks outline/script execution.
 
-The dependency graph is research → outline → script; script also depends directly
-on research. Downstream agents receive the original goal, exact sources, and bound
+The source dependency chain is research → outline → script, with optional planned
+outline refinements; script also depends directly on research. Downstream agents
+receive the original goal, exact sources, and bound
 research fields. Script additionally receives the bound outline. Creation and run
 preflight verify this graph, tool-free READ permissions, executor bindings, input/
 output schemas, and mandatory final human review. Manual completion is unavailable.
@@ -107,6 +114,43 @@ approval verify their exact contents in addition to existing hashes, scope, atte
 and digest checks. Acceptance records content review and implies no test outcome.
 Denial followed by retry repeats only script; completed research/outline persist.
 The same evidence and approval remain inspectable after restart.
+
+## Goal-driven planning contract
+
+New normal missions persist Creator planning contract version 1, rationale,
+extracted constraints, task objectives, registered assignments and input bindings.
+The original goal is preserved after the existing request normalization;
+constraints are a model interpretation for human inspection. Mission Control exposes
+**Inspect validated Creator plan** alongside the task/artifact/activity views.
+
+Plans contain 2–6 tasks: one final script, one to four outlines/refinements, and
+exactly one research task when pasted sources are supplied. Outline refinements
+can bind a previous outline as context. Every task leads to the final script review.
+Agents are selected by registered supported capabilities, including alternate IDs;
+no canonical task IDs are required. Goal, constraints and objective reach each step.
+
+The planner receives source IDs/labels, not source bodies; research and subsequent
+content steps receive the exact supplied bodies. Source-backed outlines and script
+bind the verified research fields, and script binds its exact final outline. Literal
+quotes are verified before releasing dependents. Source research still means supplied
+text only, not web discovery or independent fact checking.
+
+Creation and run preflight enforce graph bounds, acyclic dependencies, role/capability
+membership, executor availability, exact schemas, tool-free READ permissions, typed
+bindings, consistent sources and one final human review. Planned tasks cannot be
+manually completed. Missing executors, unsupported assignments, invalid plans and
+altered persisted inputs fail before execution. Retry repeats only failed work.
+
+All plans reuse the existing mission engine, persistence, artifacts and approval
+service without a storage migration. Script review owns exact script/final-outline
+copies, plus research/sources for source-backed missions. Staging and acceptance
+verify the bundle contents, scope, hashes, attempt and digest. Content completion
+never establishes tests passed or factual correctness. Original outline artifacts
+and prior decisions remain inspectable after restart.
+
+Saved unplanned brief/source graphs and the fixed demo retain their previous behavior.
+Creator thumbnails/images, external research and live quality acceptance remain
+unfinished original PLAN.md requirements; this milestone does not complete Phase 9.
 
 `/status.workflows` exposes optional `source_research_ready` for Creator. A package
 without research support can still create brief-only missions; clients omit sources

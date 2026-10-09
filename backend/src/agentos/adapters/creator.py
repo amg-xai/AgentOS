@@ -61,16 +61,14 @@ class CreatorExecutor:
     async def execute(
         self, agent: AgentDefinition, inputs: dict[str, Any], context: ExecutionContext
     ) -> AgentResult:
-        if (
-            agent.id not in {"creator_outline", "creator_script", "creator_research"}
-            or agent.role != "creator"
-        ):
-            raise StateConflict("Agent is outside the Creator workflow")
+        from agentos.services.creator_planning import creator_kind
+
+        kind = creator_kind(agent, legacy=True)
         sources = CreatorMissionCreate(
             goal=inputs["goal"], sources=inputs.get("sources", ())
         ).sources
         research = None
-        if sources and agent.id != "creator_research":
+        if sources and kind != "creator_research":
             research = ResearchResult.model_validate(
                 {key: inputs[key] for key in ("summary", "evidence", "limitations")}
             )
@@ -78,7 +76,7 @@ class CreatorExecutor:
         # Do not enrich with source files or unrelated workspace notes.
         outputs = await self.generator.generate(agent, inputs)
         Draft202012Validator(agent.output_schema).validate(outputs)
-        if agent.id == "creator_research":
+        if kind == "creator_research":
             result = ResearchResult.model_validate(outputs)
             result.verify(sources)
             return AgentResult(
@@ -96,7 +94,7 @@ class CreatorExecutor:
                     name="outline.md", media_type="text/markdown", content=outputs["outline"]
                 ),
             )
-            if agent.id == "creator_outline"
+            if kind == "creator_outline"
             else (
                 ArtifactDraft(
                     name="script.md", media_type="text/markdown", content=outputs["script"]
@@ -108,7 +106,7 @@ class CreatorExecutor:
                 ),
             )
         )
-        if sources and agent.id == "creator_script":
+        if sources and kind == "creator_script":
             assert research is not None
             artifacts += (
                 ArtifactDraft(

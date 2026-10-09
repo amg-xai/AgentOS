@@ -24,6 +24,13 @@ vertical-slice acceptance still requires a failing baseline, a live generated
 patch, passing actual tests, and human review. These implemented subsets do not
 replace the full Developer, Creator, and Student scope in original PLAN.md.
 
+Normal Creator creation now uses bounded goal-driven planning and registered
+capability selection on the same engine. Inspect its plan, original goal,
+constraints and dependency-linked content tasks before running. Outline refinements
+and supplied-source research feed one exact script review. This completes the
+planning/selection portion of that content slice; image/thumbnail artifacts and
+genuine live acceptance remain pending.
+
 Mission Control includes workspace-wide totals, recent waiting reviews/artifacts,
 and recorded task activity for installed agents. These are read-only projections
 of durable history; claim and task state do not imply agent availability. See

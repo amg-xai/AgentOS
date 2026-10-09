@@ -63,12 +63,17 @@ class Orchestrator:
         )
         revisions.validate(mission)
         if mission.planning is not None:
-            from agentos.services.planning import validate_planned_mission
+            if mission.role_id == "creator":
+                from agentos.services.creator_planning import validate_creator_plan
 
-            validate_planned_mission(mission, self.registry, self.executors)
+                validate_creator_plan(mission, self.registry, self.executors)
+            else:
+                from agentos.services.planning import validate_planned_mission
+
+                validate_planned_mission(mission, self.registry, self.executors)
         from agentos.services.creator import has_sources, validate_source_mission
 
-        if has_sources(mission):
+        if has_sources(mission) and mission.planning is None:
             validate_source_mission(mission, self.registry, self.executors)
         from agentos.services.student import has_study_plan, validate_study_mission
 
@@ -193,24 +198,45 @@ class Orchestrator:
                     raise StateConflict("Study review must own the exact complete evidence bundle")
         if task.requires_passed_tests and type(result.outputs.get("passed")) is not bool:
             raise StateConflict("Test execution must record an explicit boolean outcome")
-        from agentos.services.creator import has_sources, source_review_evidence
+        from agentos.services.creator import (
+            creator_review_evidence,
+            has_sources,
+            source_review_evidence,
+        )
 
-        if has_sources(mission) and task.id == "research":
+        if has_sources(mission) and (
+            task.id == "research"
+            if mission.planning is None
+            else self.registry.agent(task.agent_id).capability == "creator_research"
+        ):
             from agentos.domain.creator import ResearchResult
             from agentos.domain.workspace import CreatorMissionCreate
 
             ResearchResult.model_validate(result.outputs).verify(
                 CreatorMissionCreate(goal=mission.goal, sources=task.inputs["sources"]).sources
             )
-        if has_sources(mission) and task.review_required:
-            expected_creator = source_review_evidence(mission, result.outputs)
+        if (
+            mission.role_id == "creator"
+            and task.review_required
+            and (has_sources(mission) or mission.planning)
+        ):
+            expected_creator = (
+                creator_review_evidence(mission, task, result.outputs)
+                if mission.planning
+                else source_review_evidence(mission, result.outputs)
+            )
             if (
                 result.artifact_refs
                 or len(result.artifacts) != len(expected_creator)
                 or {draft.name: draft.content for draft in result.artifacts} != expected_creator
             ):
                 raise StateConflict("Creator review must own exact source and research evidence")
-        if mission.planning and mission.planning.contract_version == 2 and task.review_required:
+        if (
+            mission.role_id == "developer"
+            and mission.planning
+            and mission.planning.contract_version == 2
+            and task.review_required
+        ):
             from agentos.services.planning import review_evidence
 
             expected = review_evidence(mission, task, result.outputs)

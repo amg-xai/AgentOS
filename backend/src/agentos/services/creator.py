@@ -3,7 +3,6 @@
 import json
 from typing import Any
 
-from jsonschema import Draft202012Validator
 from jsonschema.exceptions import ValidationError as SchemaValidationError
 
 from agentos.domain.agents import Permission
@@ -98,73 +97,10 @@ def validate_source_mission(
             ):
                 raise ValueError("Unsupported source workflow permissions")
             executors.resolve(agent)
-            schema = agent.input_schema
-            research_schema = ResearchResult.model_json_schema()
-            properties = schema.get("properties", {})
-            fields = {"goal", "sources"}
-            if task.id != "research":
-                fields.update(("summary", "evidence", "limitations"))
-            if task.id == "script":
-                fields.add("outline")
-            required = (
-                ["goal", "sources"]
-                if task.id == "research"
-                else (["goal", "outline"] if task.id == "script" else ["goal"])
-            )
-            if (
-                schema.get("type") != "object"
-                or schema.get("additionalProperties") is not False
-                or set(properties) != fields
-                or schema.get("required") != required
-                or properties["sources"]
-                != {
-                    "type": "array",
-                    "minItems": 1,
-                    "maxItems": 8,
-                    "items": {"$ref": "#/$defs/SourceText"},
-                }
-                or schema.get("$defs", {}).get("SourceText") != SourceText.model_json_schema()
-            ):
-                raise ValueError("Unsupported source input contract")
-            if task.id != "research" and (
-                any(
-                    properties[key] != research_schema["properties"][key]
-                    for key in ("summary", "evidence", "limitations")
-                )
-                or schema.get("$defs", {}).get("EvidenceItem")
-                != research_schema["$defs"]["EvidenceItem"]
-            ):
-                raise ValueError("Unsupported research binding contract")
-            inputs = dict(task.inputs)
-            if task.id != "research":
-                inputs.update(
-                    summary="Evidence",
-                    evidence=[
-                        {
-                            "source_id": request.sources[0].id,
-                            "quote": request.sources[0].body[:800],
-                            "interpretation": "Evidence",
-                        }
-                    ],
-                    limitations=[],
-                )
-            if task.id == "script":
-                inputs["outline"] = "Outline"
-            Draft202012Validator(agent.input_schema).validate(inputs)
-            if task.id == "research":
-                if agent.output_schema != ResearchResult.model_json_schema():
-                    raise ValueError("Unsupported research output contract")
-            else:
-                key = "outline" if task.id == "outline" else "script"
-                if (
-                    agent.output_schema.get("additionalProperties") is not False
-                    or agent.output_schema.get("required") != [key]
-                    or set(agent.output_schema.get("properties", {})) != {key}
-                    or agent.output_schema["properties"][key].get("type") != "string"
-                    or agent.output_schema["properties"][key].get("minLength") != 1
-                    or agent.output_schema["properties"][key].get("maxLength") != 24000
-                ):
-                    raise ValueError("Unsupported content output contract")
+            from agentos.services.creator_planning import creator_kind
+
+            if creator_kind(agent, legacy=True) != agent.id:
+                raise ValueError("Legacy Creator capability changed")
     except (KeyError, ValueError, StopIteration, StateConflict, SchemaValidationError):
         raise StateConflict(
             "Creator source research capabilities or evidence graph are unavailable"
@@ -172,6 +108,9 @@ def validate_source_mission(
 
 
 def source_review_evidence(mission: Mission, outputs: dict[str, Any]) -> dict[str, str]:
+    if mission.planning is not None:
+        task = next(t for t in mission.tasks if t.review_required)
+        return creator_review_evidence(mission, task, outputs)
     by_id = {task.id: task for task in mission.tasks}
     source_inputs = by_id["research"].inputs
     sources = CreatorMissionCreate(goal=mission.goal, sources=source_inputs["sources"]).sources
@@ -189,3 +128,54 @@ def source_review_evidence(mission: Mission, outputs: dict[str, Any]) -> dict[st
             [source.model_dump(mode="json") for source in sources], ensure_ascii=False, indent=2
         ),
     }
+
+
+def creator_review_evidence(
+    mission: Mission, task: TaskSpec, outputs: dict[str, Any]
+) -> dict[str, str]:
+    try:
+        return _creator_review_evidence(mission, task, outputs)
+    except (KeyError, ValueError, StopIteration):
+        raise StateConflict("Creator review evidence is incomplete or changed") from None
+
+
+def _creator_review_evidence(
+    mission: Mission, task: TaskSpec, outputs: dict[str, Any]
+) -> dict[str, str]:
+    """Resolve exact current review evidence by bindings, never canonical task IDs."""
+    if mission.planning:
+        if mission.planning.contract_version != 1:
+            raise StateConflict("Unsupported Creator review plan version")
+        for item in mission.tasks:
+            if (
+                item.inputs.get("goal") != mission.goal
+                or item.inputs.get("constraints") != list(mission.planning.constraints)
+                or item.inputs.get("objective") != mission.planning.objectives.get(item.id)
+            ):
+                raise StateConflict("Creator review plan inputs changed")
+    by_id = {t.id: t for t in mission.tasks}
+    outline_binding = task.input_bindings["outline"]
+    outline = (by_id[outline_binding.task_id].outputs or {}).get(outline_binding.output_key)
+    script = outputs.get("script")
+    if not isinstance(outline, str) or not isinstance(script, str):
+        raise StateConflict("Creator review is missing its bound outline/script")
+    expected = {"script.md": script, "reviewed-outline.md": outline}
+    sources = CreatorMissionCreate(
+        goal=mission.goal, sources=task.inputs.get("sources", ())
+    ).sources
+    if sources:
+        binding = task.input_bindings["summary"]
+        source = by_id[binding.task_id]
+        if source.inputs.get("sources") != task.inputs["sources"]:
+            raise StateConflict("Creator source evidence changed")
+        research = ResearchResult.model_validate(source.outputs)
+        research.verify(sources)
+        expected.update(
+            {
+                "reviewed-research.json": research.model_dump_json(indent=2),
+                "reviewed-sources.json": json.dumps(
+                    [s.model_dump(mode="json") for s in sources], ensure_ascii=False, indent=2
+                ),
+            }
+        )
+    return expected
