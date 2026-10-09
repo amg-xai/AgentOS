@@ -59,6 +59,9 @@ export interface Artifact {
   size: number;
   created_at?: string;
 }
+export interface ArtifactDetail extends Artifact {
+  mission_id: string;
+}
 export interface Approval {
   id: string;
   task_id: string;

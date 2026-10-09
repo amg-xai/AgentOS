@@ -512,7 +512,12 @@ export function App() {
                 </>
               )}
               {page === 'memory' && (
-                <Memory key={status?.execution_mode} canWrite={canWrite} demo={demo} />
+                <Memory
+                  key={status?.execution_mode}
+                  canWrite={canWrite}
+                  demo={demo}
+                  onOpenMission={openMission}
+                />
               )}
               {page === 'agents' && (
                 <>

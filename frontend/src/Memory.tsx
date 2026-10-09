@@ -3,7 +3,16 @@ import type { FormEvent } from 'react';
 import { api, date, errorMessage } from './api';
 import type { Note } from './api';
 import { ErrorNotice } from './components';
-export function Memory({ canWrite, demo = false }: { canWrite: boolean; demo?: boolean }) {
+import { MemoryArtifact } from './MemoryArtifact';
+export function Memory({
+  canWrite,
+  demo = false,
+  onOpenMission,
+}: {
+  canWrite: boolean;
+  demo?: boolean;
+  onOpenMission?: (id: string) => void;
+}) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [query, setQuery] = useState('');
   const [title, setTitle] = useState('');
@@ -13,9 +22,15 @@ export function Memory({ canWrite, demo = false }: { canWrite: boolean; demo?: b
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [revision, setRevision] = useState(0);
+  const [preview, setPreview] = useState<{
+    note: Note;
+    artifactId: string;
+    origin: HTMLButtonElement;
+  } | null>(null);
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
+    setPreview(null);
     setNotes([]);
     setReadError('');
     api<Note[]>(
@@ -60,6 +75,18 @@ export function Memory({ canWrite, demo = false }: { canWrite: boolean; demo?: b
         Retrieval uses keyword overlap, not semantic search.
       </div>
       <ErrorNotice message={error || readError} />
+      {preview && (
+        <MemoryArtifact
+          key={`${preview.note.id}:${preview.artifactId}`}
+          artifactId={preview.artifactId}
+          noteTitle={preview.note.title}
+          onOpenMission={onOpenMission}
+          onClose={() => {
+            setPreview(null);
+            if (preview.origin.isConnected) preview.origin.focus();
+          }}
+        />
+      )}
       <div className="memory-layout">
         <section className="panel">
           <div className="section-heading">
@@ -72,7 +99,10 @@ export function Memory({ canWrite, demo = false }: { canWrite: boolean; demo?: b
             type="search"
             placeholder="Search project context…"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setPreview(null);
+              setQuery(e.target.value);
+            }}
             maxLength={8000}
           />
           {loading ? (
@@ -93,7 +123,25 @@ export function Memory({ canWrite, demo = false }: { canWrite: boolean; demo?: b
                 <h3>{n.title}</h3>
                 <p>{n.content}</p>
                 {n.artifact_refs.length > 0 && (
-                  <small>{n.artifact_refs.length} linked artifact(s)</small>
+                  <>
+                    <small>{n.artifact_refs.length} linked artifact(s)</small>
+                    <ul className="memory-references">
+                      {n.artifact_refs.map((ref, index) => (
+                        <li key={`${index}:${ref}`}>
+                          <button
+                            className="text-button"
+                            aria-label={`Inspect linked artifact ${index + 1} for note ${n.title} (${ref})`}
+                            onClick={(event) =>
+                              setPreview({ note: n, artifactId: ref, origin: event.currentTarget })
+                            }
+                          >
+                            Inspect linked artifact {index + 1}{' '}
+                            <span className="mono">({ref})</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
                 )}
                 <small>{date(n.created_at)}</small>
               </article>

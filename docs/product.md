@@ -24,6 +24,8 @@ records, independently of workflow creation and global dashboard totals.
 Mission inspection groups task dependencies by depth with named prerequisite
 states and keyboard navigation to existing task details. Recorded task state is
 not a claim of live worker activity or parallel execution.
+Workspace memory lets users follow saved artifact references to verified text,
+downloads, and the owning mission without changing approvals or execution.
 
 Acceptance for the vertical slice: a user creates a mission, sees tasks run,
 inspects tool activity and test output, reviews a diff, approves an explicit

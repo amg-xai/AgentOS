@@ -88,6 +88,34 @@ present, the dependency layout reports unavailable and preserves task detail
 inspection. Backend validation remains the authority for executable graphs. The
 view introduces no API or storage changes and uses no external graph library.
 
+## Follow saved artifact references
+
+In **Workspace memory**, choose **Inspect linked artifact** on a note. Each
+reference shows its id; inspection loads only the selected reference. The
+**Linked artifact** panel displays the note title, recorded artifact name/id,
+task, owner mission, size/hash, and integrity-checked text. HTML, Markdown links,
+and scripts display as ordinary text.
+
+Use **Download** after verification succeeds to save that artifact with its
+recorded filename. The backend checks integrity again for the download request.
+**Open owning mission** opens existing task/activity/artifact inspection even
+when its mission is outside current history results. Applied history filters
+remain unchanged. Neither action runs agents or accepts a result.
+
+Keyboard activation moves focus to the preview. **Close preview** returns focus
+to its reference button when that button is still present. Selecting another
+reference, changing the search, reloading notes after saving, leaving Memory,
+or changing normal/demo mode cancels earlier reads and removes obsolete previews.
+Missing files/metadata, failed integrity checks, and transport errors show an
+unavailable panel with no content or download link. Close and reopen to retry.
+Viewer inspection is read-only; note saving still requires Operator/Admin.
+
+Memory retrieval remains bounded and lexical: the client requests up to 100
+notes, and the backend considers the newest 1,000 stored notes. Searching uses
+keyword overlap rather than semantic or full-history retrieval. Failed reads
+report **Notes unavailable** instead of empty-history/no-match copy, and earlier
+query results are cleared while a new query loads.
+
 ## Interpret activity correctly
 
 **Active runs on this server** is a current in-memory observation from this API

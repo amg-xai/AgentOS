@@ -428,3 +428,25 @@ after failure recovers normally. Read errors are separate from note-save errors;
 canceled requests remain ignored. TypeScript/Vite production build and frontend
 Prettier pass. This maintenance change preserves memory retrieval, storage, and
 permissions. Native visual/accessibility and live model acceptance remain deferred.
+
+## Memory artifact inspection
+
+Validated on Windows on 2026-10-09: all 76 React/JSDOM tests pass. Thirteen new
+checks cover on-demand multi-reference selection, notes without references,
+Viewer reads without writes, escaped HTML/Markdown, recorded metadata and verified
+download filename/path, keyboard preview focus and return, owner-mission navigation
+outside filtered history, missing metadata/files, integrity and network failures,
+and closing/reopening to retry. Delayed body/error responses cannot replace another
+selection or reappear after close, search, unmount, note reload, or normal/demo
+switch. Saving a new note remains the only write in the note-reload regression.
+Earlier three-role workflows, result reviews, history, memory, dependency, and
+refresh-order tests pass. TypeScript/Vite production build and frontend Prettier
+pass. The existing backend artifact endpoint verifies content; metadata and text
+must both succeed before the client exposes downloads. No API/schema, provider,
+permission, or desktop capability changes were needed.
+
+Ready for offline interaction testing in Workspace memory using saved artifact
+references and the [Mission Control guide](mission-control.md#follow-saved-artifact-references).
+Existing bounded lexical memory retrieval remains unchanged. Native/browser
+visual, responsive, screen-reader, and download-dialog acceptance remain manual
+under the existing browser restriction; live model quality testing is deferred.

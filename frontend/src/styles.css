@@ -587,6 +587,24 @@ p {
   margin: 18px 0;
   overflow-wrap: anywhere;
 }
+.memory-artifact {
+  margin: 18px 0;
+  overflow-wrap: anywhere;
+}
+.memory-artifact-actions {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.memory-references {
+  padding-left: 18px;
+}
+.memory-references button {
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 .task-dependencies h3 {
   font-size: 13px;
 }
