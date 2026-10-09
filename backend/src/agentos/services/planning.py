@@ -3,6 +3,7 @@
 from typing import Annotated, Literal, Protocol
 
 from jsonschema import Draft202012Validator
+from jsonschema.exceptions import ValidationError as SchemaValidationError
 from pydantic import Field
 
 from agentos.domain.agents import AgentDefinition, Permission
@@ -269,7 +270,12 @@ def validate_planned_mission(
                 raise MissionValidationError("Binding requires string evidence")
             consumed.add(binding.task_id)
             resolved[key] = "validated upstream evidence"
-        Draft202012Validator(registry.agent(task.agent_id).input_schema).validate(resolved)
+        try:
+            Draft202012Validator(registry.agent(task.agent_id).input_schema).validate(resolved)
+        except SchemaValidationError:
+            raise MissionValidationError(
+                "Planned task inputs do not match the executor schema"
+            ) from None
     terminal = {key for key in by_id if key not in consumed}
     if len(terminal) != 1 or kinds[next(iter(terminal))] != "developer_test":
         raise MissionValidationError("Every planned task must lead to the final tested review")

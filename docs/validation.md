@@ -1,5 +1,21 @@
 # Backend validation
 
+## Developer planning validation follow-up
+
+Validated on Windows on 2026-10-09: 303 backend tests passed, with three Windows
+link cases skipped. Ruff lint/format and strict Mypy checks for Windows and Linux
+passed. The saved-plan regression first reproduced HTTP 500, then verified safe
+HTTP 422 before a run claim when a changed manifest makes task inputs invalid.
+The response omits input content; mission version, approvals, and artifacts remain
+unchanged, with no model dispatch.
+
+Two additional normal-workflow integrations cover independent investigation
+branches and the eight-task limit, distinct findings/context bindings into one
+patch, preserved goal/constraints, actual scratch tests, one final review, and
+unchanged source files. Model transport is injected. No live provider calls were
+made; provider configuration and live acceptance remain outstanding. No frontend,
+desktop, graph-contract, or original PLAN.md changes are introduced by this fix.
+
 ## Bounded Developer planning milestone
 
 Validated locally on Windows on 2026-10-09 with the existing Python 3.14 runtime:

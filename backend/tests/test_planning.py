@@ -58,6 +58,106 @@ def test_valid_unsorted_plan_preserves_goal_constraints_objectives_and_bindings(
     assert test.review_required and test.requires_passed_tests and not test.inputs
 
 
+@pytest.mark.parametrize("task_count", [4, 8])
+def test_branching_plans_deliver_distinct_evidence_to_one_tested_patch(
+    tmp_path, workspace, task_count
+):
+    data = plan_data()
+    investigate, patch, test = data["tasks"]
+    context = investigate | {
+        "id": "inspect_tests",
+        "objective": "Inspect test intent independently",
+    }
+    investigations = [investigate, context]
+    upstream = investigate["id"]
+    for index in range(task_count - 4):
+        task = investigate | {
+            "id": f"refine_{index}",
+            "objective": f"Refine source evidence {index}",
+            "dependencies": [upstream],
+            "bindings": [{"input_key": "context", "task_id": upstream, "output_key": "findings"}],
+        }
+        investigations.append(task)
+        upstream = task["id"]
+    patch["dependencies"] = [upstream, context["id"]]
+    patch["bindings"] = [
+        {"input_key": "findings", "task_id": upstream, "output_key": "findings"},
+        {"input_key": "context", "task_id": context["id"], "output_key": "findings"},
+    ]
+    data["tasks"] = list(reversed([*investigations, patch, test]))
+    requests = []
+
+    def transport(request):
+        body = json.loads(request.content)
+        inputs = json.loads(body["input"])
+        name = body["text"]["format"]["name"]
+        requests.append((name, inputs))
+        if name == "developer_planner":
+            return reply(data)
+        if name == "investigation":
+            return reply({"findings": inputs["objective"]})
+        assert inputs["context"] == context["objective"]
+        assert inputs["findings"] == next(
+            task["objective"] for task in investigations if task["id"] == upstream
+        )
+        assert inputs["goal"] == "Fix addition without changing tests"
+        assert inputs["constraints"] == data["constraints"]
+        return reply({"diff": PATCH, "summary": "Fix the operator, preserve test intent"})
+
+    originals = {name: (workspace.repository / name).read_bytes() for name in workspace.files}
+    with TestClient(configured_app(tmp_path, workspace, transport)) as client:
+        mission = client.post(
+            "/workflows/developer", json={"goal": "Fix addition without changing tests"}
+        ).json()
+        result = client.post(f"/missions/{mission['id']}/run", json={"expected_version": 1}).json()
+        assert result["status"] == "WAITING_APPROVAL" and len(result["tasks"]) == task_count
+        review = next(task for task in result["tasks"] if task["id"] == "verify")
+        assert review["outputs"]["passed"] is True
+        assert sum(name == "investigation" for name, _ in requests) == task_count - 2
+        assert len(client.get(f"/missions/{mission['id']}/approvals").json()) == 1
+    assert originals == {
+        name: (workspace.repository / name).read_bytes() for name in workspace.files
+    }
+
+
+def test_changed_input_contract_rejects_saved_plan_safely_before_execution(
+    registry, tmp_path, workspace
+):
+    repository = SQLiteMissionRepository(tmp_path / "saved.sqlite3")
+    request = compiled(registry)
+    mission = MissionService(registry, repository).create(request)
+    agent = registry.agent("investigation")
+    schema = copy.deepcopy(agent.input_schema)
+    schema["properties"]["goal"]["minLength"] = 8001
+    catalog = AgentRegistry(
+        [
+            other.model_copy(update={"input_schema": schema}) if other.id == agent.id else other
+            for other in registry.agents()
+        ],
+        registry.roles(),
+        {"filesystem", "git", "terminal"},
+    )
+
+    def no_generation(request):
+        pytest.fail("Invalid saved plan must be rejected before model dispatch")
+
+    model = ResponsesExecutor(
+        ModelSettings(model="injected-test"), transport=httpx.MockTransport(no_generation)
+    )
+    with TestClient(
+        create_app(catalog, db_path=repository.path, workspace=workspace, model=model),
+        raise_server_exceptions=False,
+    ) as client:
+        response = client.post(f"/missions/{mission.id}/run", json={"expected_version": 1})
+        assert response.status_code == 422
+        assert response.json()["detail"] == "Planned task inputs do not match the executor schema"
+        assert mission.goal not in response.text
+        assert client.get(f"/missions/{mission.id}").json()["version"] == 1
+        assert client.get(f"/missions/{mission.id}/run").json() is None
+        assert client.get(f"/missions/{mission.id}/artifacts").json() == []
+        assert client.get(f"/missions/{mission.id}/approvals").json() == []
+
+
 def invalid_data(case):
     data = copy.deepcopy(plan_data())
     investigate, patch, test = data["tasks"]
