@@ -152,20 +152,26 @@ automatic dependency installation or model-selected command execution occurs.
 
 1. Confirm the model and Calculator workspace appear in Mission Control with no
    missing-configuration notice. In Agents & roles, inspect Developer's planner,
-   investigation, patch, and testing agents. Record the unmodified project's
-   failing baseline using the configured test command before the live run.
+   baseline testing, investigation, patch, and final testing agents. A new normal
+   Developer mission records the unmodified project's baseline automatically;
+   the labelled offline preset retains its earlier three-task graph.
 2. Optionally add a workspace note: “Preserve the existing addition test assertions.”
    Relevant notes and selected source files are sent to the configured model.
 3. Create a mission: “Investigate and fix incorrect addition in calculator.py.
    Preserve all existing test assertions and explain the cause.”
 4. Inspect the validated goal-driven plan, objectives, and constraints. Select
    **Run mission**. Follow task states and Activity. Model-backed agents
-   investigate and generate a patch; the testing agent runs the configured
-   command in a fresh scratch checkout. The app does not silently substitute fixtures.
-5. Inspect `findings.md`, `proposed.diff`, `change-summary.md`, `tested.diff`, and
-   `test-report.txt`. The review gate identifies its attempt and bound artifacts.
-   Confirm the diff fixes subtraction and the actual report shows all three tests
-   passing. Failed tests are labelled failed and cannot be accepted for new
+   investigate the source; patch generation waits for findings and baseline evidence. Baseline
+   and patched tests run in separate fresh scratch directories using the same
+   frozen source and test recipe. The app does not silently substitute fixtures.
+5. Inspect `findings.md`, `proposed.diff`, `change-summary.md`, `tested.diff`,
+   `baseline-report.txt`, and `test-report.txt`. Final review owns `tested.diff`,
+   `test-report.txt`, and the exact `reviewed-baseline-report.txt` copy. The review
+   gate identifies its attempt and bound artifacts. Confirm baseline execution ran
+   three tests with two failures and the patched tests passed all three. Both reports
+   must show the same source and recipe digests. Inspect the diff for preserved
+   assertions and signatures. A completed baseline task can have failed tests;
+   its outcome is displayed separately. Failed patched tests cannot be accepted for new
    planned Developer missions. Deny and retry testing, or create a new mission
    when the patch needs revision.
 6. At the review gate, accept the result. The mission becomes completed without
@@ -187,7 +193,10 @@ automatic dependency installation or model-selected command execution occurs.
 
 Authentication, rate limits, invalid structured output, or a nonapplicable patch
 fail the current task with a sanitized failure category. Fix configuration, then
-explicitly retry that task and run the mission. Retries use the original snapshot.
+explicitly retry that task and run the mission. Version-2 retries use the original
+snapshot and frozen test recipe, even after workspace settings change. This does
+not freeze installed dependencies or runner binaries. Older missions and the
+offline preset retain their previous test-command behavior.
 Create a new mission to capture changed source. Interrupted runs retain a claim;
 stop the old worker before following the admin recovery procedure in
 [workflows.md](workflows.md). No automatic recovery or background worker is claimed.

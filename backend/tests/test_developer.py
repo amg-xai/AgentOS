@@ -488,10 +488,36 @@ def test_bundled_acceptance_project_bug_fix_restart_and_source_preservation(tmp_
         base = f"/missions/{mission['id']}"
         mission = client.post(base + "/run", json={"expected_version": 1}).json()
         assert mission["status"] == "WAITING_APPROVAL", mission
+        assert mission["planning"]["contract_version"] == 2
+        baseline = next(task for task in mission["tasks"] if task["id"] == "baseline")
+        assert baseline["status"] == "COMPLETED"
+        assert baseline["outputs"]["baseline_passed"] is False
+        baseline_report = baseline["outputs"]["baseline_report"]
+        assert "Ran 3 tests" in baseline_report and "failures=2" in baseline_report
+        assert "Exit code: 1" in baseline_report
         assert mission["tasks"][-1]["outputs"]["passed"] is True
-        assert "Ran 3 tests" in mission["tasks"][-1]["outputs"]["report"]
+        patched_report = mission["tasks"][-1]["outputs"]["report"]
+        assert "Ran 3 tests" in patched_report and "Exit code: 0" in patched_report
+        for prefix in ("Source SHA-256:", "Recipe SHA-256:"):
+            assert (
+                next(line for line in baseline_report.splitlines() if line.startswith(prefix))
+                in patched_report
+            )
+        artifacts = client.get(base + "/artifacts").json()
+        events = client.get(base + "/events").json()
     with TestClient(configured_app(tmp_path, config, transport)) as client:
+        assert client.get(base).json() == mission
+        assert client.get(base + "/artifacts").json() == artifacts
+        assert client.get(base + "/events").json() == events
         approval = client.get(base + "/approvals").json()[0]
+        covered = [a for a in artifacts if a["id"] in approval["payload"]["artifact_refs"]]
+        assert {a["name"] for a in covered} == {
+            "tested.diff",
+            "test-report.txt",
+            "reviewed-baseline-report.txt",
+        }
+        reviewed_baseline = next(a for a in covered if a["name"] == "reviewed-baseline-report.txt")
+        assert client.get(f"/artifacts/{reviewed_baseline['id']}/content").text == baseline_report
         result = client.post(
             f"/approvals/{approval['id']}/decision",
             json={
@@ -502,4 +528,9 @@ def test_bundled_acceptance_project_bug_fix_restart_and_source_preservation(tmp_
         )
         assert result.status_code == 200
         assert result.json()["status"] == "COMPLETED"
+    with TestClient(configured_app(tmp_path, config, transport)) as client:
+        assert client.get(base).json() == result.json()
+        decisions = client.get(base + "/approvals?pending_only=false").json()
+        assert len(decisions) == 1 and decisions[0]["status"] == "APPROVED"
+        assert decisions[0]["payload_digest"] == approval["payload_digest"]
     assert original == {name: (source / name).read_bytes() for name in original}

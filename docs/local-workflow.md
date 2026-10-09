@@ -81,8 +81,9 @@ publishing, deployments, or changes to the original checkout.
 Developer capabilities. See [planning contracts](developer-planning.md) for the
 supported graph shapes, validation, preserved goal, and inspectable evidence.
 The result stops for human approval after actual testing. Its review bundle owns
-`tested.diff` and `test-report.txt`, so approval verifies the exact tested patch
-as well as the report. The earlier `proposed.diff` remains investigation history.
+`tested.diff`, `test-report.txt`, and, for version-2 normal plans,
+`reviewed-baseline-report.txt`, so approval verifies the exact tested patch and both
+reports. The earlier `proposed.diff` remains investigation history.
 Inspect `passed` and the report: new planned and demo results cannot be accepted
 unless tests explicitly pass. Older/manual completion does not establish passing
 tests. Denial fails the review task; retry reruns tests in fresh
