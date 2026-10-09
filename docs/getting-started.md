@@ -152,28 +152,32 @@ automatic dependency installation or model-selected command execution occurs.
 
 1. Confirm the model and Calculator workspace appear in Mission Control with no
    missing-configuration notice. In Agents & roles, inspect Developer's planner,
-   baseline testing, investigation, patch, and final testing agents. A new normal
-   Developer mission records the unmodified project's baseline automatically;
-   the labelled offline preset retains its earlier three-task graph.
+   baseline testing, investigation, local Issue Agent, patch, and final testing
+   agents. A new normal Developer mission records the unmodified project's
+   baseline when run; the labelled offline preset retains its earlier three-task graph.
 2. Optionally add a workspace note: “Preserve the existing addition test assertions.”
    Relevant notes and selected source files are sent to the configured model.
 3. Create a mission: “Investigate and fix incorrect addition in calculator.py.
    Preserve all existing test assertions and explain the cause.”
 4. Inspect the validated goal-driven plan, objectives, and constraints. Select
    **Run mission**. Follow task states and Activity. Model-backed agents
-   investigate the source; patch generation waits for findings and baseline evidence. Baseline
-   and patched tests run in separate fresh scratch directories using the same
-   frozen source and test recipe. The app does not silently substitute fixtures.
+   investigate the source. The Issue Agent binds findings and baseline evidence;
+   patch generation receives that same issue, findings, and baseline evidence.
+   Baseline and patched tests run in separate fresh scratch directories using
+   the same frozen source and test recipe. The app does not silently substitute fixtures.
 5. Inspect `findings.md`, `proposed.diff`, `change-summary.md`, `tested.diff`,
-   `baseline-report.txt`, and `test-report.txt`. Final review owns `tested.diff`,
-   `test-report.txt`, and the exact `reviewed-baseline-report.txt` copy. The review
-   gate identifies its attempt and bound artifacts. Confirm baseline execution ran
+   `baseline-report.txt`, `issue.json`, `issue.md`, and `test-report.txt`. New normal
+   Developer v3 review owns exactly five files: `tested.diff`, `test-report.txt`,
+   `reviewed-baseline-report.txt`, `reviewed-issue.json`, and `reviewed-issue.md`.
+   Confirm the issue copies match the original proposal; suggested reproduction
+   steps and acceptance criteria do not establish coverage or correctness.
+   The review gate identifies its attempt and bound artifacts. Confirm baseline execution ran
    three tests with two failures and the patched tests passed all three. Both reports
    must show the same source and recipe digests. Inspect the diff for preserved
    assertions and signatures. A completed baseline task can have failed tests;
    its outcome is displayed separately. Failed patched tests cannot be accepted for new
    planned Developer missions. Deny and retry testing against the same patch, or,
-   for a normal version-2 mission with failed tests, use **Revise patch**, enter
+   for a normal version-2/3 mission with failed tests, use **Revise patch**, enter
    feedback, and explicitly **Run mission**. At most two replacement patches are
    allowed; each needs real tests and a fresh human decision. Demo and legacy
    missions retain their existing retry behavior.
@@ -196,7 +200,7 @@ automatic dependency installation or model-selected command execution occurs.
 
 Authentication, rate limits, invalid structured output, or a nonapplicable patch
 fail the current task with a sanitized failure category. Fix configuration, then
-explicitly retry that task and run the mission. Version-2 retries use the original
+explicitly retry that task and run the mission. Version-2/3 retries use the original
 snapshot and frozen test recipe, even after workspace settings change. This does
 not freeze installed dependencies or runner binaries. Older missions and the
 offline preset retain their previous test-command behavior.
@@ -209,6 +213,37 @@ security sandbox**. Tests run under your user account. The API is local and
 single-user; never expose it on the network. Patches are restricted to existing
 selected UTF-8 text files. New files, renames, binary edits, and vector/semantic
 memory are deferred. See [workflow limits](local-workflow.md).
+
+## Continuous offline integration validation
+
+With development dependencies installed, run from PowerShell at the repository root:
+
+```powershell
+$env:AGENTOS_TEST_PYTHON = (Resolve-Path .\.venv\Scripts\python.exe).Path
+npm --prefix frontend run test:integration
+```
+
+Use `.venv-runtime` instead where required by your local Python installation.
+On Linux/macOS, set `AGENTOS_TEST_PYTHON` to the installed backend interpreter's
+absolute path and run the same npm command. Missing Python is an error, not a skip.
+
+This dedicated suite renders the actual React application in JSDOM and sends real
+HTTP requests to an isolated loopback backend. Only model transport is injected;
+registered planning validation, scoped source/Git tools, actual baseline/patched
+unittest runs, artifacts, approvals, revisions and SQLite persistence are real.
+It covers a passing result, success on the second explicit patch revision, and
+exhaustion of both revision cycles; it verifies all five v3 review files, failed-test
+rejection, explicit acceptance, process restart and byte-preserved source files.
+It creates temporary test storage and does not read your provider configuration.
+The existing normal-mode API enum `live` identifies normal execution, not proof
+that this test contacts a live model. Live authorization remains disabled.
+
+The ordinary `npm --prefix frontend test` suite retains fast mocked API contract
+coverage, including legacy/other-role/demo behavior. The continuous suite runs
+separately in Linux and Windows CI. Neither JSDOM nor injected transport establishes
+native/browser rendering, live endpoint compatibility or AI result quality. Those
+require the separately authorized walkthrough above; human patch review remains
+necessary before applying a result to any real checkout.
 
 For frontend development, run the backend on port 8000 and `npm --prefix frontend
 run dev`; open the Vite loopback URL ending in `/app/`. The dev proxy preserves

@@ -7,7 +7,8 @@
     "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
     "test": "vitest run",
-    "format:check": "prettier --check src vite.config.ts tsconfig.json package.json index.html"
+    "test:integration": "node --check integration/server.mjs && vitest run --config vite.integration.config.ts",
+    "format:check": "prettier --check src integration vite*.ts tsconfig.json package.json index.html"
   },
   "dependencies": {
     "react": "^19.0.0",

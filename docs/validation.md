@@ -1,5 +1,35 @@
 # Backend validation
 
+## Continuous Developer v3 UI/API validation
+
+Validated on Windows on 2026-10-10:
+
+- Three dedicated journeys render the actual React App in JSDOM against an
+  isolated real HTTP backend, with same-origin headers and injected model
+  transport. No frontend API response fixtures or live calls are used.
+- Actual Calculator baseline execution runs three tests with two failures.
+  Patched execution records its explicit pass/fail outcome. The UI inspects all
+  five review files; both Issue copies equal their originals, and baseline/test
+  reports share frozen source and recipe digests.
+- Tests cover initial success, success on the second explicit patch revision,
+  and exhaustion of both revisions. Failed-test acceptance and a third revision
+  are rejected by the real API. Human decisions use UI controls. Real process
+  restarts preserve missions, plans, artifacts, activity and outcomes; original
+  source files remain byte-for-byte unchanged.
+- Full checks: 616 backend tests passed, three Windows symlink cases skipped;
+  119 frontend unit tests and 26 desktop tests passed, including owned backend
+  process integration. Ruff lint/format, strict Windows/Linux Mypy, frontend
+  TypeScript/Vite build, formatting, desktop syntax and offline wheel build passed.
+
+The dedicated command and Linux/Windows CI are documented in
+[getting-started.md](getting-started.md#continuous-offline-integration-validation).
+Missing test Python is an error rather than a skip. The fixture reuses registered
+agents, existing model injection, tools, storage, approvals and revisions; it is
+not a production execution mode. No production contracts or dependencies changed.
+Injected transport does not establish live model quality/compatibility, and JSDOM
+is not native/browser visual acceptance. Original PLAN.md and the full three-role
+scope remain unchanged. Live calls remain disabled pending explicit authorization.
+
 ## Developer planning evidence presentation follow-up
 
 Validated on Windows on 2026-10-09: all 81 frontend tests passed, along with the

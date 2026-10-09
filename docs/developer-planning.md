@@ -127,3 +127,13 @@ outside this milestone. Result Review History remains deferred. The next
 acceptance milestone needs a trusted project, a failing baseline, an authorized
 live goal-driven run, actual passing patched tests, human review, and restart
 inspection. Neither automated mocks nor the offline demo complete that claim.
+
+## Continuous UI/API acceptance
+
+`npm --prefix frontend run test:integration` renders the actual React application
+in JSDOM against a real isolated loopback backend with injected model transport.
+It exercises normal v3 creation, actual baseline/patched tests, exact five-file
+review evidence, failed-test rejection, two explicit revisions, acceptance and
+restart inspection with unchanged source files. It does not add a production
+fixture mode or establish live AI quality or native rendering. See
+[validation setup](getting-started.md#continuous-offline-integration-validation).

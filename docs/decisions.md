@@ -1,5 +1,21 @@
 # Decisions and baseline
 
+## 2026-10-10: Continuous normal Developer acceptance coverage
+
+Close the UI/API integration gap with the existing React/JSDOM runner connected
+by real loopback HTTP to a test-only create_app server. Inject only model transport
+with live authorization disabled. Reuse registered capabilities, scoped tools,
+SQLite, artifacts, approvals and revisions; add no production mode or workflow
+engine. Isolate source/storage, forward same-origin requests and cancellation,
+and bound startup/request/shutdown with owned temporary-directory cleanup.
+
+Run initial success, second-revision success and revision-exhaustion journeys
+through UI controls; check actual baseline/patched tests, all five exact review
+artifacts, explicit decisions, process restart/history and preserved source bytes.
+Retain existing role/version/demo suites and run dedicated integration CI on
+Linux and Windows. Offline evidence does not replace live AI or native visual
+acceptance. Full original roadmap and existing deferred milestones remain intact.
+
 ## 2026-10-10: Developer local issue evidence
 
 Original PLAN.md section 1 and Phase 8 name an Issue Agent between investigation
