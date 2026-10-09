@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { api, artifactText, date, errorMessage, label } from './api';
-import type { Activity, Approval, Artifact, Mission } from './api';
+import type { Activity, Approval, Artifact, Mission, PatchRevisionStatus } from './api';
 import { Badge, ErrorNotice } from './components';
 import { TaskDependencies } from './TaskDependencies';
 export function MissionDetail({
@@ -18,6 +18,8 @@ export function MissionDetail({
   const [events, setEvents] = useState<Activity[]>([]);
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [approvals, setApprovals] = useState<Approval[]>([]);
+  const [revision, setRevision] = useState<PatchRevisionStatus | null>(null);
+  const [feedback, setFeedback] = useState('');
   const [claim, setClaim] = useState<unknown>(null);
   const [tab, setTab] = useState<'tasks' | 'artifacts' | 'activity'>('tasks');
   const tabs = ['tasks', 'artifacts', 'activity'] as const;
@@ -61,7 +63,16 @@ export function MissionDetail({
       const reviewArtifacts = await Promise.all(
         missing.map((ref) => api<Artifact>(`/artifacts/${encodeURIComponent(ref)}`)),
       );
+      const revisionStatus =
+        !demo &&
+        m.role_id === 'developer' &&
+        m.planning?.contract_version === 2 &&
+        m.status === 'FAILED' &&
+        m.tasks.some((task) => task.requires_passed_tests && task.outputs?.passed === false)
+          ? await api<PatchRevisionStatus>(`${base}/patch-revision`)
+          : null;
       if (requestNumber !== refreshNumber.current) return;
+      setRevision(revisionStatus);
       setMission(m);
       setEvents((current) =>
         [...new Map([...current, ...e].map((item) => [item.sequence, item])).values()].sort(
@@ -84,7 +95,7 @@ export function MissionDetail({
     } catch (e) {
       if (requestNumber === refreshNumber.current) setRefreshError(errorMessage(e));
     }
-  }, [id, artifactPages]);
+  }, [id, artifactPages, demo]);
   useEffect(() => {
     void refresh();
     const timer = window.setInterval(() => {
@@ -115,13 +126,15 @@ export function MissionDetail({
     return () => controller.abort();
   }, [artifact]);
   async function action(path: string, body: Record<string, unknown> = {}) {
-    if (!mission) return;
+    if (!mission) return false;
     setBusy(true);
     setError('');
     try {
       await api(path, { expected_version: mission.version, ...body });
+      return true;
     } catch (e) {
       setError(errorMessage(e));
+      return false;
     } finally {
       await refresh();
       await onChange();
@@ -330,6 +343,53 @@ export function MissionDetail({
           )}
         </div>
       ))}
+      {revision && (
+        <div className="approval">
+          <h3>Correct the failed patch</h3>
+          <p>
+            {revision.remaining} revision cycles remaining. A revision preserves the original goal,
+            source, and tests. It needs a separate run and fresh human review.
+          </p>
+          {revision.allowed ? (
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (!canWrite || busy || !feedback.trim()) return;
+                void action(`/missions/${id}/patch-revision`, {
+                  approval_id: revision.approval_id,
+                  payload_digest: revision.payload_digest,
+                  feedback: feedback.trim(),
+                }).then((success) => {
+                  if (success) setFeedback('');
+                });
+              }}
+            >
+              <label htmlFor={`${tabId}-feedback`}>Patch revision feedback</label>
+              <textarea
+                id={`${tabId}-feedback`}
+                required
+                maxLength={2000}
+                value={feedback}
+                disabled={!canWrite || busy}
+                onChange={(event) => setFeedback(event.target.value)}
+              />
+              <p>
+                Describe the failure you observed. This feedback and the previous diff will go to
+                the patch agent; test logs remain local.
+              </p>
+              <button disabled={!canWrite || busy || !feedback.trim()}>Revise patch</button>
+            </form>
+          ) : (
+            <p role="status">{revision.reason}</p>
+          )}
+        </div>
+      )}
+      {!!mission.developer_revisions?.length && (
+        <details>
+          <summary>Inspect patch revision evidence</summary>
+          <pre>{JSON.stringify(mission.developer_revisions, null, 2)}</pre>
+        </details>
+      )}
       <div className="tabs" role="tablist" aria-label="Mission details">
         {tabs.map((t, index) => (
           <button

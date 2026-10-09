@@ -89,6 +89,14 @@ unless tests explicitly pass. Older/manual completion does not establish passing
 tests. Denial fails the review task; retry reruns tests in fresh
 scratch. Existing recovery rules apply after interrupted runs.
 
+Normal version-2 missions also support an explicit bounded replacement after human
+denial of failed tests. **Revise patch** records feedback and resets only patch/testing;
+it does not run. The next explicit run generates a full replacement against the
+original frozen snapshot and tests it with the original recipe. Two cycles maximum,
+intact prior evidence, Operator/Admin access, and fresh passing-test approval are
+required. See [revision contracts](developer-planning.md). Live calls remain disabled
+unless separately authorized; deterministic transport tests do not prove AI quality.
+
 `GET/POST /memory` stores workspace notes with validated artifact references.
 Retrieval matches words against the most recent 1,000 notes; results are bounded,
 Unicode-aware, and ordered by overlap then recency. It is **lexical**, not semantic

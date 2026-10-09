@@ -193,3 +193,21 @@ Reuse current execution, persistence, retry/recovery and review services. Add no
 calendar, timer, notifications, grading, research access, or database migration.
 Live AI/native visual acceptance remains pending; Result Review History stays deferred
 and original full role scope remains intact.
+
+## 2026-10-09: Explicit bounded Developer patch replacement
+
+After human denial of an intact failed-test result, normal version-2 Developer
+missions allow two explicit patch revision cycles with bounded user feedback.
+Reset only patch/testing in the existing graph, recording prior attempts, denied
+approval, artifacts/hashes and immutable plan digest in the mission snapshot.
+Reuse repository transactions, version/claim checks and audit events; no migration
+or parallel workflow engine is needed. Requesting a revision does not execute it.
+
+The registered patch executor receives the prior exact diff and untrusted feedback
+alongside original goal/constraints/findings. Generate a full replacement against
+the frozen source, rerun actual tests with the frozen recipe, and require a new
+passing-test human approval. Keep raw logs/argv local, preserve all old evidence,
+and fail preflight on damaged revision references. Provider failure remains an
+explicit retry; there is no automatic correction loop. Demo/legacy graphs keep
+their behavior. Original PLAN.md and all three roles retain their intended scope;
+live acceptance is still disabled pending separate authorization.

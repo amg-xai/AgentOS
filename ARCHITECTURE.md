@@ -84,6 +84,15 @@ version, task attempt, digest, and artifact integrity before completing the task
 It never reruns the executor or grants permission to an external tool. Denied
 results fail and can be retried only explicitly.
 
+Normal version-2 Developer missions may explicitly replace a patch after human
+denial of failed tests, with at most two cycles. A revision service validates the
+current denied attempt and exact evidence, then atomically records bounded history
+and reopens patch/testing through the existing version/claim-checked repository.
+The same orchestrator revalidates retained evidence before claiming work and supplies
+untrusted feedback plus the prior diff to the registered patch executor. Source,
+test recipe, goal, constraints and graph remain unchanged. Execution requires a
+separate run, and replacement results require fresh passing-test human approval.
+
 Artifact files have generated ids and content hashes; filenames are metadata,
 not user-controlled paths. Files are written and flushed before metadata commits.
 Confirmed uncommitted files are removed on failure; ambiguous files are retained

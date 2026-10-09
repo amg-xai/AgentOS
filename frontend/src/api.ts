@@ -55,6 +55,14 @@ export interface Task {
   requires_passed_tests?: boolean;
 }
 export interface Mission {
+  developer_revisions?: {
+    number: number;
+    feedback: string;
+    patch_attempt: number;
+    test_attempt: number;
+    artifact_refs: string[];
+    artifact_hashes: Record<string, string>;
+  }[];
   id: string;
   goal: string;
   role_id: string;
@@ -70,6 +78,13 @@ export interface Mission {
     constraints: string[];
     objectives: Record<string, string>;
   } | null;
+}
+export interface PatchRevisionStatus {
+  allowed: boolean;
+  remaining: number;
+  reason: string;
+  approval_id?: string;
+  payload_digest?: string;
 }
 export interface Artifact {
   id: string;

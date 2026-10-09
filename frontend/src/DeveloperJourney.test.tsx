@@ -187,6 +187,8 @@ function plannedWorkflow(firstRunPasses: boolean) {
     }
     if (path === '/missions/planned') return respond(mission);
     if (path === '/missions/planned/run') return respond(null);
+    if (path.endsWith('/patch-revision'))
+      return respond({ allowed: false, remaining: 2, reason: 'Fixture retry journey' });
     if (path.endsWith('/approvals')) return respond(approvals);
     if (path.includes('/artifacts?')) return respond(artifacts);
     if (path.includes('/events?'))

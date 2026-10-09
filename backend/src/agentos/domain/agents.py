@@ -11,6 +11,7 @@ from agentos.domain.artifacts import ArtifactDraft
 from agentos.domain.base import Definition as Definition
 from agentos.domain.base import Identifier as Identifier
 from agentos.domain.base import Text as Text
+from agentos.domain.revisions import PatchRevisionContext
 
 
 class VersionedManifest(Definition):
@@ -93,6 +94,7 @@ class ExecutionContext(Definition):
     task_id: Text
     run_token: str | None = None
     planning_version: int = Field(default=1, strict=True, ge=1, le=2)
+    patch_revision: PatchRevisionContext | None = None
 
 
 class AgentResult(Definition):

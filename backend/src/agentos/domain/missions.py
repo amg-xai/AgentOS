@@ -7,6 +7,7 @@ from typing import Annotated, Any, Self
 from pydantic import Field, computed_field, model_validator
 
 from agentos.domain.agents import Definition, Identifier, Text
+from agentos.domain.revisions import DeveloperRevision, Digest, Feedback
 
 
 class MissionValidationError(ValueError):
@@ -139,6 +140,7 @@ class Mission(Definition):
     created_at: datetime
     updated_at: datetime
     planning: PlanningEvidence | None = None
+    developer_revisions: tuple[DeveloperRevision, ...] = Field(default=(), max_length=2)
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -169,6 +171,12 @@ class TaskAction(StrEnum):
 
 class VersionRequest(Definition):
     expected_version: int = Field(ge=1, strict=True)
+
+
+class PatchRevisionRequest(VersionRequest):
+    approval_id: Text
+    payload_digest: Digest
+    feedback: Feedback
 
 
 class TaskActionRequest(VersionRequest):

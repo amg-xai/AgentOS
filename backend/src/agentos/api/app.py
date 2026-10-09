@@ -47,12 +47,14 @@ from agentos.domain.missions import (
     MissionNotFound,
     MissionStatus,
     MissionValidationError,
+    PatchRevisionRequest,
     StateConflict,
     TaskAction,
     TaskActionRequest,
     VersionRequest,
 )
 from agentos.domain.overview import WorkspaceOverview
+from agentos.domain.revisions import PatchRevisionStatus
 from agentos.domain.roles import RolePackage
 from agentos.domain.workspace import (
     CreatorMissionCreate,
@@ -76,6 +78,7 @@ from agentos.services.planning import (
     registered_planner,
 )
 from agentos.services.registry import AgentRegistry
+from agentos.services.revisions import PatchRevisionService
 from agentos.services.student import has_study_plan, student_mission, validate_study_mission
 from agentos.services.tools import ToolRegistry
 
@@ -325,6 +328,9 @@ def create_app(
 
     orchestrator = Orchestrator(catalog, repository, bindings, storage)
     approvals = ApprovalService(repository, storage)
+    revisions = PatchRevisionService(
+        catalog, repository, bindings, storage, demo=demo_root is not None
+    )
     app = FastAPI(title="AgentOS", version="0.1.0")
     app.add_middleware(
         TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "[::1]", "testserver"]
@@ -539,6 +545,14 @@ def create_app(
                 "Offline demo uses executor results; only explicit retry is allowed"
             )
         return missions.act(mission_id, task_id, request)
+
+    @app.get("/missions/{mission_id}/patch-revision")
+    def patch_revision_status(mission_id: str) -> PatchRevisionStatus:
+        return revisions.status(repository.get(mission_id))
+
+    @app.post("/missions/{mission_id}/patch-revision")
+    def request_patch_revision(mission_id: str, request: PatchRevisionRequest) -> Mission:
+        return revisions.request(mission_id, request, role)
 
     @app.post("/missions/{mission_id}/cancel")
     def cancel_mission(mission_id: str, request: VersionRequest) -> Mission:

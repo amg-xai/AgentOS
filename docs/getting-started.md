@@ -172,8 +172,11 @@ automatic dependency installation or model-selected command execution occurs.
    must show the same source and recipe digests. Inspect the diff for preserved
    assertions and signatures. A completed baseline task can have failed tests;
    its outcome is displayed separately. Failed patched tests cannot be accepted for new
-   planned Developer missions. Deny and retry testing, or create a new mission
-   when the patch needs revision.
+   planned Developer missions. Deny and retry testing against the same patch, or,
+   for a normal version-2 mission with failed tests, use **Revise patch**, enter
+   feedback, and explicitly **Run mission**. At most two replacement patches are
+   allowed; each needs real tests and a fresh human decision. Demo and legacy
+   missions retain their existing retry behavior.
 6. At the review gate, accept the result. The mission becomes completed without
    rerunning completed tasks. Alternatively deny it, then explicitly retry the
    failed review task and run again. This reruns tests, not patch generation.

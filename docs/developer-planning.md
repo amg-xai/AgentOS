@@ -60,9 +60,32 @@ snapshot and frozen test recipe. The final review owns `tested.diff`, `test-repo
 and an exact `reviewed-baseline-report.txt` copy. Staging and acceptance validate
 their contents against dependency-bound evidence and the final report. Damaged
 artifacts cannot be accepted; denial and retry retain history.
-To change the patch or goal, create a new mission. Missing or malformed
+To change the goal or source, create a new mission. Missing or malformed
 test outcomes fail execution without a result approval. Manual actions cannot
 replace planned executor results; only retry is allowed.
+
+For normal version-2 missions, an Operator/Admin can explicitly deny a failed-test
+result and request **Revise patch** with nonblank feedback (at most 2,000 characters).
+Two revision cycles are allowed after the initial patch. `GET /missions/{id}/patch-revision`
+reports eligibility; POST requires the current mission version, denied approval ID,
+payload digest, and feedback. Pending review, active claims, stale attempts, damaged
+evidence, passing-but-denied results, legacy/manual missions, and demo graphs are
+ineligible. The request runs no model or tools; select **Run mission** separately.
+
+Only patch and final testing are reopened. Investigation, baseline, original goal,
+constraints, graph, assignments, source snapshot, and frozen test recipe are retained.
+The registered patch agent receives the exact prior diff and feedback as untrusted
+context, alongside the original inputs. Raw test logs and runner arguments stay local.
+It generates a full replacement diff against the original source, not a stacked patch.
+Existing permission-checked Git/testing tools run again in fresh scratch. A distinct
+approval requires explicit passing tests; an old decision cannot accept the replacement.
+
+Bounded `developer_revisions` records retain previous attempts, feedback, denied approval,
+artifact references/hashes, and plan digest. Original artifacts and decisions remain
+inspectable after restart. Revision requests and state changes are audited atomically
+with the existing version/claim checks. Run preflight verifies retained revision evidence
+before taking a claim. Provider/tool failure uses explicit task retry; no automatic loop
+or additional revision slot is spent. This adds no storage migration or new workflow engine.
 
 Older/manual mission records retain their existing API behavior. Their task or
 mission completion is lifecycle evidence, not proof of passing tests. Inspect

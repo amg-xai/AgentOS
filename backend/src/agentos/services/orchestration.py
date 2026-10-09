@@ -56,6 +56,12 @@ class Orchestrator:
     ) -> Mission:
         require_operator(role)
         mission = self.repository.get(mission_id)
+        from agentos.services.revisions import PatchRevisionService
+
+        revisions = PatchRevisionService(
+            self.registry, self.repository, self.executors, self.artifacts
+        )
+        revisions.validate(mission)
         if mission.planning is not None:
             from agentos.services.planning import validate_planned_mission
 
@@ -132,6 +138,7 @@ class Orchestrator:
                             planning_version=(
                                 mission.planning.contract_version if mission.planning else 1
                             ),
+                            patch_revision=revisions.context(mission, task),
                         ),
                     )
                     mission = self._finish(mission, task, result, claim.token, actor)
