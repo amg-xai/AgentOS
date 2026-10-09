@@ -60,6 +60,10 @@ class Orchestrator:
             from agentos.services.planning import validate_planned_mission
 
             validate_planned_mission(mission, self.registry, self.executors)
+        from agentos.services.creator import has_sources, validate_source_mission
+
+        if has_sources(mission):
+            validate_source_mission(mission, self.registry, self.executors)
         if mission.version != expected_version:
             raise StateConflict("Mission version is stale")
         if mission.status in {
@@ -155,6 +159,23 @@ class Orchestrator:
         created: list[Artifact] = []
         if task.requires_passed_tests and type(result.outputs.get("passed")) is not bool:
             raise StateConflict("Test execution must record an explicit boolean outcome")
+        from agentos.services.creator import has_sources, source_review_evidence
+
+        if has_sources(mission) and task.id == "research":
+            from agentos.domain.creator import ResearchResult
+            from agentos.domain.workspace import CreatorMissionCreate
+
+            ResearchResult.model_validate(result.outputs).verify(
+                CreatorMissionCreate(goal=mission.goal, sources=task.inputs["sources"]).sources
+            )
+        if has_sources(mission) and task.review_required:
+            expected_creator = source_review_evidence(mission, result.outputs)
+            if (
+                result.artifact_refs
+                or len(result.artifacts) != len(expected_creator)
+                or {draft.name: draft.content for draft in result.artifacts} != expected_creator
+            ):
+                raise StateConflict("Creator review must own exact source and research evidence")
         if mission.planning and mission.planning.contract_version == 2 and task.review_required:
             from agentos.services.planning import review_evidence
 

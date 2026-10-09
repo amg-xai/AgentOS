@@ -1,4 +1,5 @@
 export interface Workflow {
+  source_research_ready?: boolean;
   role_id: string;
   name: string;
   ready: boolean;
@@ -6,6 +7,11 @@ export interface Workflow {
   steps: string;
   context_notice: string;
   demo_goal: string | null;
+}
+export interface SourceText {
+  id: string;
+  label: string;
+  body: string;
 }
 export interface Status {
   workflows?: Workflow[];

@@ -218,6 +218,16 @@ def test_creator_missing_provider_and_invalid_workspace_are_separate(tmp_path, m
 def test_creator_demo_is_labelled_persisted_and_never_uses_a_model(demo_root):
     before = originals(demo_root)
     with TestClient(create_app(demo_root=demo_root)) as client:
+        assert (
+            client.post(
+                "/workflows/creator",
+                json={
+                    "goal": CREATOR_DEMO_GOAL,
+                    "sources": [{"id": "note", "label": "Note", "body": "Custom demo source"}],
+                },
+            ).status_code
+            == 409
+        )
         assert client.post("/workflows/creator", json={"goal": "Other brief"}).status_code == 409
         mission = client.post("/workflows/creator", json={"goal": CREATOR_DEMO_GOAL}).json()
         base = f"/missions/{mission['id']}"

@@ -48,7 +48,8 @@ workspace configuration, Git commands, source selection, or test runner.
 ```
 
 Choose Creator, create a mission with your brief, then run and review it as above.
-Only the supplied brief and generated outline are sent to the model. Workspace
+Brief-only missions send the supplied brief and generated outline to the model.
+Optional pasted sources add research before the outline and script. Workspace
 notes can store artifact references but are not automatically added to Creator
 requests. Briefs are limited to 8,000 characters and generated outline/script
 fields to 24,000 characters each. Invalid output fails the current task; retry
@@ -70,4 +71,43 @@ continues to describe Developer; clients should use per-role readiness for Creat
 Live provider acceptance remains deferred. Automated provider tests use mocked
 transport, and the offline scenario verifies interaction rather than AI quality.
 Browser visual, responsive, and screen-reader acceptance remains unverified.
-Research, images/thumbnails, rendered video, publishing, and Student are deferred.
+Web/file research, images/thumbnails, rendered video, and publishing remain deferred.
+Student notes/quiz are implemented separately; original PLAN.md retains the full scope.
+
+## Optional supplied-source research
+
+In normal mode, use **Add source** to paste labelled text before creating the
+mission. No URL is fetched and no project files are discovered. All supplied
+text is shared with the configured model for research, outline, and script.
+The model treats source text as untrusted data. Live calls remain disabled until
+explicitly authorized in the local configuration. The fixed demo rejects sources.
+
+Sources require unique stable IDs, nonblank labels (up to 160 characters), and
+nonblank bodies (up to 12,000 characters). Supply at most eight sources and
+48,000 total body characters. Text whitespace and Unicode are preserved exactly.
+API clients may add `sources: [{id, label, body}]` to the existing creation body;
+unknown fields, duplicate IDs, and exceeded bounds are rejected before persistence.
+
+Research produces a summary (up to 2,000 characters), one to eight evidence
+items (`source_id`, exact `quote`, `interpretation`, the latter two up to 800
+characters each), and up to eight limitations of 500 characters each. Each ID
+must reference supplied text and each quote must match a literal substring.
+These checks establish provenance, not source truth or interpretation correctness.
+Invalid research fails its task and blocks outline/script execution.
+
+The dependency graph is research → outline → script; script also depends directly
+on research. Downstream agents receive the original goal, exact sources, and bound
+research fields. Script additionally receives the bound outline. Creation and run
+preflight verify this graph, tool-free READ permissions, executor bindings, input/
+output schemas, and mandatory final human review. Manual completion is unavailable.
+
+At review, inspect `script.md`, `reviewed-outline.md`, `reviewed-research.json`, and
+`reviewed-sources.json`. The script attempt owns all four copies. Staging and
+approval verify their exact contents in addition to existing hashes, scope, attempt,
+and digest checks. Acceptance records content review and implies no test outcome.
+Denial followed by retry repeats only script; completed research/outline persist.
+The same evidence and approval remain inspectable after restart.
+
+`/status.workflows` exposes optional `source_research_ready` for Creator. A package
+without research support can still create brief-only missions; clients omit sources
+for that path. Saved brief-only missions remain inspectable and the demo stays unchanged.

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { api, date, errorMessage } from './api';
-import type { Agent, Mission, Overview, Role, Status } from './api';
+import type { Agent, Mission, Overview, Role, Status, SourceText, Workflow } from './api';
+import { CreatorSources } from './CreatorSources';
 
 import { Badge, ErrorNotice } from './components';
 import { MissionDetail } from './MissionDetail';
@@ -22,6 +23,7 @@ export function App() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [goal, setGoal] = useState('');
+  const [sources, setSources] = useState<SourceText[]>([]);
   const [roleId, setRoleId] = useState('developer');
   const [busy, setBusy] = useState(false);
   const [offset, setOffset] = useState(0);
@@ -49,6 +51,7 @@ export function App() {
           setSelected(null);
           setCreating(false);
           setGoal('');
+          setSources([]);
           setError('');
           setOverview(null);
           setMissions([]);
@@ -83,6 +86,7 @@ export function App() {
           setSelected(null);
           setCreating(false);
           setGoal('');
+          setSources([]);
           setError('');
           setOverview(null);
           setMissions([]);
@@ -130,7 +134,7 @@ export function App() {
   }, [refresh]);
   const canWrite = !!status && status.user_role !== 'viewer';
   const demo = status?.execution_mode === 'demo';
-  const workflows = status?.workflows ?? [
+  const workflows: Workflow[] = status?.workflows ?? [
     {
       role_id: 'developer',
       name: 'Developer',
@@ -146,12 +150,16 @@ export function App() {
     if (status?.workflows && !status.workflows.some((item) => item.role_id === roleId)) {
       const first = status.workflows.find((item) => item.ready) ?? status.workflows[0];
       if (first) {
+        modeGeneration.current++;
+        setSources([]);
         setRoleId(first.role_id);
         setGoal(first.demo_goal ?? '');
       }
     }
   }, [status, roleId]);
   function selectRole(value: string) {
+    modeGeneration.current++;
+    setSources([]);
     setRoleId(value);
     setGoal(demo ? (workflows.find((item) => item.role_id === value)?.demo_goal ?? '') : '');
   }
@@ -162,14 +170,25 @@ export function App() {
     const generation = modeGeneration.current;
     try {
       if (!workflow?.ready || !canWrite) return;
+      const sourceContext =
+        roleId === 'creator' && !demo && workflow.source_research_ready && sources.length > 0;
+      if (
+        sourceContext &&
+        (sources.some((source) => !source.label.trim() || !source.body.trim()) ||
+          sources.reduce((sum, source) => sum + [...source.body].length, 0) > 48000)
+      ) {
+        throw new Error('Provide nonblank source labels and text within 48,000 total characters.');
+      }
       const mission = await api<Mission>(`/workflows/${encodeURIComponent(roleId)}`, {
         goal: goal.trim(),
+        ...(sourceContext ? { sources } : {}),
       });
       if (generation !== modeGeneration.current) return;
       setOffset(0);
       setSelected(mission.id);
       setCreating(false);
       setGoal('');
+      setSources([]);
       await refresh(0);
     } catch (e) {
       if (generation === modeGeneration.current) setError(errorMessage(e));
@@ -178,6 +197,8 @@ export function App() {
     }
   }
   function openMission(id: string) {
+    modeGeneration.current++;
+    setSources([]);
     setSelected(id);
     setPage('missions');
     setCreating(false);
@@ -275,6 +296,8 @@ export function App() {
                 className="primary"
                 disabled={!workflow?.ready || !canWrite}
                 onClick={() => {
+                  modeGeneration.current++;
+                  setSources([]);
                   setGoal(demo ? (workflow?.demo_goal ?? '') : '');
                   setCreating(true);
                 }}
@@ -412,6 +435,13 @@ export function App() {
                             ? 'Fixed sample scenario. No source files or notes are sent to a model.'
                             : workflow?.context_notice}
                         </p>
+                        {!demo && roleId === 'creator' && workflow?.source_research_ready && (
+                          <CreatorSources
+                            sources={sources}
+                            onChange={setSources}
+                            disabled={busy || !canWrite}
+                          />
+                        )}
                         <button
                           className="primary"
                           disabled={busy || !goal.trim() || !workflow?.ready || !canWrite}

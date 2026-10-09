@@ -45,6 +45,21 @@ class ApprovalService:
                 raise StateConflict("Artifact scope does not match the approval")
             if request.decision == "approve":
                 self.artifacts.read(artifact)
+        from agentos.services.creator import has_sources, source_review_evidence
+
+        if request.decision == "approve" and has_sources(mission):
+            expected_creator = source_review_evidence(mission, task.outputs or {})
+            actual_creator = {
+                self.repository.artifact(ref).name: self.artifacts.read(
+                    self.repository.artifact(ref)
+                ).decode("utf-8")
+                for ref in task.artifact_refs
+            }
+            if (
+                len(task.artifact_refs) != len(expected_creator)
+                or actual_creator != expected_creator
+            ):
+                raise StateConflict("Creator review evidence does not match its sources")
         if (
             request.decision == "approve"
             and mission.planning

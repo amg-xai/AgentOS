@@ -118,10 +118,13 @@ does not freeze dependencies, binaries, host state, or test intent.
 Scratch directories isolate patch targets from source files; they do not provide
 OS process isolation. See [local workflow details](docs/local-workflow.md).
 
-Creator is a separate manifest package with two tool-free agents. Its graph binds
+Creator is a separate manifest package with three tool-free agents. Its graph binds
 the outline output into the script task and requires review of the script plus
 an exact copy of the outline used. The executor sends only the supplied brief
-and outline to the structured generator, without source or memory enrichment.
+and outline to the structured generator, without project-file or memory enrichment.
+Optional pasted sources add a research task and bound evidence to the existing
+graph. Exact quotes are checked before task completion; final review owns sources,
+research, outline, and script copies. See [Creator workflow](docs/creator-workflow.md).
 It uses the existing mission schema, artifact store, approval integrity checks,
 and retry/recovery services. No additional database migration is required.
 

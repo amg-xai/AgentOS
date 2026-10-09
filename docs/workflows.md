@@ -106,3 +106,9 @@ distributed workers, and background scheduling are outside the current scope.
 
 Creator and Student workflows reuse the engine; they do not create separate
 applications or alternate permission paths.
+
+Creator optional supplied-source missions use research → outline → script, with
+script also depending on research. Preflight enforces the source graph and
+tool-free contracts. Research validates exact-quote provenance before releasing
+dependents. Final staging and approval validate four owned evidence copies;
+retry preserves completed upstream tasks. [Details](creator-workflow.md).

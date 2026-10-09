@@ -5,7 +5,11 @@
     "id": "creator",
     "name": "Creator",
     "description": "Turn a supplied content brief into an outline and a reviewed video script.",
-    "agents": ["creator_outline", "creator_script"],
+    "agents": [
+      "creator_outline",
+      "creator_script",
+      "creator_research"
+    ],
     "tools": []
   }
 }

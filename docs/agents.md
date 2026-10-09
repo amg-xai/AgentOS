@@ -17,9 +17,10 @@ testing, and a tool-free planning agent. Normal routing uses declared capabiliti
 rather than canonical agent IDs;
 the offline preset remains explicit. See [Developer planning](developer-planning.md).
 Its executor composes the structured generator with registered local tools and scoped project
-context. Creator provides `creator_outline` and `creator_script`, with no tools.
-The Creator executor sends only the brief and dependency-bound outline to the
-generator. Both packages share the execution registry, mission engine, artifacts,
+context. Creator provides tool-free `creator_research`, `creator_outline`, and
+`creator_script`. Optional supplied sources add verified research outputs to
+the outline/script inputs; brief-only requests retain their existing inputs.
+Both packages share the execution registry, mission engine, artifacts,
 and approval services; manifest discovery itself never runs an agent.
 
 Creator bounds briefs to 8,000 characters and each generated outline/script to
@@ -36,3 +37,6 @@ choices, an answer index from 0 to 3, and an explanation. Unknown properties and
 invalid output fail before artifact creation. Questions and answers render into
 separate files; the quiz task also owns its input notes copy for review integrity.
 Retrying a failed or denied quiz preserves the completed notes and old artifacts.
+
+Creator supplied-source schema limits, provenance checks, owned review copies, and
+capability preflight are documented in [Creator workflow](creator-workflow.md).

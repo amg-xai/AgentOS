@@ -160,3 +160,19 @@ This improves offline evidence while live acceptance remains separately gated.
 Frozen recipes do not freeze dependencies, binaries, host state, or test intent;
 scratch remains trusted-code execution rather than OS isolation. Original PLAN.md
 and the full role roadmap are unchanged; Result Review History stays deferred.
+
+## 2026-10-09: Creator supplied-source evidence
+
+Extend Creator with optional pasted-source research using a tool-free registered
+agent. Preserve brief-only and fixed demo graphs. Source-backed missions reuse
+the orchestrator, persistence, retries, artifacts, and approval service. Reject
+unsupported contracts, permissions, or evidence graphs before persistence/run.
+Exact quote checks release dependents only after source provenance validation;
+they do not verify truth or model interpretations.
+
+Final script review owns exact source, research, outline, and script copies.
+Staging and acceptance check bundle contents, scope, attempt, hashes, and approval
+digest. Source text remains exact, bounded, and inspectable after restart. Denied
+script retries preserve completed research/outline. Live acceptance remains gated;
+no source fetching, media production, or publication is added. Original PLAN.md
+and full role scope are preserved; Result Review History remains deferred.

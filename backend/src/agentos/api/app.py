@@ -63,7 +63,7 @@ from agentos.domain.workspace import (
     WorkspaceSettings,
 )
 from agentos.services.approvals import ApprovalService
-from agentos.services.creator import creator_mission
+from agentos.services.creator import creator_mission, has_sources, validate_source_mission
 from agentos.services.developer import developer_mission
 from agentos.services.execution import ExecutorRegistry
 from agentos.services.missions import MissionService
@@ -169,7 +169,7 @@ def create_app(
             CreatorDemoGenerator() if demo_root is not None else generator,
             demo=demo_root is not None,
         )
-        for agent_id in ("creator_outline", "creator_script"):
+        for agent_id in ("creator_outline", "creator_script", "creator_research"):
             bindings.register_agent(agent_id, creator)
         student = StudentExecutor(
             StudentDemoGenerator() if demo_root is not None else generator,
@@ -248,6 +248,29 @@ def create_app(
                             bindings.resolve(catalog.agent(agent_id))
                 except (KeyError, StateConflict, MissionValidationError):
                     reason = "Required workflow agents or executors are unavailable."
+            source_research_ready = False
+            if role_id == "creator" and not reason and demo_root is None:
+                try:
+                    from agentos.domain.creator import SourceText
+
+                    validate_source_mission(
+                        creator_mission(
+                            "Check source support",
+                            (SourceText(id="sample", label="Sample", body="Evidence"),),
+                        ),
+                        catalog,
+                        bindings,
+                    )
+                    source_research_ready = True
+                except StateConflict:
+                    pass
+            if source_research_ready:
+                steps = "Optional source research → outline → script → human review"
+                notice = (
+                    "Only your brief and optional pasted source text are sent to the model. "
+                    "Quotes are checked for provenance; source truth and interpretations "
+                    "require review."
+                )
             result.append(
                 {
                     "role_id": role_id,
@@ -259,6 +282,11 @@ def create_app(
                     if demo_root is not None
                     else notice,
                     "demo_goal": goal if demo_root is not None else None,
+                    **(
+                        {"source_research_ready": source_research_ready}
+                        if role_id == "creator"
+                        else {}
+                    ),
                 }
             )
         return result
@@ -400,9 +428,12 @@ def create_app(
     def create_creator_mission(request: CreatorMissionCreate) -> Mission:
         require_operator(role)
         require_workflow("creator")
-        if demo_root is not None and request.goal != CREATOR_DEMO_GOAL:
+        if demo_root is not None and (request.goal != CREATOR_DEMO_GOAL or request.sources):
             raise StateConflict("Offline Creator demo supports only its fixed brief")
-        return missions.create(creator_mission(request.goal))
+        mission = creator_mission(request.goal, request.sources)
+        if request.sources:
+            validate_source_mission(mission, catalog, bindings)
+        return missions.create(mission)
 
     @app.post("/workflows/student", status_code=201)
     def create_student_mission(request: StudentMissionCreate) -> Mission:
@@ -466,7 +497,10 @@ def create_app(
     @app.post("/missions/{mission_id}/tasks/{task_id}/actions")
     def task_action(mission_id: str, task_id: str, request: TaskActionRequest) -> Mission:
         require_operator(role)
-        if repository.get(mission_id).planning is not None and request.action != TaskAction.RETRY:
+        managed = repository.get(mission_id)
+        if (
+            managed.planning is not None or has_sources(managed)
+        ) and request.action != TaskAction.RETRY:
             raise StateConflict(
                 "Planned missions use executor results; only explicit retry is allowed"
             )

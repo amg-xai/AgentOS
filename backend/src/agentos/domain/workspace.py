@@ -7,6 +7,7 @@ from typing import Annotated
 from pydantic import Field, field_validator
 
 from agentos.domain.base import Definition, Text
+from agentos.domain.creator import SourceText, validate_sources
 
 
 def scoped_path(value: str) -> str:
@@ -77,6 +78,9 @@ class DeveloperMissionCreate(Definition):
 
 class CreatorMissionCreate(Definition):
     goal: Annotated[str, Field(min_length=1, max_length=8000)]
+    sources: tuple[SourceText, ...] = Field(default=(), max_length=8)
+
+    _sources = field_validator("sources")(validate_sources)
 
 
 class StudentMissionCreate(Definition):

@@ -260,7 +260,9 @@ export function MissionDetail({
             {student
               ? 'Inspect the quiz, answer key, and reviewed notes. Acceptance records review of this material; it does not verify correctness or exam readiness.'
               : creator
-                ? 'Inspect the script and its reviewed outline. Acceptance records this content; it does not publish or send it.'
+                ? mission.tasks.some((task) => task.agent_id === 'creator_research')
+                  ? 'Inspect the script, reviewed outline, research, and supplied sources. Quotes establish provenance; source truth and interpretations require your review. Acceptance records this content; it does not publish or send it.'
+                  : 'Inspect the script and its reviewed outline. Acceptance records this content; it does not publish or send it.'
                 : 'Inspect the diff and test report. Acceptance records this result; it does not change the source project or publish anything.'}
           </p>
           {p.payload?.artifact_refs && (

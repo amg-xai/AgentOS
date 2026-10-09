@@ -8,8 +8,9 @@ proposes a fix, runs tests, presents a diff, and produces an approved artifact.
 Developer is the first functional package. Creator now demonstrates reuse of the
 same platform for a supplied brief, outline, and reviewed video script. Both have
 explicit offline scenarios for interaction testing; normal execution requires a
-configured model. Creator does not perform research, fact-checking, image/video
-production, or publication. Student now provides supplied-material notes and a
+configured model. Creator optionally researches pasted source text with exact-quote
+provenance checks and reviewed evidence copies. It does not fetch sources, fact-check,
+produce images/video, or publish. Student now provides supplied-material notes and a
 multiple-choice quiz with a separate answer key, including a fixed offline demo.
 Study review records acceptance of the bundle, without asserting correctness or
 exam readiness. Interactive answering, scoring, research, and study scheduling are

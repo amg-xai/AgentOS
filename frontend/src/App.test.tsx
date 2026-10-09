@@ -166,3 +166,48 @@ test('connection failure remains visible', async () => {
   render(<App />);
   expect(await screen.findByRole('alert')).toHaveTextContent('Local service unavailable');
 });
+
+test('Creator sends exact pasted source text and clears it when switching roles', async () => {
+  mockFetch({
+    '/status': {
+      ...status,
+      workflows: [
+        { role_id: 'creator', name: 'Creator', ready: true, source_research_ready: true },
+        { role_id: 'student', name: 'Student', ready: true },
+      ],
+    },
+  });
+  const original = globalThis.fetch;
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (path: string, options?: RequestInit) =>
+      path === '/workflows/creator'
+        ? new Response(JSON.stringify({ detail: 'Mock submission received' }), { status: 409 })
+        : original(path, options),
+    ),
+  );
+  const user = userEvent.setup();
+  render(<App />);
+  await user.click(await screen.findByRole('button', { name: '+ New mission' }));
+  await user.type(screen.getByLabelText('What should your video script cover?'), 'A short video');
+  await user.click(screen.getByRole('button', { name: 'Add source' }));
+  await user.type(screen.getByLabelText('Source label (source_1)'), 'My note');
+  await user.type(screen.getByLabelText('Source text (source_1)'), '  Café 日本語\n');
+  await user.click(screen.getByRole('button', { name: 'Create mission' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Mock submission received');
+  expect(globalThis.fetch).toHaveBeenCalledWith(
+    '/workflows/creator',
+    expect.objectContaining({
+      body: JSON.stringify({
+        goal: 'A short video',
+        sources: [{ id: 'source_1', label: 'My note', body: '  Café 日本語\n' }],
+      }),
+    }),
+  );
+  await user.selectOptions(screen.getByLabelText('Role package'), 'student');
+  expect(screen.queryByText('Optional source text')).not.toBeInTheDocument();
+  await user.selectOptions(screen.getByLabelText('Role package'), 'creator');
+  expect(screen.queryByLabelText('Source text (source_1)')).not.toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Add source' }));
+  expect(screen.getByLabelText('Source text (source_1)')).toHaveValue('');
+});

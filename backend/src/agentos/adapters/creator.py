@@ -1,5 +1,6 @@
-"""Content-only Creator adapter; no source, memory, shell, or publishing access."""
+"""Content-only Creator adapter; no project-file, memory, shell or publishing access."""
 
+import json
 from typing import Any
 
 from jsonschema import Draft202012Validator
@@ -12,7 +13,9 @@ from agentos.domain.agents import (
     StructuredGenerator,
 )
 from agentos.domain.artifacts import ArtifactDraft
+from agentos.domain.creator import ResearchResult
 from agentos.domain.missions import StateConflict
+from agentos.domain.workspace import CreatorMissionCreate
 
 CREATOR_DEMO_GOAL = (
     "Create a short introductory video script explaining AgentOS's bundled Calculator "
@@ -58,11 +61,35 @@ class CreatorExecutor:
     async def execute(
         self, agent: AgentDefinition, inputs: dict[str, Any], context: ExecutionContext
     ) -> AgentResult:
-        if agent.id not in {"creator_outline", "creator_script"} or agent.role != "creator":
+        if (
+            agent.id not in {"creator_outline", "creator_script", "creator_research"}
+            or agent.role != "creator"
+        ):
             raise StateConflict("Agent is outside the Creator workflow")
+        sources = CreatorMissionCreate(
+            goal=inputs["goal"], sources=inputs.get("sources", ())
+        ).sources
+        research = None
+        if sources and agent.id != "creator_research":
+            research = ResearchResult.model_validate(
+                {key: inputs[key] for key in ("summary", "evidence", "limitations")}
+            )
+            research.verify(sources)
         # Do not enrich with source files or unrelated workspace notes.
         outputs = await self.generator.generate(agent, inputs)
         Draft202012Validator(agent.output_schema).validate(outputs)
+        if agent.id == "creator_research":
+            result = ResearchResult.model_validate(outputs)
+            result.verify(sources)
+            return AgentResult(
+                outputs=outputs,
+                artifacts=(
+                    ArtifactDraft(
+                        name="research.json",
+                        content=result.model_dump_json(indent=2),
+                    ),
+                ),
+            )
         artifacts: tuple[ArtifactDraft, ...] = (
             (
                 ArtifactDraft(
@@ -81,6 +108,21 @@ class CreatorExecutor:
                 ),
             )
         )
+        if sources and agent.id == "creator_script":
+            assert research is not None
+            artifacts += (
+                ArtifactDraft(
+                    name="reviewed-research.json", content=research.model_dump_json(indent=2)
+                ),
+                ArtifactDraft(
+                    name="reviewed-sources.json",
+                    content=json.dumps(
+                        [source.model_dump(mode="json") for source in sources],
+                        ensure_ascii=False,
+                        indent=2,
+                    ),
+                ),
+            )
         if self.demo:
             artifacts += (
                 ArtifactDraft(
