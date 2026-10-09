@@ -418,3 +418,13 @@ mission snapshot as task details. It is ready for offline interaction testing in
 the Tasks tab; see the [Mission Control guide](mission-control.md#inspect-task-dependencies).
 Native/browser visual, responsive, and screen-reader acceptance remain manual
 under the existing browser restriction. Live model testing remains deferred.
+
+## Memory read failures
+
+Validated on Windows on 2026-10-09: all 63 React/JSDOM tests pass. Two new checks
+verify a failed initial note load is labelled unavailable, and a failed search
+cannot present earlier results as matches for the new query. Changing the search
+after failure recovers normally. Read errors are separate from note-save errors;
+canceled requests remain ignored. TypeScript/Vite production build and frontend
+Prettier pass. This maintenance change preserves memory retrieval, storage, and
+permissions. Native visual/accessibility and live model acceptance remain deferred.

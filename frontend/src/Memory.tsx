@@ -9,12 +9,15 @@ export function Memory({ canWrite, demo = false }: { canWrite: boolean; demo?: b
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [error, setError] = useState('');
+  const [readError, setReadError] = useState('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [revision, setRevision] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
+    setNotes([]);
+    setReadError('');
     api<Note[]>(
       `/memory?limit=100&query=${encodeURIComponent(query)}`,
       undefined,
@@ -23,10 +26,10 @@ export function Memory({ canWrite, demo = false }: { canWrite: boolean; demo?: b
       .then((n) => {
         if (controller.signal.aborted) return;
         setNotes(n);
-        setError('');
+        setReadError('');
       })
       .catch((e) => {
-        if (!controller.signal.aborted) setError(errorMessage(e));
+        if (!controller.signal.aborted) setReadError(errorMessage(e));
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
@@ -56,7 +59,7 @@ export function Memory({ canWrite, demo = false }: { canWrite: boolean; demo?: b
           : 'Relevant notes may be sent to your configured model during investigation. '}
         Retrieval uses keyword overlap, not semantic search.
       </div>
-      <ErrorNotice message={error} />
+      <ErrorNotice message={error || readError} />
       <div className="memory-layout">
         <section className="panel">
           <div className="section-heading">
@@ -74,6 +77,11 @@ export function Memory({ canWrite, demo = false }: { canWrite: boolean; demo?: b
           />
           {loading ? (
             <p role="status">Loading notes…</p>
+          ) : readError ? (
+            <div className="empty">
+              <h3>Notes unavailable</h3>
+              <p>Refresh the page or change the search to try again.</p>
+            </div>
           ) : !notes.length ? (
             <div className="empty">
               <h3>{query ? 'No matching notes' : 'A fresh workspace'}</h3>
