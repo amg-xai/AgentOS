@@ -123,3 +123,21 @@ paging unchanged; accept history-proportional scan cost without a schema/status
 cache. Explicitly submit UI filters and preserve selected mission inspection,
 global overview totals, and independent workflow creation. Failed queries remain
 unavailable, failed polls label retained results, and mode changes clear filters.
+
+## 2026-10-09: Bounded goal-driven Developer planning
+
+Implement original PLAN.md Phase 5 with a manifest-loaded tool-free planner,
+declared Developer executor capabilities, and a server-validated 3–8 task graph.
+Support investigation evidence chains feeding one patch and one final tested
+human review. Preserve original goal, constraints, objectives, assignments, and
+bindings in durable mission evidence and audit events. Reuse the orchestrator,
+scoped tools, artifact store, and approvals; keep the offline preset explicit.
+
+Reject invalid graphs, unsupported schemas/permissions, and missing executor
+bindings before work. New Developer results require explicit passing tests for
+acceptance; failed test evidence can be inspected and denied. Preserve old/manual
+API semantics without inferring test success from completion. Disable live
+transport by default until separately authorized. Defer Result Review History;
+the next product proof is live vertical-slice acceptance with baseline failure,
+actual patched tests, human review, and restart evidence. Original PLAN.md and
+the full Developer, Creator, and Student product scope remain unchanged.

@@ -32,6 +32,7 @@ class ModelSettings(Definition):
     api_key: SecretStr | None = Field(default=None, exclude=True, repr=False)
     timeout_seconds: float = Field(default=120, gt=0, le=300)
     max_output_tokens: int = Field(default=8192, ge=256, le=32768)
+    allow_live_calls: bool = Field(default=False, strict=True)
 
     @field_validator("base_url")
     @classmethod
@@ -62,7 +63,12 @@ class ModelSettings(Definition):
         key = os.environ.get("AGENTOS_MODEL_KEY") or os.environ.get("OPENAI_API_KEY")
         if urlsplit(endpoint).hostname == "api.openai.com" and not key:
             return None
-        return cls(model=model, base_url=endpoint, api_key=SecretStr(key) if key else None)
+        return cls(
+            model=model,
+            base_url=endpoint,
+            api_key=SecretStr(key) if key else None,
+            allow_live_calls=os.environ.get("AGENTOS_ALLOW_LIVE_MODELS") == "1",
+        )
 
 
 class ResponsesExecutor:
@@ -78,6 +84,8 @@ class ResponsesExecutor:
         return AgentResult(outputs=await self.generate(agent, inputs))
 
     async def generate(self, agent: AgentDefinition, inputs: dict[str, Any]) -> dict[str, Any]:
+        if self._transport is None and not self.settings.allow_live_calls:
+            raise ProviderFailure("Live model calls are disabled pending explicit authorization")
         try:
             return await asyncio.wait_for(
                 self._generate(agent, inputs), timeout=self.settings.timeout_seconds

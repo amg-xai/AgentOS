@@ -16,6 +16,7 @@ from agentos.adapters.workspace import read_workspace_source
 from agentos.domain.base import Definition
 from agentos.domain.governance import UserRole
 from agentos.domain.workspace import WorkspaceSettings
+from agentos.services.planning import developer_kind, registered_planner
 
 
 class SetupCheck(Definition):
@@ -93,7 +94,18 @@ def diagnose(root: Path, *, demo: bool = False, workflow: str = "developer") -> 
             if workflow == "creator"
             else {"investigation", "code_helper", "testing"}
         )
-        if not required <= set(registry.role(workflow).agents):
+        if workflow == "developer" and not demo:
+            agents = registry.role_agents(workflow)
+            registered_planner(registry)
+            kinds = set()
+            for agent in agents:
+                try:
+                    kinds.add(developer_kind(agent))
+                except ValueError:
+                    continue
+            if kinds != {"developer_investigate", "developer_patch", "developer_test"}:
+                raise ValueError("Package is missing supported planning capabilities")
+        elif not required <= set(registry.role(workflow).agents):
             raise ValueError("Package is missing required workflow agents")
         record(
             "packages",
@@ -106,10 +118,13 @@ def diagnose(root: Path, *, demo: bool = False, workflow: str = "developer") -> 
         provider = None if demo else ModelSettings.from_environment()
         record(
             "provider",
-            demo or provider is not None,
+            demo or (provider is not None and provider.allow_live_calls),
             "Offline demo uses scripted responses; provider configuration is ignored."
             if demo
-            else "Provider configuration is present; connectivity is unverified."
+            else "Provider configuration and live-call authorization are present; "
+            "connectivity is unverified."
+            if provider and provider.allow_live_calls
+            else "Live calls are disabled; explicit authorization is required."
             if provider
             else "Set AGENTOS_MODEL and the provider key when required in .env.",
         )

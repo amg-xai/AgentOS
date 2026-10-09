@@ -75,6 +75,7 @@ class AgentDefinition(Definition):
     input_schema: dict[str, Any]
     output_schema: dict[str, Any]
     provider: ProviderConfig | None = None
+    capability: Identifier | None = None
 
     _schemas = field_validator("input_schema", "output_schema")(validate_schema)
 

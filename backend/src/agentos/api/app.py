@@ -7,6 +7,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
+from jsonschema.exceptions import ValidationError as SchemaValidationError
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from agentos.adapters.artifacts import ArtifactStore
@@ -22,7 +23,8 @@ from agentos.adapters.demo import (
 from agentos.adapters.developer import DeveloperExecutor, register_local_tools
 from agentos.adapters.local_tools import LocalWorkspaceTools
 from agentos.adapters.manifests import load_registry
-from agentos.adapters.provider import ModelSettings, ResponsesExecutor
+from agentos.adapters.planning import StructuredDeveloperPlanner
+from agentos.adapters.provider import ModelSettings, ProviderFailure, ResponsesExecutor
 from agentos.adapters.sqlite import SQLiteMissionRepository
 from agentos.adapters.student import STUDENT_DEMO_GOAL, StudentDemoGenerator, StudentExecutor
 from agentos.adapters.workspace import WorkspaceStore
@@ -67,6 +69,12 @@ from agentos.services.execution import ExecutorRegistry
 from agentos.services.missions import MissionService
 from agentos.services.orchestration import Orchestrator
 from agentos.services.overview import workspace_overview
+from agentos.services.planning import (
+    DeveloperPlanner,
+    compile_plan,
+    developer_kind,
+    registered_planner,
+)
 from agentos.services.registry import AgentRegistry
 from agentos.services.student import student_mission
 from agentos.services.tools import ToolRegistry
@@ -85,6 +93,7 @@ def create_app(
     frontend_root: Path | None = None,
     demo_root: Path | None = None,
     desktop_session: str | None = None,
+    planner: DeveloperPlanner | None = None,
 ) -> FastAPI:
     if demo_root is not None:
         if any(
@@ -98,6 +107,7 @@ def create_app(
                 artifact_root,
                 package_root,
                 frontend_root,
+                planner,
             )
         ):
             raise ValueError("Demo mode uses its own isolated startup configuration")
@@ -133,7 +143,8 @@ def create_app(
             workspace_error = "Developer workspace configuration is invalid; check workspace.json."
     settings = ModelSettings.from_environment() if demo_root is None and model is None else None
     if settings is not None:
-        model = ResponsesExecutor(settings)
+        if settings.allow_live_calls:
+            model = ResponsesExecutor(settings)
     bindings = executors or ExecutorRegistry()
     generator: StructuredGenerator | None = DemoGenerator() if demo_root is not None else model
     if executors is None and workspace is not None and generator is not None:
@@ -145,8 +156,14 @@ def create_app(
         developer: AgentExecutor = (
             DemoDeveloperExecutor(scoped) if demo_root is not None else scoped
         )
-        for agent_id in ("investigation", "code_helper", "testing"):
-            bindings.register_agent(agent_id, developer)
+        for candidate in catalog.role_agents("developer"):
+            try:
+                developer_kind(candidate)
+            except MissionValidationError:
+                continue
+            bindings.register_agent(candidate.id, developer)
+    if planner is None and demo_root is None and generator is not None and workspace is not None:
+        planner = StructuredDeveloperPlanner(generator, catalog, workspace)
     if executors is None and generator is not None:
         creator = CreatorExecutor(
             CreatorDemoGenerator() if demo_root is not None else generator,
@@ -192,16 +209,34 @@ def create_app(
                 continue
             reason = ""
             if generator is None:
-                reason = "Configure a model provider before creating this workflow."
+                reason = "Configure a model provider and explicitly authorize live model calls."
             elif role_id == "developer" and workspace is None:
                 reason = workspace_error or "Configure selected source files and test commands."
             else:
                 try:
-                    if not set(agents) <= set(package.agents):
-                        raise StateConflict("Package is missing required workflow agents")
-                    for agent_id in agents:
-                        bindings.resolve(catalog.agent(agent_id))
-                except (KeyError, StateConflict):
+                    if role_id == "developer" and demo_root is None:
+                        registered_planner(catalog)
+                        kinds = set()
+                        for candidate in catalog.role_agents("developer"):
+                            if candidate.capability == "developer_plan":
+                                continue
+                            try:
+                                kind = developer_kind(candidate)
+                            except MissionValidationError:
+                                continue
+                            bindings.resolve(candidate)
+                            kinds.add(kind)
+                        if (
+                            kinds != {"developer_investigate", "developer_patch", "developer_test"}
+                            or planner is None
+                        ):
+                            raise StateConflict("Developer planning capabilities are unavailable")
+                    else:
+                        if not set(agents) <= set(package.agents):
+                            raise StateConflict("Package is missing required workflow agents")
+                        for agent_id in agents:
+                            bindings.resolve(catalog.agent(agent_id))
+                except (KeyError, StateConflict, MissionValidationError):
                     reason = "Required workflow agents or executors are unavailable."
             result.append(
                 {
@@ -273,6 +308,12 @@ def create_app(
     async def invalid_mission(request: Request, exc: MissionValidationError) -> JSONResponse:
         return JSONResponse(status_code=422, content={"detail": str(exc)})
 
+    @app.exception_handler(ProviderFailure)
+    async def provider_failed(request: Request, exc: ProviderFailure) -> JSONResponse:
+        return JSONResponse(
+            status_code=502, content={"detail": "Provider planning failed; no mission was created"}
+        )
+
     @app.get("/health")
     def health() -> dict[str, str]:
         return {"status": "ok", "capability": "discovery"}
@@ -326,14 +367,24 @@ def create_app(
         return memory.add_note(request)
 
     @app.post("/workflows/developer", status_code=201)
-    def create_developer_mission(request: DeveloperMissionCreate) -> Mission:
+    async def create_developer_mission(request: DeveloperMissionCreate) -> Mission:
         require_operator(role)
         require_workflow("developer")
         if demo_root is not None:
             if request.goal != DEMO_GOAL:
                 raise StateConflict("Offline demo supports only its fixed Calculator mission")
             demo_workspace(demo_root)
-        return missions.create(developer_mission(request.goal))
+            return missions.create(developer_mission(request.goal))
+        if planner is None:
+            raise StateConflict("Developer planner is unavailable")
+        try:
+            plan, planner_id = await planner.plan(request.goal)
+            compiled = compile_plan(request.goal, plan, planner_id, catalog, bindings)
+        except (ValueError, SchemaValidationError, KeyError):
+            raise MissionValidationError(
+                "Developer plan rejected: invalid graph, capability or IO contract"
+            ) from None
+        return missions.create(compiled)
 
     @app.post("/workflows/creator", status_code=201)
     def create_creator_mission(request: CreatorMissionCreate) -> Mission:
@@ -405,6 +456,10 @@ def create_app(
     @app.post("/missions/{mission_id}/tasks/{task_id}/actions")
     def task_action(mission_id: str, task_id: str, request: TaskActionRequest) -> Mission:
         require_operator(role)
+        if repository.get(mission_id).planning is not None and request.action != TaskAction.RETRY:
+            raise StateConflict(
+                "Planned missions use executor results; only explicit retry is allowed"
+            )
         if demo_root is not None and request.action != TaskAction.RETRY:
             raise StateConflict(
                 "Offline demo uses executor results; only explicit retry is allowed"

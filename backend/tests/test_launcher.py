@@ -42,6 +42,7 @@ def test_loads_explicit_workspace_configuration_without_exposing_keys(monkeypatc
     monkeypatch.setenv("AGENTOS_WORKSPACE_CONFIG", str(path))
     monkeypatch.setenv("AGENTOS_MODEL", "configured-model")
     monkeypatch.setenv("AGENTOS_MODEL_KEY", "private-server-key")
+    monkeypatch.setenv("AGENTOS_ALLOW_LIVE_MODELS", "1")
     with TestClient(create_app(db_path=tmp_path / "missions.sqlite3")) as client:
         response = client.get("/status")
         assert response.json()["workflow_ready"] is True

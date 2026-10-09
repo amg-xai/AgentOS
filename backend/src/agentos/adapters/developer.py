@@ -13,8 +13,8 @@ from agentos.domain.agents import (
 )
 from agentos.domain.artifacts import ArtifactDraft
 from agentos.domain.governance import UserRole
-from agentos.domain.missions import StateConflict
 from agentos.domain.tools import ToolDefinition
+from agentos.services.planning import developer_kind
 from agentos.services.tools import ToolRegistry
 
 
@@ -55,7 +55,8 @@ class DeveloperExecutor:
     async def execute(
         self, agent: AgentDefinition, inputs: dict[str, Any], context: ExecutionContext
     ) -> AgentResult:
-        if agent.id == "testing":
+        kind = developer_kind(agent)
+        if kind == "developer_test":
             outputs = await self.tools.execute("terminal", agent, self.role, inputs, context)
             return AgentResult(
                 outputs=outputs,
@@ -68,11 +69,9 @@ class DeveloperExecutor:
                     ),
                 ),
             )
-        if agent.id not in {"investigation", "code_helper"}:
-            raise StateConflict("Agent is outside the Developer workflow")
         source = await self.tools.execute("filesystem", agent, self.role, {}, context)
         enriched = inputs | {"source_files": source["files"]}
-        if agent.id == "investigation":
+        if kind == "developer_investigate":
             enriched["workspace_notes"] = [
                 note.model_dump(mode="json") for note in self.memory.notes(inputs["goal"], limit=5)
             ]
@@ -85,7 +84,7 @@ class DeveloperExecutor:
             )
         outputs = await self.model.generate(agent, enriched)
         artifacts: tuple[ArtifactDraft, ...]
-        if agent.id == "code_helper":
+        if kind == "developer_patch":
             await self.tools.execute("git", agent, self.role, {"diff": outputs["diff"]}, context)
             artifacts = (
                 ArtifactDraft(

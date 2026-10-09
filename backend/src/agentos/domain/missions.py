@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Any, Self
+from typing import Annotated, Any, Self
 
 from pydantic import Field, computed_field, model_validator
 
@@ -55,9 +55,12 @@ class TaskSpec(Definition):
     inputs: dict[str, Any] = Field(default_factory=dict)
     input_bindings: dict[Identifier, InputBinding] = Field(default_factory=dict)
     review_required: bool = Field(default=False, strict=True)
+    requires_passed_tests: bool = Field(default=False, strict=True)
 
     @model_validator(mode="after")
     def valid_bindings(self) -> Self:
+        if self.requires_passed_tests and not self.review_required:
+            raise MissionValidationError("A tested-result boundary requires human review")
         if self.inputs.keys() & self.input_bindings.keys():
             raise MissionValidationError("Bound inputs must not overwrite explicit inputs")
         for binding in self.input_bindings.values():
@@ -93,11 +96,23 @@ def dependency_order(tasks: tuple[TaskSpec, ...]) -> list[str]:
     return ordered
 
 
+class PlanningEvidence(Definition):
+    planner_id: Identifier
+    rationale: str = Field(min_length=1, max_length=4000)
+    constraints: tuple[Annotated[str, Field(min_length=1, max_length=1000)], ...] = Field(
+        max_length=16
+    )
+    objectives: dict[Identifier, Annotated[str, Field(min_length=1, max_length=2000)]] = Field(
+        max_length=8
+    )
+
+
 class MissionCreate(Definition):
     goal: Text
     role_id: Identifier = "developer"
     workspace_id: Identifier = "local"
     tasks: tuple[TaskSpec, ...] = Field(min_length=1, max_length=500)
+    planning: PlanningEvidence | None = None
 
     @model_validator(mode="after")
     def valid_graph(self) -> Self:
@@ -122,6 +137,7 @@ class Mission(Definition):
     version: int = Field(ge=1)
     created_at: datetime
     updated_at: datetime
+    planning: PlanningEvidence | None = None
 
     @computed_field  # type: ignore[prop-decorator]
     @property

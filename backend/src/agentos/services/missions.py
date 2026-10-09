@@ -89,8 +89,21 @@ class MissionService:
             version=1,
             created_at=now,
             updated_at=now,
+            planning=request.planning,
         )
         events = [NewEvent(timestamp=now, actor=actor, action="mission_created")]
+        if request.planning:
+            events.append(
+                NewEvent(
+                    timestamp=now,
+                    actor=actor,
+                    action="mission_planned",
+                    details={
+                        "planner_id": request.planning.planner_id,
+                        "tasks": len(mission.tasks),
+                    },
+                )
+            )
         events.extend(
             NewEvent(
                 timestamp=now,

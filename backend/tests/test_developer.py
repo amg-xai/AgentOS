@@ -51,13 +51,74 @@ def workspace(tmp_path):
     )
 
 
+def plan_data(refine=False):
+    tasks = [
+        {
+            "id": "investigate",
+            "title": "Investigate goal",
+            "agent_id": "investigation",
+            "objective": "Gather source evidence",
+            "dependencies": [],
+            "bindings": [],
+            "review_required": False,
+        },
+        {
+            "id": "fix",
+            "title": "Patch the identified issue",
+            "agent_id": "code_helper",
+            "objective": "Fix the issue without weakening tests",
+            "dependencies": ["refine" if refine else "investigate"],
+            "bindings": [
+                {
+                    "input_key": "findings",
+                    "task_id": "refine" if refine else "investigate",
+                    "output_key": "findings",
+                }
+            ],
+            "review_required": False,
+        },
+        {
+            "id": "verify",
+            "title": "Test and review the patch",
+            "agent_id": "testing",
+            "objective": "Run configured tests and review the result",
+            "dependencies": ["fix"],
+            "bindings": [{"input_key": "diff", "task_id": "fix", "output_key": "diff"}],
+            "review_required": True,
+        },
+    ]
+    if refine:
+        tasks.insert(
+            1,
+            {
+                "id": "refine",
+                "title": "Refine the evidence",
+                "agent_id": "investigation",
+                "objective": "Examine the constraint-sensitive behavior",
+                "dependencies": ["investigate"],
+                "bindings": [
+                    {"input_key": "context", "task_id": "investigate", "output_key": "findings"}
+                ],
+                "review_required": False,
+            },
+        )
+    return {
+        "rationale": "Plan the requested investigation and a single reviewed patch",
+        "constraints": ["Preserve existing test assertions"],
+        "tasks": tasks,
+    }
+
+
 def model_transport(request):
     body = json.loads(request.content)
     inputs = json.loads(body["input"])
-    assert "calculator.py" in inputs["source_files"]
     agent = body["text"]["format"]["name"]
+    if agent != "developer_planner":
+        assert "calculator.py" in inputs["source_files"]
     outputs = (
-        {"findings": "calculator.py subtracts instead of adding"}
+        plan_data()
+        if agent == "developer_planner"
+        else {"findings": "calculator.py subtracts instead of adding"}
         if agent == "investigation"
         else {"diff": PATCH, "summary": "Correct addition without changing tests"}
     )
@@ -141,7 +202,12 @@ def test_provider_failure_retry_then_deny(tmp_path, workspace):
     failing = True
 
     def transport(request):
-        return httpx.Response(401, text="secret") if failing else model_transport(request)
+        planning = json.loads(request.content)["text"]["format"]["name"] == "developer_planner"
+        return (
+            httpx.Response(401, text="secret")
+            if failing and not planning
+            else model_transport(request)
+        )
 
     with TestClient(configured_app(tmp_path, workspace, transport)) as client:
         mission = client.post("/workflows/developer", json={"goal": "Fix addition"}).json()
@@ -360,6 +426,8 @@ def test_bundled_acceptance_project_bug_fix_restart_and_source_preservation(tmp_
     )
 
     def transport(request):
+        if json.loads(request.content)["text"]["format"]["name"] == "developer_planner":
+            return model_transport(request)
         body = json.loads(request.content)
         inputs = json.loads(body["input"])
         text = inputs["source_files"]["calculator.py"]

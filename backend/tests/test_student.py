@@ -312,6 +312,7 @@ def test_all_demo_roles_coexist_without_models_or_normal_changes(demo_root):
 
 
 def test_student_diagnostics_skip_developer_requirements(demo_root, monkeypatch):
+    monkeypatch.setenv("AGENTOS_ALLOW_LIVE_MODELS", "1")
     monkeypatch.setenv("AGENTOS_PACKAGES", str(demo_root / "packages"))
     monkeypatch.setenv("AGENTOS_MODEL_URL", "https://api.openai.com/v1")
     for demo in (False, True):

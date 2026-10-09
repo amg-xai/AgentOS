@@ -16,3 +16,9 @@ API credentials. Never put keys in manifests, source control, or review notes.
 
 Provider tests use mocked transport. They verify the wire contract and rejection
 paths; they do not establish model quality or live endpoint compatibility.
+
+Live model calls default to disabled, even with provider credentials present.
+After explicit authorization for live acceptance, set `AGENTOS_ALLOW_LIVE_MODELS=1`
+in the ignored local `.env` and restart. With the default `0`, normal workflow
+creation is blocked and the adapter rejects live transport before HTTP dispatch.
+Read-only doctor checks never contact a provider. Tests use injected transports.

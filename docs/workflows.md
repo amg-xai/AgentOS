@@ -71,6 +71,13 @@ Legacy manual `wait_approval` only records a waiting state, without generating a
 result approval. New executable workflows should use `review_required` instead.
 Result approval does not authorize a tool call, deployment, or publication.
 
+Normal Developer creation compiles a [bounded goal-driven plan](developer-planning.md)
+before persistence, then revalidates it before execution. New planned and offline
+Developer test results declare `requires_passed_tests: true`; accepting them
+requires explicit boolean `passed: true` in addition to the existing review
+integrity checks. Completion alone never establishes test success for historical
+or manually managed missions.
+
 ## Interrupted run recovery
 
 GET `/missions/{id}/run` to inspect a durable claim. A normal run releases it;

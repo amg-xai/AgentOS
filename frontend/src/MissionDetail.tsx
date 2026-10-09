@@ -159,6 +159,10 @@ export function MissionDetail({
   const student = mission.role_id === 'student';
   const roleName = creator ? 'CREATOR' : mission.role_id.toUpperCase();
   const selectedArtifact = artifacts.find((a) => a.id === artifact);
+  const testsBlockReview = (taskId: string) => {
+    const task = mission.tasks.find((item) => item.id === taskId);
+    return task?.requires_passed_tests === true && task.outputs?.passed !== true;
+  };
   return (
     <section className="panel detail">
       <div className="section-heading">
@@ -174,6 +178,14 @@ export function MissionDetail({
         {id.slice(0, 8)} · revision {mission.version}
       </p>
       <ErrorNotice message={refreshError || error} />
+      {mission.planning && (
+        <details className="mission-plan">
+          <summary>Inspect validated Developer plan</summary>
+          <p>{mission.planning.rationale}</p>
+          <pre>{JSON.stringify(mission.planning, null, 2)}</pre>
+          <p>Agent assignments and dependencies are recorded in the Tasks tab.</p>
+        </details>
+      )}
       {claim && !busy ? (
         <div className="info">
           This mission has an execution claim. If its worker was interrupted, stop that worker and
@@ -246,7 +258,7 @@ export function MissionDetail({
           <div className="approval-actions">
             <button
               className="primary"
-              disabled={busy || !canWrite}
+              disabled={busy || !canWrite || testsBlockReview(p.task_id)}
               onClick={() =>
                 void action(`/approvals/${p.id}/decision`, {
                   decision: 'approve',
@@ -268,6 +280,12 @@ export function MissionDetail({
               Deny result
             </button>
           </div>
+          {testsBlockReview(p.task_id) && (
+            <p role="status">
+              Tests must explicitly pass before this result can be accepted. Inspect the report,
+              then deny and retry if needed.
+            </p>
+          )}
         </div>
       ))}
       <div className="tabs" role="tablist" aria-label="Mission details">

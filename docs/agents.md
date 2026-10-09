@@ -1,8 +1,8 @@
 # Agents and role packages
 
 An AgentDefinition includes a stable id, name, description, role/package,
-instructions, allowed tools, permissions, input/output schemas, and provider
-configuration. Secrets are resolved at runtime and never stored in manifests.
+instructions, optional capability, allowed tools, permissions, input/output schemas,
+and provider configuration. Secrets are resolved at runtime and never stored in manifests.
 
 AgentRegistry validates unique identifiers and resolves definitions by id.
 Execution is a separate interface so discovery does not initialize providers or
@@ -12,8 +12,10 @@ Role manifests reference registered agents and declared tools. Validate missing
 references, duplicate ids, malformed schemas, and invalid permission values at
 load time. Activation selects capabilities; it never bypasses permission checks.
 
-Developer provides investigation, code changes, and testing agents. Its executor
-composes the structured generator with registered local tools and scoped project
+Developer provides investigation, code changes, testing, and a tool-free planning
+agent. Normal routing uses declared capabilities, rather than canonical agent IDs;
+the offline preset remains explicit. See [Developer planning](developer-planning.md).
+Its executor composes the structured generator with registered local tools and scoped project
 context. Creator provides `creator_outline` and `creator_script`, with no tools.
 The Creator executor sends only the brief and dependency-bound outline to the
 generator. Both packages share the execution registry, mission engine, artifacts,

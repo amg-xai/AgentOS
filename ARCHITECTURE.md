@@ -5,6 +5,12 @@ result approvals, artifacts, scoped local tools, a configurable model adapter,
 workspace memory, and React Mission Control are implemented. Live provider and
 browser acceptance verification remain outstanding.
 
+Normal Developer creation now uses a registered tool-free planner and validated
+capability routing. [Bounded planning](docs/developer-planning.md) compiles into
+the existing mission engine; it does not introduce another workflow runtime.
+Planning evidence persists with mission snapshots and audit events. New Developer
+tested results require explicit passing outcomes before human acceptance.
+
 An explicitly selected offline Calculator demo reuses the same mission, tool,
 and approval services with scripted generation and actual local tests. Its
 databases, memory, artifacts, and scratch work live under `.agentos/demo/`.

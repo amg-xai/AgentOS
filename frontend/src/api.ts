@@ -40,6 +40,7 @@ export interface Task {
   dependencies: string[];
   outputs: Record<string, unknown> | null;
   error: string | null;
+  requires_passed_tests?: boolean;
 }
 export interface Mission {
   id: string;
@@ -50,6 +51,12 @@ export interface Mission {
   created_at: string;
   updated_at: string;
   tasks: Task[];
+  planning?: {
+    planner_id: string;
+    rationale: string;
+    constraints: string[];
+    objectives: Record<string, string>;
+  } | null;
 }
 export interface Artifact {
   id: string;

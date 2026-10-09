@@ -5,7 +5,16 @@
     "id": "developer",
     "name": "Developer",
     "description": "Investigate issues, propose scoped code changes, and verify results.",
-    "agents": ["investigation", "code_helper", "testing"],
-    "tools": ["filesystem", "git", "terminal"]
+    "agents": [
+      "investigation",
+      "code_helper",
+      "testing",
+      "developer_planner"
+    ],
+    "tools": [
+      "filesystem",
+      "git",
+      "terminal"
+    ]
   }
 }

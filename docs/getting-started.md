@@ -97,6 +97,9 @@ Edit the ignored `.env` file locally. Set `AGENTOS_MODEL` to your chosen model a
 [provider configuration](providers.md) for a local Responses-compatible endpoint.
 No model is selected implicitly, and desktop sign-in does not supply an API key.
 The launcher reads `.env` without overriding existing environment variables.
+Live calls remain disabled with `AGENTOS_ALLOW_LIVE_MODELS=0`. Only after explicit
+live acceptance authorization, set it to `1` locally and restart. Provider
+credentials alone do not enable execution.
 
 Check local prerequisites without contacting a provider or executing project code:
 
@@ -148,18 +151,23 @@ automatic dependency installation or model-selected command execution occurs.
 ## Acceptance walkthrough
 
 1. Confirm the model and Calculator workspace appear in Mission Control with no
-   missing-configuration notice. In Agents & roles, inspect Developer's three agents.
+   missing-configuration notice. In Agents & roles, inspect Developer's planner,
+   investigation, patch, and testing agents. Record the unmodified project's
+   failing baseline using the configured test command before the live run.
 2. Optionally add a workspace note: “Preserve the existing addition test assertions.”
    Relevant notes and selected source files are sent to the configured model.
 3. Create a mission: “Investigate and fix incorrect addition in calculator.py.
    Preserve all existing test assertions and explain the cause.”
-4. Select **Run mission**. Follow task states and Activity. The two model-backed
-   agents investigate and generate a patch; the testing agent runs the configured
+4. Inspect the validated goal-driven plan, objectives, and constraints. Select
+   **Run mission**. Follow task states and Activity. Model-backed agents
+   investigate and generate a patch; the testing agent runs the configured
    command in a fresh scratch checkout. The app does not silently substitute fixtures.
 5. Inspect `findings.md`, `proposed.diff`, `change-summary.md`, `tested.diff`, and
    `test-report.txt`. The review gate identifies its attempt and bound artifacts.
    Confirm the diff fixes subtraction and the actual report shows all three tests
-   passing. Failed tests are labelled failed; accepting a result does not alter that.
+   passing. Failed tests are labelled failed and cannot be accepted for new
+   planned Developer missions. Deny and retry testing, or create a new mission
+   when the patch needs revision.
 6. At the review gate, accept the result. The mission becomes completed without
    rerunning completed tasks. Alternatively deny it, then explicitly retry the
    failed review task and run again. This reruns tests, not patch generation.

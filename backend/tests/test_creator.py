@@ -235,6 +235,7 @@ def test_creator_demo_is_labelled_persisted_and_never_uses_a_model(demo_root):
 
 
 def test_creator_diagnostics_do_not_require_developer_configuration(demo_root, monkeypatch):
+    monkeypatch.setenv("AGENTOS_ALLOW_LIVE_MODELS", "1")
     monkeypatch.setenv("AGENTOS_PACKAGES", str(demo_root / "packages"))
     monkeypatch.setenv("AGENTOS_MODEL_URL", "https://api.openai.com/v1")
     report = diagnose(demo_root, workflow="creator")

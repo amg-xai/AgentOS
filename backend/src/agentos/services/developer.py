@@ -30,6 +30,7 @@ def developer_mission(goal: str) -> MissionCreate:
                 agent_id="testing",
                 dependencies=("fix",),
                 review_required=True,
+                requires_passed_tests=True,
                 input_bindings={"diff": InputBinding(task_id="fix", output_key="diff")},
             ),
         ),

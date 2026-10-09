@@ -47,6 +47,12 @@ class ApprovalService:
                 self.artifacts.read(artifact)
         now = datetime.now(UTC)
         approved = request.decision == "approve"
+        if (
+            approved
+            and task.requires_passed_tests
+            and (task.outputs is None or task.outputs.get("passed") is not True)
+        ):
+            raise StateConflict("Tests must explicitly pass before accepting this result")
         decision = approval.model_copy(
             update={
                 "status": ApprovalStatus.APPROVED if approved else ApprovalStatus.DENIED,

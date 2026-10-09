@@ -56,6 +56,10 @@ class Orchestrator:
     ) -> Mission:
         require_operator(role)
         mission = self.repository.get(mission_id)
+        if mission.planning is not None:
+            from agentos.services.planning import validate_planned_mission
+
+            validate_planned_mission(mission, self.registry, self.executors)
         if mission.version != expected_version:
             raise StateConflict("Mission version is stale")
         if mission.status in {
@@ -146,6 +150,8 @@ class Orchestrator:
         self, mission: Mission, task: Task, result: AgentResult, token: str, actor: str
     ) -> Mission:
         created: list[Artifact] = []
+        if task.requires_passed_tests and type(result.outputs.get("passed")) is not bool:
+            raise StateConflict("Test execution must record an explicit boolean outcome")
         try:
             for artifact_id in result.artifact_refs:
                 existing = self.repository.artifact(artifact_id)

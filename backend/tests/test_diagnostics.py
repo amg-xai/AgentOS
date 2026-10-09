@@ -49,11 +49,22 @@ def configured_root(tmp_path, monkeypatch):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("AGENTOS_MODEL", "configured-model")
     monkeypatch.setenv("AGENTOS_MODEL_KEY", "private-server-key")
+    monkeypatch.setenv("AGENTOS_ALLOW_LIVE_MODELS", "1")
     return tmp_path
 
 
 def checks(report):
     return {check.id: check for check in report.checks}
+
+
+def test_configured_provider_remains_blocked_without_live_authorization(
+    configured_root, monkeypatch
+):
+    monkeypatch.delenv("AGENTOS_ALLOW_LIVE_MODELS")
+    report = diagnose(configured_root)
+    assert not report.configured_ready
+    assert "disabled" in checks(report)["provider"].detail
+    assert checks(report)["packages"].passed
 
 
 def test_readiness_is_read_only_does_not_contact_model_or_expose_keys(configured_root, monkeypatch):

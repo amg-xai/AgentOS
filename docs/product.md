@@ -15,6 +15,12 @@ Study review records acceptance of the bundle, without asserting correctness or
 exam readiness. Interactive answering, scoring, research, and study scheduling are
 deferred. Do not advertise placeholder packages as functional.
 
+Normal Developer missions now use [bounded goal-driven planning](developer-planning.md).
+Live calls remain disabled pending explicit acceptance authorization. Real AI
+vertical-slice acceptance still requires a failing baseline, a live generated
+patch, passing actual tests, and human review. These implemented subsets do not
+replace the full Developer, Creator, and Student scope in original PLAN.md.
+
 Mission Control includes workspace-wide totals, recent waiting reviews/artifacts,
 and recorded task activity for installed agents. These are read-only projections
 of durable history; claim and task state do not imply agent availability. See

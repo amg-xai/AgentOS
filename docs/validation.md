@@ -1,5 +1,32 @@
 # Backend validation
 
+## Bounded Developer planning milestone
+
+Validated locally on Windows on 2026-10-09 with the existing Python 3.14 runtime:
+
+- 300 backend tests passed; three symlink/junction cases remain skipped on Windows.
+  Planning checks cover valid goal-dependent graphs, renamed registered agents,
+  malformed/unsafe assignments, schemas, bindings, dependencies, executor readiness,
+  pre-claim validation, preserved goal/constraints, planning failures, restart
+  evidence, manual bypass rejection, and explicit test/review outcomes.
+- Model transport is injected. Normal workflow tests still perform real scoped
+  filesystem reads, Git patch validation/application, and subprocess test runs.
+- Ruff lint/format checks passed across 64 files; strict Mypy passed across 42
+  source files for Windows and Linux platform checks.
+- 79 frontend tests passed, including inspectable planning evidence and acceptance
+  disabled for false/missing test outcomes. TypeScript/Vite build and formatting passed.
+- 25 desktop tests passed, including real owned backend process startup, review,
+  restart, and preserved source/history across all three role workflows. Syntax
+  and formatting checks passed.
+- Diff and staged-file review exclude ignored proposals/review notes and preserve
+  original PLAN.md, local credentials, and workspace configuration.
+
+Live calls remain disabled; no live provider compatibility or model-quality
+acceptance is claimed. Native/browser visual acceptance is still outstanding.
+The full intended Developer, Creator, and Student scope remains in original PLAN.md.
+Result Review History is deferred. See [planning contracts](developer-planning.md)
+for supported shapes, evidence, approval enforcement, and remaining live acceptance.
+
 ## Registry milestone
 
 Validated on Windows on 2026-10-08:
