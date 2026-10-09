@@ -76,12 +76,10 @@ class StudentExecutor:
     async def execute(
         self, agent: AgentDefinition, inputs: dict[str, Any], context: ExecutionContext
     ) -> AgentResult:
-        if (
-            agent.id not in {"student_notes", "student_quiz", "student_focus"}
-            or agent.role != "student"
-        ):
-            raise StateConflict("Agent is outside the Student workflow")
-        if agent.id == "student_focus":
+        from agentos.services.student_planning import student_kind, validate_student_output
+
+        kind = student_kind(agent, legacy=True)
+        if kind == "student_focus":
             if self.demo:
                 raise StateConflict("Offline Student demo does not support study planning")
             settings = StudySettings.model_validate(inputs["study_settings"])
@@ -90,7 +88,8 @@ class StudentExecutor:
             Quiz(questions=inputs["questions"])
         outputs = await self.generator.generate(agent, inputs)
         Draft202012Validator(agent.output_schema).validate(outputs)
-        if agent.id == "student_focus":
+        validate_student_output(kind, outputs)
+        if kind == "student_focus":
             evidence = study_evidence(settings, inputs["notes"], inputs["questions"], outputs)
             return AgentResult(
                 outputs=outputs,
@@ -104,7 +103,7 @@ class StudentExecutor:
                 ),
             )
         artifacts: tuple[ArtifactDraft, ...]
-        if agent.id == "student_notes":
+        if kind == "student_notes":
             artifacts = (
                 ArtifactDraft(
                     name="notes.md", media_type="text/markdown", content=outputs["notes"]

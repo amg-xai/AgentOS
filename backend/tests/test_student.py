@@ -17,6 +17,7 @@ from agentos.adapters.student import STUDENT_DEMO_GOAL, STUDENT_DEMO_QUESTIONS
 from agentos.api.app import create_app
 from agentos.domain.governance import UserRole
 from agentos.services.execution import ExecutorRegistry
+from agentos.services.student import student_mission
 
 demo_root = demo_fixture
 GOAL = "Summarize and quiz me: stacks are LIFO; queues are FIFO."
@@ -63,7 +64,7 @@ def runtime(tmp_path, monkeypatch):
 
 
 def start(client):
-    response = client.post("/workflows/student", json={"goal": GOAL})
+    response = client.post("/missions", json=student_mission(GOAL).model_dump(mode="json"))
     assert response.status_code == 201, response.text
     base = f"/missions/{response.json()['id']}"
     run = client.post(base + "/run", json={"expected_version": 1})
@@ -268,7 +269,7 @@ def test_student_missing_provider_package_executor_and_invalid_workspace(tmp_pat
             student = next((w for w in status["workflows"] if w["role_id"] == "student"), None)
             assert bool(student and student["ready"]) is ready
             assert client.post("/workflows/student", json={"goal": GOAL}).status_code == (
-                201 if ready else 409
+                502 if ready else 409
             )
 
 

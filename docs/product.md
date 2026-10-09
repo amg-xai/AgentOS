@@ -31,6 +31,13 @@ and supplied-source research feed one exact script review. This completes the
 planning/selection portion of that content slice; image/thumbnail artifacts and
 genuine live acceptance remain pending.
 
+Normal Student creation also uses bounded goal-driven decomposition and registered
+notes/quiz/Focus selection. Inspect the plan, run content work explicitly and review
+the exact final bundle. Notes refinements preserve the original goal/constraints;
+only explicit time settings request Focus. This completes planning/selection for
+the supplied-material subset; research/summarizer capabilities and live quality
+acceptance remain unfinished original-roadmap work.
+
 Mission Control includes workspace-wide totals, recent waiting reviews/artifacts,
 and recorded task activity for installed agents. These are read-only projections
 of durable history; claim and task state do not imply agent availability. See

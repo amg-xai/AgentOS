@@ -8,7 +8,8 @@
     "agents": [
       "student_notes",
       "student_quiz",
-      "student_focus"
+      "student_focus",
+      "student_planner"
     ],
     "tools": []
   }

@@ -168,6 +168,16 @@ and reference checks, staging, and acceptance reuse the existing engine and stor
 Legacy notes/quiz and fixed demo graphs remain unchanged; no migration is needed.
 See [Student workflow](docs/student-workflow.md).
 
+New normal Student creation compiles bounded goal-driven planning contract version 1
+into the same engine. Registered notes/quiz/Focus capabilities allow alternate agent
+IDs and notes refinements; explicit settings alone opt into Focus. Original goal,
+constraints, objectives and settings reach every step. Preflight and actual output
+validation enforce bindings, same final notes for quiz/Focus and one final content
+review. Binding-resolved exact three-/six-file bundles reuse existing approvals.
+Saved legacy graphs and demos remain supported. Mission decomposition is distinct
+from Focus's study-effort artifact; neither completion nor approval implies tests
+passed or exam readiness. Live calls stay gated; no migration or new engine is added.
+
 ## Desktop lifecycle
 
 The Electron main process spawns the selected Python environment directly and

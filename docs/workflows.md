@@ -127,3 +127,10 @@ bundle, while old/plain missions keep quiz review. Preflight and completion vali
 supported graphs/contracts, bounded time allocation and quiz references; staging
 and acceptance verify six exact owned copies. Retry preserves completed upstream
 content. [Details](student-workflow.md).
+
+New normal Student creation uses a bounded registered mission planner: one to four
+notes/refinements, one quiz and optional explicitly requested Focus. All work leads
+to one final review, using the same final notes for quiz/Focus. Role-aware preflight
+and actual output validation reuse this engine; goal/constraints/objectives/settings
+persist and reach generation. Binding-resolved exact quiz or Focus bundles guard
+staging and approval. Saved fixed graphs and labelled demos retain their contracts.

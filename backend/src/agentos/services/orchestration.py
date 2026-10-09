@@ -67,6 +67,10 @@ class Orchestrator:
                 from agentos.services.creator_planning import validate_creator_plan
 
                 validate_creator_plan(mission, self.registry, self.executors)
+            elif mission.role_id == "student":
+                from agentos.services.student_planning import validate_student_plan
+
+                validate_student_plan(mission, self.registry, self.executors)
             else:
                 from agentos.services.planning import validate_planned_mission
 
@@ -77,7 +81,7 @@ class Orchestrator:
             validate_source_mission(mission, self.registry, self.executors)
         from agentos.services.student import has_study_plan, validate_study_mission
 
-        if has_study_plan(mission):
+        if has_study_plan(mission) and mission.planning is None:
             validate_study_mission(mission, self.registry, self.executors)
         if mission.version != expected_version:
             raise StateConflict("Mission version is stale")
@@ -179,7 +183,24 @@ class Orchestrator:
         created: list[Artifact] = []
         from agentos.services.student import has_study_plan, study_review_evidence
 
-        if has_study_plan(mission):
+        if mission.role_id == "student" and mission.planning is not None:
+            from agentos.services.student import student_review_evidence
+            from agentos.services.student_planning import student_kind, validate_student_output
+
+            validate_student_output(
+                student_kind(self.registry.agent(task.agent_id)), result.outputs
+            )
+            if task.review_required:
+                expected_study = student_review_evidence(mission, task, result.outputs)
+                if (
+                    result.artifact_refs
+                    or len(result.artifacts) != len(expected_study)
+                    or {a.name: a.content for a in result.artifacts} != expected_study
+                ):
+                    raise StateConflict(
+                        "Student review must own the exact complete evidence bundle"
+                    )
+        elif has_study_plan(mission):
             from agentos.domain.student import Quiz
 
             if task.id == "notes":

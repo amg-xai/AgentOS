@@ -52,3 +52,10 @@ not canonical IDs. Optional objective/constraints/context input fields preserve
 legacy input compatibility. Strict capability/schema/permission checks happen at
 compilation and before claiming execution. The planner has no tools or permissions;
 content agents retain tool-free READ metadata. See [Creator planning](creator-workflow.md).
+
+Normal Student missions use a separate tool-free `student_planner` for bounded
+decomposition and select registered notes/quiz/Focus capabilities rather than IDs.
+Focus remains optional and creates study-effort content, not mission decomposition.
+Optional objective/constraints/settings/context fields preserve saved legacy input
+contracts. Strict schema/permission/binding checks guard compilation and execution;
+final review resolves exact evidence by task bindings. See [Student planning](student-workflow.md).

@@ -194,7 +194,9 @@ export function MissionDetail({
       <ErrorNotice message={refreshError || error} />
       {mission.planning && (
         <details className="mission-plan">
-          <summary>Inspect validated {creator ? 'Creator' : 'Developer'} plan</summary>
+          <summary>
+            Inspect validated {student ? 'Student' : creator ? 'Creator' : 'Developer'} plan
+          </summary>
           <p>{mission.planning.rationale}</p>
           <p>
             Planner: <code>{mission.planning.planner_id}</code>
@@ -271,7 +273,10 @@ export function MissionDetail({
           <h3>The result is ready for your review</h3>
           <p>
             {student
-              ? mission.tasks.some((task) => task.agent_id === 'student_focus')
+              ? mission.tasks.some(
+                  (task) =>
+                    task.agent_id === 'student_focus' || 'questions' in (task.input_bindings ?? {}),
+                )
                 ? 'Inspect the study plan, original time settings, quiz, answer key, and reviewed notes. Durations are suggested effort. Acceptance records content review; it does not verify correctness, completed study, or exam readiness.'
                 : 'Inspect the quiz, answer key, and reviewed notes. Acceptance records review of this material; it does not verify correctness or exam readiness.'
               : creator
@@ -301,7 +306,11 @@ export function MissionDetail({
                   (a) =>
                     a.name ===
                     (student
-                      ? mission.tasks.some((task) => task.agent_id === 'student_focus')
+                      ? mission.tasks.some(
+                          (task) =>
+                            task.agent_id === 'student_focus' ||
+                            'questions' in (task.input_bindings ?? {}),
+                        )
                         ? 'study-plan.md'
                         : 'quiz.md'
                       : creator

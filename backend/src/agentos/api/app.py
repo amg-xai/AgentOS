@@ -23,7 +23,11 @@ from agentos.adapters.demo import (
 from agentos.adapters.developer import DeveloperExecutor, register_local_tools
 from agentos.adapters.local_tools import LocalWorkspaceTools
 from agentos.adapters.manifests import load_registry
-from agentos.adapters.planning import StructuredCreatorPlanner, StructuredDeveloperPlanner
+from agentos.adapters.planning import (
+    StructuredCreatorPlanner,
+    StructuredDeveloperPlanner,
+    StructuredStudentPlanner,
+)
 from agentos.adapters.provider import ModelSettings, ProviderFailure, ResponsesExecutor
 from agentos.adapters.sqlite import SQLiteMissionRepository
 from agentos.adapters.student import STUDENT_DEMO_GOAL, StudentDemoGenerator, StudentExecutor
@@ -86,7 +90,14 @@ from agentos.services.planning import (
 )
 from agentos.services.registry import AgentRegistry
 from agentos.services.revisions import PatchRevisionService
-from agentos.services.student import has_study_plan, student_mission, validate_study_mission
+from agentos.services.student import has_study_plan, student_mission
+from agentos.services.student_planning import (
+    StudentPlanner,
+    compile_student_plan,
+    registered_student_planner,
+    student_kind,
+    validate_student_plan,
+)
 from agentos.services.tools import ToolRegistry
 
 
@@ -105,6 +116,7 @@ def create_app(
     desktop_session: str | None = None,
     planner: DeveloperPlanner | None = None,
     creator_planner: CreatorPlanner | None = None,
+    student_planner: StudentPlanner | None = None,
 ) -> FastAPI:
     if demo_root is not None:
         if any(
@@ -120,6 +132,7 @@ def create_app(
                 frontend_root,
                 planner,
                 creator_planner,
+                student_planner,
             )
         ):
             raise ValueError("Demo mode uses its own isolated startup configuration")
@@ -178,6 +191,8 @@ def create_app(
         planner = StructuredDeveloperPlanner(generator, catalog, workspace)
     if creator_planner is None and demo_root is None and generator is not None:
         creator_planner = StructuredCreatorPlanner(generator, catalog)
+    if student_planner is None and demo_root is None and generator is not None:
+        student_planner = StructuredStudentPlanner(generator, catalog)
     if executors is None and generator is not None:
         creator = CreatorExecutor(
             CreatorDemoGenerator() if demo_root is not None else generator,
@@ -195,8 +210,14 @@ def create_app(
             StudentDemoGenerator() if demo_root is not None else generator,
             demo=demo_root is not None,
         )
-        for agent_id in ("student_notes", "student_quiz", "student_focus"):
-            bindings.register_agent(agent_id, student)
+        for candidate in catalog.agents():
+            if candidate.role != "student":
+                continue
+            try:
+                student_kind(candidate, legacy=True)
+            except StateConflict:
+                continue
+            bindings.register_agent(candidate.id, student)
 
     def workflow_status() -> list[dict[str, object]]:
         result: list[dict[str, object]] = []
@@ -276,6 +297,21 @@ def create_app(
                             or creator_planner is None
                         ):
                             raise StateConflict("Creator planning capabilities are unavailable")
+                    elif role_id == "student" and demo_root is None:
+                        registered_student_planner(catalog)
+                        student_kinds = set()
+                        for candidate in catalog.role_agents("student"):
+                            try:
+                                capability = student_kind(candidate)
+                                bindings.resolve(candidate)
+                            except StateConflict:
+                                continue
+                            student_kinds.add(capability)
+                        if (
+                            not {"student_notes", "student_quiz"} <= student_kinds
+                            or student_planner is None
+                        ):
+                            raise StateConflict("Student planning capabilities are unavailable")
                     else:
                         if not set(agents) <= set(package.agents):
                             raise StateConflict("Package is missing required workflow agents")
@@ -286,24 +322,12 @@ def create_app(
             source_research_ready = False
             study_planning_ready = False
             if role_id == "student" and not reason and demo_root is None:
-                from agentos.domain.student import StudySettings
-
-                try:
-                    validate_study_mission(
-                        student_mission(
-                            "Check study planning support",
-                            StudySettings(total_minutes=60, max_session_minutes=25),
-                        ),
-                        catalog,
-                        bindings,
-                    )
-                    study_planning_ready = True
-                    steps = "Notes → quiz → optional study plan → human review"
-                    notice = (
-                        "Your brief, notes, quiz and optional time settings are sent to the model."
-                    )
-                except StateConflict:
-                    pass
+                study_planning_ready = "student_focus" in student_kinds
+                steps = "Goal-driven plan → notes → quiz → optional study plan → human review"
+                notice = (
+                    "Your study brief, extracted constraints, task objectives, registered catalog, "
+                    "bound notes/quiz and explicit optional time settings are sent to the model."
+                )
             if role_id == "creator" and not reason and demo_root is None:
                 source_research_ready = "creator_research" in creator_kinds
                 steps = "Goal-driven plan → outlines → script → human review"
@@ -504,16 +528,31 @@ def create_app(
         return missions.create(mission)
 
     @app.post("/workflows/student", status_code=201)
-    def create_student_mission(request: StudentMissionCreate) -> Mission:
+    async def create_student_mission(request: StudentMissionCreate) -> Mission:
         require_operator(role)
         require_workflow("student")
         if demo_root is not None and (
             request.goal != STUDENT_DEMO_GOAL or request.study_settings is not None
         ):
             raise StateConflict("Offline Student demo supports only its fixed study brief")
-        mission = student_mission(request.goal, request.study_settings)
-        if request.study_settings is not None:
-            validate_study_mission(mission, catalog, bindings)
+        if demo_root is not None:
+            return missions.create(student_mission(request.goal))
+        if student_planner is None:
+            raise StateConflict("Student planning is unavailable")
+        if (
+            request.study_settings is not None
+            and not next(w for w in workflow_status() if w["role_id"] == "student")[
+                "study_planning_ready"
+            ]
+        ):
+            raise StateConflict("Student Focus is unavailable")
+        try:
+            plan, planner_id = await student_planner.plan(request)
+            mission = compile_student_plan(request, plan, planner_id, catalog, bindings)
+        except (ValueError, KeyError, SchemaValidationError):
+            raise MissionValidationError(
+                "Student plan rejected: invalid graph, capability or IO contract"
+            ) from None
         return missions.create(mission)
 
     @app.get("/agents")
@@ -545,6 +584,8 @@ def create_app(
             raise StateConflict("Use a fixed workflow scenario in offline demo mode")
         if request.role_id == "creator" and request.planning is not None:
             validate_creator_plan(request, catalog, bindings)
+        if request.role_id == "student" and request.planning is not None:
+            validate_student_plan(request, catalog, bindings)
         return missions.create(request)
 
     @app.get("/missions")

@@ -50,10 +50,22 @@ class ApprovalService:
             has_sources,
             source_review_evidence,
         )
-        from agentos.services.student import has_study_plan, study_review_evidence
+        from agentos.services.student import (
+            has_study_plan,
+            student_review_evidence,
+            study_review_evidence,
+        )
 
-        if request.decision == "approve" and has_study_plan(mission):
-            expected_study = study_review_evidence(mission, task.outputs or {})
+        if (
+            request.decision == "approve"
+            and mission.role_id == "student"
+            and (mission.planning is not None or has_study_plan(mission))
+        ):
+            expected_study = (
+                student_review_evidence(mission, task, task.outputs or {})
+                if mission.planning
+                else study_review_evidence(mission, task.outputs or {})
+            )
             actual_study = {
                 self.repository.artifact(ref).name: self.artifacts.read(
                     self.repository.artifact(ref)

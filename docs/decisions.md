@@ -232,3 +232,25 @@ Live model acceptance remains separately gated. Image/thumbnail artifacts, broad
 Student work, semantic memory and other original PLAN.md requirements remain pending;
 full Developer/Creator/Student scope is unchanged. Result Review History and Developer
 memory-context evidence stay deferred.
+
+## 2026-10-09: Bounded goal-driven Student mission planning
+
+Replace fixed normal creation with registered tool-free mission decomposition and
+capability-selected notes/quiz/optional Focus on the existing engine. Allow 2–6
+tasks, one to four notes/refinements, one quiz and exactly one Focus iff explicit
+time settings are supplied. Focus creates a study-effort artifact; it is distinct
+from mission decomposition. Preserve original goal, constraints, objectives and
+exact settings through execution, without inferring time opt-in from prose.
+
+Student planning version 1 reuses persisted evidence and shared planning primitives.
+Role-aware preflight validates graph/schema/permissions/executors/bindings and one
+terminal review. Quiz and Focus share final notes; strict output and existing
+budget/reference checks release dependents. Final staging/approval compare exact
+binding-resolved three-/six-file bundles with scope, hashes, attempt and digest.
+Legacy graphs/demos remain compatible; no migration, tools or second engine.
+
+Offline injected transports establish contracts, not AI quality, correctness,
+exam readiness or passed software tests. Live acceptance remains separately gated;
+Student research/summarizer capabilities, Creator media and other original PLAN.md
+requirements remain pending. Full three-role scope and deferred history/memory work
+are unchanged. No calendar, scoring, external publishing or deployment is added.

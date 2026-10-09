@@ -5,11 +5,10 @@ from typing import Any
 from agentos.domain.agents import Permission
 from agentos.domain.missions import InputBinding, Mission, MissionCreate, StateConflict, TaskSpec
 from agentos.domain.student import (
-    StudyPlan,
+    Quiz,
     StudyPlanningError,
     StudySettings,
-    focus_input_schema,
-    quiz_schema,
+    render_quiz,
     study_evidence,
 )
 from agentos.services.execution import ExecutorRegistry
@@ -63,6 +62,8 @@ def student_mission(goal: str, study_settings: StudySettings | None = None) -> M
 
 
 def has_study_plan(mission: Mission | MissionCreate) -> bool:
+    if mission.role_id == "student" and mission.planning is not None:
+        return any(task.inputs.get("study_settings") is not None for task in mission.tasks)
     return mission.role_id == "student" and any(
         task.agent_id == "student_focus" or "study_settings" in task.inputs
         for task in mission.tasks
@@ -82,8 +83,6 @@ def validate_study_mission(
         )
         if mission.workspace_id != "local" or actual != expected.tasks:
             raise ValueError("Unsupported study graph")
-        goal_schema = {"type": "string", "minLength": 1, "maxLength": 8000}
-        notes_schema = {"type": "string", "minLength": 1, "maxLength": 24000}
         for task in expected.tasks:
             agent = registry.agent(task.agent_id)
             if (
@@ -94,31 +93,10 @@ def validate_study_mission(
             ):
                 raise ValueError("Unsupported study permissions")
             executors.resolve(agent)
-            if task.id == "study_plan":
-                inputs = focus_input_schema()
-                outputs = StudyPlan.model_json_schema()
-            else:
-                properties = {"goal": goal_schema}
-                if task.id == "quiz":
-                    properties["notes"] = notes_schema
-                inputs = {
-                    "type": "object",
-                    "properties": properties,
-                    "required": list(properties),
-                    "additionalProperties": False,
-                }
-                outputs = (
-                    quiz_schema()
-                    if task.id == "quiz"
-                    else {
-                        "type": "object",
-                        "properties": {"notes": notes_schema},
-                        "required": ["notes"],
-                        "additionalProperties": False,
-                    }
-                )
-            if agent.input_schema != inputs or agent.output_schema != outputs:
-                raise ValueError("Unsupported study executor contract")
+            from agentos.services.student_planning import student_kind
+
+            if student_kind(agent, legacy=True) != agent.id:
+                raise ValueError("Legacy Student capability changed")
     except (KeyError, ValueError, StopIteration, StateConflict):
         raise StateConflict(
             "Student study planning capabilities or evidence graph are unavailable"
@@ -126,6 +104,9 @@ def validate_study_mission(
 
 
 def study_review_evidence(mission: Mission, outputs: dict[str, Any]) -> dict[str, str]:
+    if mission.planning is not None:
+        task = next(t for t in mission.tasks if t.review_required)
+        return student_review_evidence(mission, task, outputs)
     try:
         by_id = {task.id: task for task in mission.tasks}
         return study_evidence(
@@ -138,3 +119,45 @@ def study_review_evidence(mission: Mission, outputs: dict[str, Any]) -> dict[str
         raise
     except (KeyError, ValueError):
         raise StateConflict("Student review is missing valid study evidence") from None
+
+
+def student_review_evidence(
+    mission: Mission, task: TaskSpec, outputs: dict[str, Any]
+) -> dict[str, str]:
+    """Resolve the exact planned result bundle through current dependency bindings."""
+    try:
+        evidence = mission.planning
+        if mission.role_id != "student" or not evidence or evidence.contract_version != 1:
+            raise StateConflict("Unsupported Student review plan")
+        settings = task.inputs["study_settings"]
+        for item in mission.tasks:
+            if (
+                item.inputs.get("goal") != mission.goal
+                or item.inputs.get("constraints") != list(evidence.constraints)
+                or item.inputs.get("objective") != evidence.objectives.get(item.id)
+                or item.inputs.get("study_settings") != settings
+            ):
+                raise StateConflict("Student review plan inputs changed")
+        by_id = {t.id: t for t in mission.tasks}
+        binding = task.input_bindings["notes"]
+        notes = (by_id[binding.task_id].outputs or {})[binding.output_key]
+        if not isinstance(notes, str) or not notes.strip() or len(notes) > 24000:
+            raise StateConflict("Student review is missing bounded notes")
+        if settings is not None:
+            quiz_binding = task.input_bindings["questions"]
+            quiz = by_id[quiz_binding.task_id]
+            if binding != quiz.input_bindings["notes"]:
+                raise StateConflict("Student review notes do not match the quiz")
+            return study_evidence(
+                StudySettings.model_validate(settings),
+                notes,
+                (quiz.outputs or {})[quiz_binding.output_key],
+                outputs,
+            )
+        content = Quiz.model_validate(outputs)
+        questions, key = render_quiz([q.model_dump(mode="json") for q in content.questions])
+        return {"quiz.md": questions, "answer-key.md": key, "reviewed-notes.md": notes}
+    except StudyPlanningError:
+        raise
+    except (KeyError, ValueError):
+        raise StateConflict("Student review evidence is incomplete or changed") from None

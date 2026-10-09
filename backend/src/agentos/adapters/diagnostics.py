@@ -122,6 +122,18 @@ def diagnose(root: Path, *, demo: bool = False, workflow: str = "developer") -> 
                     continue
             if not {"creator_outline", "creator_script"} <= creator_kinds:
                 raise ValueError("Creator package is missing supported planning capabilities")
+        elif workflow == "student" and not demo:
+            from agentos.services.student_planning import registered_student_planner, student_kind
+
+            registered_student_planner(registry)
+            student_kinds = set()
+            for candidate in registry.role_agents("student"):
+                try:
+                    student_kinds.add(student_kind(candidate))
+                except ValueError:
+                    continue
+            if not {"student_notes", "student_quiz"} <= student_kinds:
+                raise ValueError("Student package is missing supported planning capabilities")
         elif not required <= set(registry.role(workflow).agents):
             raise ValueError("Package is missing required workflow agents")
         record(

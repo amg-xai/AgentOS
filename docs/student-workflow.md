@@ -40,6 +40,12 @@ requires the unchanged bundled Calculator sample; custom briefs need normal mode
 
 ## Normal execution
 
+New normal missions first invoke a registered tool-free mission planner, then
+validate and persist its bounded task graph. Creation plans work; **Run mission**
+separately executes content tasks. Live calls remain disabled until explicitly
+authorized. Invalid planning returns an error without persisting a mission;
+normal mode never substitutes a fixed graph or demo result.
+
 Configure a Responses-compatible structured model through the ignored `.env` file
 as described in [providers.md](providers.md). Student needs no Developer workspace,
 Git commands, selected source files, or test runner configuration.
@@ -50,7 +56,9 @@ Git commands, selected source files, or test runner configuration.
 ```
 
 Choose Student and include the topic, learning goal, and source material in the
-study brief. Only this brief and generated notes are sent to the model. Workspace
+study brief. Planning receives the brief, registered capability catalog and explicit
+optional time settings. Execution receives the original goal, extracted constraints,
+task objectives and bound notes/quiz context. Workspace
 memory is available for saving references but is not added to Student prompts.
 Normal mode never substitutes demo fixtures.
 
@@ -96,13 +104,14 @@ API clients may POST this body to `/workflows/student`:
 }
 ```
 
-Omitting `study_settings`, or passing null, preserves the existing notes/quiz
-workflow. `/status.workflows` exposes optional `study_planning_ready` for Student.
+Omitting `study_settings`, or passing null, requests notes/quiz without Focus.
+`/status.workflows` exposes optional `study_planning_ready` for Student.
 Packages without the Focus agent or its supported executor contracts keep ordinary
 notes/quiz creation available; opted-in requests fail before persistence.
 
-The opted-in graph is notes → quiz → study_plan, with the planner also directly
-depending on notes. The original goal and time settings persist as task inputs.
+The opted-in chain is notes → quiz → Focus, with Focus also directly depending
+on the same final notes as the quiz. Planned notes refinements can precede quiz.
+The original goal and time settings persist as task inputs.
 Focus receives the bound notes and structured questions without project, memory,
 or web enrichment. Quiz is intermediate content in this graph; the single final
 human review covers the complete study bundle. Old missions retain their original
@@ -139,3 +148,38 @@ grading record, or automatic background work. Research remains future roadmap wo
 Live model calls stay disabled until separately authorized; implementation verification
 uses injected transport and does not establish real model quality. Original PLAN.md
 and the full Developer/Creator/Student scope remain unchanged.
+
+## Goal-driven mission planning contract
+
+The mission planner decomposes work; Focus produces a study-effort artifact. They
+are separate registered capabilities. New normal missions persist Student planning
+contract version 1, rationale, extracted constraints, task objectives, assignments
+and typed input bindings. **Inspect validated Student plan** exposes that evidence.
+Constraints are model interpretations for human inspection, not proof of compliance.
+
+Plans contain 2–6 tasks: one to four notes/refinements, exactly one quiz, and one
+Focus task only when explicit time settings are supplied. A notes refinement may
+bind one earlier notes output as context. All tasks lead to one final review: quiz
+without Focus, otherwise Focus. Goal, constraints, objective and exact settings
+(or explicit null) reach every step. Prose mentioning an exam/deadline does not
+authorize inferred settings. Equivalent registered agent IDs are supported.
+
+Compilation and run preflight enforce bounds, unique IDs, acyclic dependencies,
+role/capability membership, supported exact schemas, executor availability,
+tool-free READ permissions, bound dependency outputs, consistent original inputs
+and mandatory final review. Focus and quiz must bind the same final notes. Actual
+nonblank notes and strict quiz values validate before releasing dependents. Managed
+tasks cannot be manually completed. Unsupported graphs fail before execution claims.
+
+Final quiz review owns exactly the questions, answer key and bound notes copy.
+Final Focus review owns the existing six-file bundle. Both staging and acceptance
+compare exact expected contents resolved through bindings, plus existing scope,
+hash, attempt, version and digest checks. Content completion never means tests
+passed, facts were independently checked, or the user completed study.
+
+Saved unplanned notes/quiz/Focus missions and fixed demos retain their previous
+contracts. Denied final results require explicit retry/run and fresh approval;
+completed upstream work, artifacts and prior decisions persist across restart.
+No storage migration, workflow engine, web/file/memory enrichment, scoring,
+scheduling or publication is added. Research/summarizer capabilities and genuine
+live acceptance remain unfinished original-roadmap work.

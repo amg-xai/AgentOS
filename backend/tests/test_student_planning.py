@@ -6,6 +6,7 @@ from copy import deepcopy
 import httpx
 import pytest
 from fastapi.testclient import TestClient
+from student_plan_fixture import student_plan
 from test_demo import demo_root as demo_fixture
 from test_student import GOAL, NOTES, decide
 
@@ -55,6 +56,22 @@ def runtime(tmp_path, monkeypatch):
     def transport(request):
         body = json.loads(request.content)
         agent = body["text"]["format"]["name"]
+        if agent == "student_planner":
+            calls.append(agent)
+            return httpx.Response(
+                200,
+                json={
+                    "status": "completed",
+                    "output": [
+                        {
+                            "type": "message",
+                            "content": [
+                                {"type": "output_text", "text": json.dumps(student_plan())}
+                            ],
+                        }
+                    ],
+                },
+            )
         expected = {"goal": GOAL}
         if agent != "student_notes":
             expected["notes"] = NOTES
@@ -86,7 +103,9 @@ def runtime(tmp_path, monkeypatch):
 
 
 def start(client):
-    response = client.post("/workflows/student", json={"goal": GOAL, "study_settings": SETTINGS})
+    response = client.post(
+        "/missions", json=student_mission(GOAL, StudySettings(**SETTINGS)).model_dump(mode="json")
+    )
     assert response.status_code == 201, response.text
     base = f"/missions/{response.json()['id']}"
     response = client.post(base + "/run", json={"expected_version": 1})
@@ -474,7 +493,7 @@ def test_missing_optional_support_preserves_legacy_creation(runtime, registry, m
                 client.post("/workflows/student", json={"goal": GOAL, **settings}).status_code
                 == 201
             )
-        assert calls == []
+        assert calls == ["student_planner", "student_planner"]
 
 
 def test_viewer_can_inspect_but_cannot_create_run_or_review(runtime):
