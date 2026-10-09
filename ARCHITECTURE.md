@@ -5,6 +5,13 @@ result approvals, artifacts, scoped local tools, a configurable model adapter,
 workspace memory, and React Mission Control are implemented. Live provider and
 browser acceptance verification remain outstanding.
 
+Opted-in normal Creator missions use Creator planning version 2: script preparation
+followed by a registered graphic-layout agent and local PNG rendering. The same
+orchestrator stages the image, frozen rendering receipt and exact bound text for
+human review. Acceptance verifies stored evidence without rerendering. Default
+Creator v1 plans and fixed demos retain their contracts. Developer v2 test-result
+semantics remain guarded by role. See [Creator workflow](docs/creator-workflow.md).
+
 Normal Developer creation now uses a registered tool-free planner and validated
 capability routing. [Bounded planning](docs/developer-planning.md) compiles into
 the existing mission engine; it does not introduce another workflow runtime.

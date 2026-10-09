@@ -6,7 +6,13 @@ from jsonschema import Draft202012Validator
 from jsonschema.exceptions import ValidationError as SchemaValidationError
 
 from agentos.domain.agents import AgentDefinition, Permission
-from agentos.domain.creator_planning import CreatorKind, CreatorPlan, input_schema, output_schema
+from agentos.domain.creator_planning import (
+    CreatorKind,
+    CreatorPlan,
+    CreatorThumbnailPlan,
+    input_schema,
+    output_schema,
+)
 from agentos.domain.missions import (
     InputBinding,
     Mission,
@@ -21,12 +27,14 @@ from agentos.services.registry import AgentRegistry
 
 
 class CreatorPlanner(Protocol):
-    async def plan(self, request: CreatorMissionCreate) -> tuple[CreatorPlan, str]: ...
+    async def plan(
+        self, request: CreatorMissionCreate
+    ) -> tuple[CreatorPlan | CreatorThumbnailPlan, str]: ...
 
 
 def creator_kind(agent: AgentDefinition, *, legacy: bool = False) -> CreatorKind:
     kind = agent.capability or (agent.id if legacy else None)
-    if kind not in {"creator_research", "creator_outline", "creator_script"}:
+    if kind not in {"creator_research", "creator_outline", "creator_script", "creator_thumbnail"}:
         raise StateConflict("Unsupported Creator capability")
     kind = cast(CreatorKind, kind)
     if (
@@ -45,13 +53,17 @@ def creator_kind(agent: AgentDefinition, *, legacy: bool = False) -> CreatorKind
     return kind
 
 
-def registered_creator_planner(registry: AgentRegistry) -> AgentDefinition:
-    planners = [a for a in registry.role_agents("creator") if a.capability == "creator_plan"]
+def registered_creator_planner(
+    registry: AgentRegistry, *, thumbnail: bool = False
+) -> AgentDefinition:
+    capability = "creator_thumbnail_plan" if thumbnail else "creator_plan"
+    model = CreatorThumbnailPlan if thumbnail else CreatorPlan
+    planners = [a for a in registry.role_agents("creator") if a.capability == capability]
     if (
         len(planners) != 1
         or planners[0].tools
         or planners[0].permissions
-        or planners[0].output_schema != CreatorPlan.model_json_schema()
+        or planners[0].output_schema != model.model_json_schema()
     ):
         raise StateConflict("Creator needs one supported tool-free planner")
     return planners[0]
@@ -59,12 +71,13 @@ def registered_creator_planner(registry: AgentRegistry) -> AgentDefinition:
 
 def compile_creator_plan(
     request: CreatorMissionCreate,
-    plan: CreatorPlan,
+    plan: CreatorPlan | CreatorThumbnailPlan,
     planner_id: str,
     registry: AgentRegistry,
     executors: ExecutorRegistry,
 ) -> MissionCreate:
-    plan = CreatorPlan.model_validate(plan.model_dump())
+    model = CreatorThumbnailPlan if request.include_thumbnail else CreatorPlan
+    plan = model.model_validate(plan.model_dump())
     context = (
         {"sources": [s.model_dump(mode="json") for s in request.sources]} if request.sources else {}
     )
@@ -88,6 +101,11 @@ def compile_creator_plan(
                     "objective": task.objective,
                     "constraints": list(plan.constraints),
                     **context,
+                    **(
+                        {"include_thumbnail": True}
+                        if registry.agent(task.agent_id).capability == "creator_thumbnail"
+                        else {}
+                    ),
                 },
                 review_required=task.review_required,
             )
@@ -97,7 +115,7 @@ def compile_creator_plan(
         role_id="creator",
         tasks=tuple(tasks),
         planning=PlanningEvidence(
-            contract_version=1,
+            contract_version=2 if request.include_thumbnail else 1,
             planner_id=planner_id,
             rationale=plan.rationale,
             constraints=plan.constraints,
@@ -136,12 +154,16 @@ def _validate_creator_plan(
         request.role_id != "creator"
         or request.workspace_id != "local"
         or not request.planning
-        or request.planning.contract_version != 1
-        or not 2 <= len(request.tasks) <= 6
+        or request.planning.contract_version not in {1, 2}
+        or not (3 if request.planning.contract_version == 2 else 2)
+        <= len(request.tasks)
+        <= (7 if request.planning.contract_version == 2 else 6)
     ):
         raise StateConflict("Invalid planned Creator mission")
     evidence = PlanningEvidence.model_validate(request.planning.model_dump())
-    CreatorPlan.model_validate(
+    thumbnail = evidence.contract_version == 2
+    model = CreatorThumbnailPlan if thumbnail else CreatorPlan
+    model.model_validate(
         {
             "rationale": evidence.rationale,
             "constraints": evidence.constraints,
@@ -162,7 +184,7 @@ def _validate_creator_plan(
             ],
         }
     )
-    if evidence.planner_id != registered_creator_planner(registry).id or set(
+    if evidence.planner_id != registered_creator_planner(registry, thumbnail=thumbnail).id or set(
         evidence.objectives
     ) != {t.id for t in request.tasks}:
         raise StateConflict("Creator planning evidence does not match its tasks or planner")
@@ -183,6 +205,7 @@ def _validate_creator_plan(
         counts.count("creator_script") != 1
         or not 1 <= counts.count("creator_outline") <= 4
         or counts.count("creator_research") != int(bool(sources))
+        or counts.count("creator_thumbnail") != int(thumbnail)
     ):
         raise StateConflict(
             "Creator plan needs outlines, one final script and supplied-source research"
@@ -198,10 +221,13 @@ def _validate_creator_plan(
         }
         if sources:
             expected["sources"] = source_data
+        if kind == "creator_thumbnail":
+            expected["include_thumbnail"] = True
         if (
             task.inputs != expected
             or task.requires_passed_tests
-            or task.review_required != (kind == "creator_script")
+            or task.review_required
+            != (kind == ("creator_thumbnail" if thumbnail else "creator_script"))
         ):
             raise StateConflict(
                 "Creator plan must preserve goal, constraints, sources and final review"
@@ -212,8 +238,13 @@ def _validate_creator_plan(
             if sources and kind != "creator_research"
             else set()
         )
-        if kind == "creator_script":
+        if kind in {"creator_script", "creator_thumbnail"}:
             required.add("outline")
+        if kind == "creator_thumbnail":
+            required.add("script")
+            script_task = next(t for t in request.tasks if kinds[t.id] == "creator_script")
+            if task.input_bindings.get("outline") != script_task.input_bindings.get("outline"):
+                raise StateConflict("Thumbnail and script must use the same final outline")
         allowed = required | ({"context"} if kind == "creator_outline" else set())
         if not required <= keys <= allowed or (kind == "creator_research" and keys):
             raise StateConflict("Unsupported Creator input bindings")
@@ -224,8 +255,15 @@ def _validate_creator_plan(
             source = by_id[binding.task_id]
             research_key = key in {"summary", "evidence", "limitations"}
             if (
-                binding.output_key != (key if research_key else "outline")
-                or kinds[source.id] != ("creator_research" if research_key else "creator_outline")
+                binding.output_key != (key if research_key or key == "script" else "outline")
+                or kinds[source.id]
+                != (
+                    "creator_research"
+                    if research_key
+                    else "creator_script"
+                    if key == "script"
+                    else "creator_outline"
+                )
                 or (research_key and source.id not in research_ids)
             ):
                 raise StateConflict("Creator binding source/output does not match its capability")
@@ -250,5 +288,7 @@ def _validate_creator_plan(
             consumed.add(source.id)
         Draft202012Validator(registry.agent(task.agent_id).input_schema).validate(resolved)
     terminal = set(by_id) - consumed
-    if len(terminal) != 1 or kinds[next(iter(terminal))] != "creator_script":
+    if len(terminal) != 1 or kinds[next(iter(terminal))] != (
+        "creator_thumbnail" if thumbnail else "creator_script"
+    ):
         raise StateConflict("Every Creator task must lead to the final script review")

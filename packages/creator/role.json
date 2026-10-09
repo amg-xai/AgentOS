@@ -4,12 +4,14 @@
   "role": {
     "id": "creator",
     "name": "Creator",
-    "description": "Turn a supplied content brief into an outline and a reviewed video script.",
+    "description": "Plan source-grounded outlines and scripts, with optional locally rendered graphic thumbnails for human review.",
     "agents": [
       "creator_outline",
       "creator_script",
       "creator_research",
-      "creator_planner"
+      "creator_planner",
+      "creator_thumbnail",
+      "creator_thumbnail_planner"
     ],
     "tools": []
   }

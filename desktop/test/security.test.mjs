@@ -10,6 +10,20 @@ import {
 } from '../src/security.mjs';
 
 const origin = 'http://127.0.0.1:8767';
+
+test('graphic previews use verified local PNG content without widening image origins', () => {
+  const content = `${origin}/artifacts/${'a'.repeat(32)}/content`;
+  assert.ok(requestAllowed(content, origin, 'GET', 'image'));
+  assert.ok(artifactURL(content, origin));
+  for (const url of [
+    'https://example.com/thumbnail.png',
+    'file:///thumbnail.png',
+    'data:image/svg+xml,<svg/>',
+    'data:image/png;base64,AAAA',
+  ])
+    assert.equal(requestAllowed(url, origin, 'GET', 'image'), false, url);
+  assert.equal(artifactURL(`${content}?remote=1`, origin), false);
+});
 const artifact = `${origin}/artifacts/${'a'.repeat(32)}/content`;
 test('exact local navigation and artifact downloads; no remote, encoded, or privileged schemes', () => {
   assert.ok(navigationURL(`${origin}/app/#section`, origin));

@@ -22,7 +22,13 @@ class ArtifactStore:
         return path
 
     def write(self, mission_id: str, task_id: str, draft: ArtifactDraft) -> Artifact:
-        content = draft.content.encode("utf-8")
+        content = (
+            draft.content if isinstance(draft.content, bytes) else draft.content.encode("utf-8")
+        )
+        if draft.media_type == "image/png":
+            from agentos.adapters.thumbnail import validate_png
+
+            validate_png(content)
         artifact = Artifact(
             id=uuid4().hex,
             mission_id=mission_id,

@@ -1203,3 +1203,10 @@ footer span {
     flex-direction: column;
   }
 }
+.thumbnail-preview {
+  display: block;
+  width: 100%;
+  max-width: 1280px;
+  height: auto;
+  border-radius: 8px;
+}

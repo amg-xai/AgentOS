@@ -33,6 +33,7 @@ export function App() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [goal, setGoal] = useState('');
+  const [includeThumbnail, setIncludeThumbnail] = useState(false);
   const [sources, setSources] = useState<SourceText[]>([]);
   const [studySettings, setStudySettings] = useState<StudySettings | null>(null);
   const [roleId, setRoleId] = useState('developer');
@@ -63,6 +64,7 @@ export function App() {
           setCreating(false);
           setGoal('');
           setSources([]);
+          setIncludeThumbnail(false);
           setStudySettings(null);
           setError('');
           setOverview(null);
@@ -99,6 +101,7 @@ export function App() {
           setCreating(false);
           setGoal('');
           setSources([]);
+          setIncludeThumbnail(false);
           setStudySettings(null);
           setError('');
           setOverview(null);
@@ -165,6 +168,7 @@ export function App() {
       if (first) {
         modeGeneration.current++;
         setSources([]);
+        setIncludeThumbnail(false);
         setStudySettings(null);
         setRoleId(first.role_id);
         setGoal(first.demo_goal ?? '');
@@ -174,6 +178,7 @@ export function App() {
   function selectRole(value: string) {
     modeGeneration.current++;
     setSources([]);
+    setIncludeThumbnail(false);
     setStudySettings(null);
     setRoleId(value);
     setGoal(demo ? (workflows.find((item) => item.role_id === value)?.demo_goal ?? '') : '');
@@ -209,6 +214,9 @@ export function App() {
       const mission = await api<Mission>(`/workflows/${encodeURIComponent(roleId)}`, {
         goal: goal.trim(),
         ...(sourceContext ? { sources } : {}),
+        ...(roleId === 'creator' && !demo && workflow.thumbnail_ready && includeThumbnail
+          ? { include_thumbnail: true }
+          : {}),
         ...(roleId === 'student' && !demo && workflow.study_planning_ready && studySettings
           ? { study_settings: studySettings }
           : {}),
@@ -219,6 +227,7 @@ export function App() {
       setCreating(false);
       setGoal('');
       setSources([]);
+      setIncludeThumbnail(false);
       setStudySettings(null);
       await refresh(0);
     } catch (e) {
@@ -230,6 +239,7 @@ export function App() {
   function openMission(id: string) {
     modeGeneration.current++;
     setSources([]);
+    setIncludeThumbnail(false);
     setStudySettings(null);
     setSelected(id);
     setPage('missions');
@@ -330,6 +340,7 @@ export function App() {
                 onClick={() => {
                   modeGeneration.current++;
                   setSources([]);
+                  setIncludeThumbnail(false);
                   setStudySettings(null);
                   setGoal(demo ? (workflow?.demo_goal ?? '') : '');
                   setCreating(true);
@@ -468,6 +479,22 @@ export function App() {
                             ? 'Fixed sample scenario. No source files or notes are sent to a model.'
                             : workflow?.context_notice}
                         </p>
+                        {!demo && roleId === 'creator' && workflow?.thumbnail_ready && (
+                          <label>
+                            <input
+                              type="checkbox"
+                              checked={includeThumbnail}
+                              disabled={busy || !canWrite}
+                              onChange={(event) => setIncludeThumbnail(event.target.checked)}
+                            />{' '}
+                            Include a graphic thumbnail
+                            <span className="muted">
+                              {' '}
+                              Local text and geometry PNG; printable ASCII text only. No
+                              photographic synthesis or publication.
+                            </span>
+                          </label>
+                        )}
                         {!demo && roleId === 'creator' && workflow?.source_research_ready && (
                           <CreatorSources
                             sources={sources}

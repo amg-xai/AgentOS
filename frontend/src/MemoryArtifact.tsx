@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { api, artifactText, errorMessage } from './api';
+import { api, artifactPreview, errorMessage } from './api';
 import type { ArtifactDetail } from './api';
 import { ErrorNotice } from './components';
 
@@ -24,15 +24,16 @@ export function MemoryArtifact({
     setError('');
     panel.current?.focus();
     panel.current?.scrollIntoView?.({ block: 'nearest' });
-    void Promise.all([
-      api<ArtifactDetail>(
-        `/artifacts/${encodeURIComponent(artifactId)}`,
-        undefined,
-        controller.signal,
-      ),
-      artifactText(artifactId, controller.signal),
-    ])
-      .then(([metadata, text]) => {
+    void api<ArtifactDetail>(
+      `/artifacts/${encodeURIComponent(artifactId)}`,
+      undefined,
+      controller.signal,
+    )
+      .then(async (metadata) => ({
+        metadata,
+        text: await artifactPreview(metadata, controller.signal),
+      }))
+      .then(({ metadata, text }) => {
         if (!controller.signal.aborted) setResult({ metadata, text });
       })
       .catch((e) => {
@@ -56,7 +57,7 @@ export function MemoryArtifact({
       <ErrorNotice message={error} />
       {error ? (
         <p>Artifact unavailable. Close the preview and try the reference again.</p>
-      ) : !result ? (
+      ) : !result || result.metadata.id !== artifactId ? (
         <p role="status">Verifying and loading linked artifact…</p>
       ) : (
         <>
@@ -65,7 +66,16 @@ export function MemoryArtifact({
             Task {result.metadata.task_id} · {result.metadata.size} bytes
           </p>
           <p className="muted mono">Owning mission: {result.metadata.mission_id}</p>
-          <pre className="artifact-content">{result.text}</pre>
+          {result.metadata.media_type === 'image/png' ? (
+            <img
+              className="thumbnail-preview"
+              src={result.text}
+              alt={`Graphic thumbnail: ${result.metadata.name}`}
+              onError={() => setError('PNG could not be displayed or failed its integrity check.')}
+            />
+          ) : (
+            <pre className="artifact-content">{result.text}</pre>
+          )}
           <p className="muted mono hash">SHA-256 {result.metadata.sha256}</p>
           <div className="memory-artifact-actions">
             <a

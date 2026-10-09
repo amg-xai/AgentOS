@@ -1,4 +1,5 @@
 export interface Workflow {
+  thumbnail_ready?: boolean;
   source_research_ready?: boolean;
   study_planning_ready?: boolean;
   role_id: string;
@@ -87,6 +88,7 @@ export interface PatchRevisionStatus {
   payload_digest?: string;
 }
 export interface Artifact {
+  media_type?: 'text/plain' | 'text/markdown' | 'text/x-diff' | 'image/png';
   id: string;
   name: string;
   task_id: string;
@@ -199,6 +201,43 @@ export async function artifactText(id: string, signal?: AbortSignal): Promise<st
   const response = await fetch(`/artifacts/${encodeURIComponent(id)}/content`, { signal });
   if (!response.ok) throw new Error('Artifact could not be loaded or failed its integrity check.');
   return response.text();
+}
+
+export async function artifactPreview(artifact: Artifact, signal?: AbortSignal): Promise<string> {
+  if (artifact.media_type !== 'image/png') return artifactText(artifact.id, signal);
+  const url = `/artifacts/${encodeURIComponent(artifact.id)}/content`;
+  if (artifact.size <= 0 || artifact.size > 2_000_000)
+    throw new Error('PNG exceeds preview limits.');
+  const response = await fetch(url, { signal });
+  if (!response.ok || response.headers.get('Content-Type')?.split(';')[0] !== 'image/png')
+    throw new Error('PNG could not be loaded or failed its integrity check.');
+  const reader = response.body?.getReader();
+  if (!reader)
+    throw new Error('PNG streaming preview is unavailable. Download the artifact instead.');
+  let size = 0;
+  const header = new Uint8Array(24);
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      header.set(value.subarray(0, Math.max(0, 24 - size)), Math.min(size, 24));
+      size += value.length;
+      if (size > 2_000_000 || size > artifact.size) throw new Error('PNG exceeds preview limits.');
+    }
+  } finally {
+    await reader.cancel();
+  }
+  const view = new DataView(header.buffer);
+  if (
+    size !== artifact.size ||
+    size < 24 ||
+    header.slice(0, 8).join(',') !== '137,80,78,71,13,10,26,10' ||
+    view.getUint32(16) !== 1280 ||
+    view.getUint32(20) !== 720
+  )
+    throw new Error('PNG has an unsupported size or format.');
+  // This immutable local endpoint verifies the bytes on every read, including the image request.
+  return url;
 }
 export const errorMessage = (error: unknown) =>
   error instanceof Error ? error.message : 'Something went wrong. Try again.';

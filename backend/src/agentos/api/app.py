@@ -320,6 +320,7 @@ def create_app(
                 except (KeyError, StateConflict, MissionValidationError):
                     reason = "Required workflow agents or executors are unavailable."
             source_research_ready = False
+            thumbnail_ready = False
             study_planning_ready = False
             if role_id == "student" and not reason and demo_root is None:
                 study_planning_ready = "student_focus" in student_kinds
@@ -330,6 +331,11 @@ def create_app(
                 )
             if role_id == "creator" and not reason and demo_root is None:
                 source_research_ready = "creator_research" in creator_kinds
+                try:
+                    registered_creator_planner(catalog, thumbnail=True)
+                    thumbnail_ready = "creator_thumbnail" in creator_kinds
+                except StateConflict:
+                    pass
                 steps = "Goal-driven plan → outlines → script → human review"
             if source_research_ready:
                 steps = (
@@ -352,7 +358,10 @@ def create_app(
                     else notice,
                     "demo_goal": goal if demo_root is not None else None,
                     **(
-                        {"source_research_ready": source_research_ready}
+                        {
+                            "source_research_ready": source_research_ready,
+                            "thumbnail_ready": thumbnail_ready,
+                        }
                         if role_id == "creator"
                         else {}
                     ),
@@ -505,12 +514,21 @@ def create_app(
     async def create_creator_mission(request: CreatorMissionCreate) -> Mission:
         require_operator(role)
         require_workflow("creator")
-        if demo_root is not None and (request.goal != CREATOR_DEMO_GOAL or request.sources):
+        if demo_root is not None and (
+            request.goal != CREATOR_DEMO_GOAL or request.sources or request.include_thumbnail
+        ):
             raise StateConflict("Offline Creator demo supports only its fixed brief")
         if demo_root is not None:
             return missions.create(creator_mission(request.goal))
         if creator_planner is None:
             raise StateConflict("Creator planning is unavailable")
+        if (
+            request.include_thumbnail
+            and not next(w for w in workflow_status() if w["role_id"] == "creator")[
+                "thumbnail_ready"
+            ]
+        ):
+            raise StateConflict("Creator graphic thumbnail planning is unavailable")
         if (
             request.sources
             and not next(w for w in workflow_status() if w["role_id"] == "creator")[
@@ -582,6 +600,15 @@ def create_app(
         require_operator(role)
         if demo_root is not None:
             raise StateConflict("Use a fixed workflow scenario in offline demo mode")
+        if any(
+            t.agent_id in {a.id for a in catalog.agents() if a.capability == "creator_thumbnail"}
+            for t in request.tasks
+        ) and not (
+            request.role_id == "creator"
+            and request.planning
+            and request.planning.contract_version == 2
+        ):
+            raise StateConflict("Graphic thumbnails require an explicit validated Creator plan")
         if request.role_id == "creator" and request.planning is not None:
             validate_creator_plan(request, catalog, bindings)
         if request.role_id == "student" and request.planning is not None:
@@ -678,10 +705,11 @@ def create_app(
     @app.get("/artifacts/{artifact_id}/content")
     def artifact_content(artifact_id: str) -> Response:
         artifact = repository.artifact(artifact_id)
+        disposition = "inline" if artifact.media_type == "image/png" else "attachment"
         return Response(
             content=storage.read(artifact),
             media_type=artifact.media_type,
-            headers={"Content-Disposition": f'attachment; filename="{artifact.name}"'},
+            headers={"Content-Disposition": f'{disposition}; filename="{artifact.name}"'},
         )
 
     assets = frontend_root or Path("frontend/dist")

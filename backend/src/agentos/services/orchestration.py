@@ -62,6 +62,16 @@ class Orchestrator:
             self.registry, self.repository, self.executors, self.artifacts
         )
         revisions.validate(mission)
+        if any(
+            t.agent_id
+            in {a.id for a in self.registry.agents() if a.capability == "creator_thumbnail"}
+            for t in mission.tasks
+        ) and not (
+            mission.role_id == "creator"
+            and mission.planning
+            and mission.planning.contract_version == 2
+        ):
+            raise StateConflict("Graphic thumbnails require an explicit validated Creator plan")
         if mission.planning is not None:
             if mission.role_id == "creator":
                 from agentos.services.creator_planning import validate_creator_plan
@@ -154,6 +164,7 @@ class Orchestrator:
                 except Exception as exc:
                     # Keep raw provider errors/inputs (which may contain secrets) out of audit logs.
                     from agentos.domain.student import StudyPlanningError
+                    from agentos.domain.thumbnail import ThumbnailRenderingError
 
                     mission = lifecycle.act(
                         mission.id,
@@ -162,7 +173,7 @@ class Orchestrator:
                             expected_version=mission.version,
                             action=TaskAction.FAIL,
                             error=exc.safe_message
-                            if isinstance(exc, StudyPlanningError)
+                            if isinstance(exc, (StudyPlanningError, ThumbnailRenderingError))
                             else f"Execution failed ({type(exc).__name__}); check configuration",
                         ),
                         actor,
@@ -250,6 +261,17 @@ class Orchestrator:
                 result.artifact_refs
                 or len(result.artifacts) != len(expected_creator)
                 or {draft.name: draft.content for draft in result.artifacts} != expected_creator
+                or any(
+                    draft.media_type
+                    != (
+                        "image/png"
+                        if draft.name == "thumbnail.png"
+                        else "text/markdown"
+                        if draft.name.endswith(".md")
+                        else "text/plain"
+                    )
+                    for draft in result.artifacts
+                )
             ):
                 raise StateConflict("Creator review must own exact source and research evidence")
         if (

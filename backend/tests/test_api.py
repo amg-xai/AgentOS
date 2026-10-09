@@ -15,6 +15,8 @@ def test_discovery_api(registry, tmp_path):
             "testing",
             "creator_research",
             "creator_planner",
+            "creator_thumbnail",
+            "creator_thumbnail_planner",
             "student_planner",
             "creator_outline",
             "creator_script",
@@ -57,4 +59,4 @@ def test_environment_package_root(monkeypatch, tmp_path):
     monkeypatch.setenv("AGENTOS_PACKAGES", str(PACKAGES))
     monkeypatch.setenv("AGENTOS_DATABASE", str(tmp_path / "api.sqlite3"))
     with TestClient(create_app()) as client:
-        assert len(client.get("/agents").json()) == 13
+        assert len(client.get("/agents").json()) == 15

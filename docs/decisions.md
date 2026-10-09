@@ -254,3 +254,23 @@ exam readiness or passed software tests. Live acceptance remains separately gate
 Student research/summarizer capabilities, Creator media and other original PLAN.md
 requirements remain pending. Full three-role scope and deferred history/memory work
 are unchanged. No calendar, scoring, external publishing or deployment is added.
+
+## 2026-10-09: Opted-in Creator graphic thumbnails
+
+Address original PLAN.md Phase 3 Image Agent and Phase 9 script → thumbnail → review
+with a bounded graphic subset, preserving the full three-role roadmap. Register
+separate thumbnail and optional thumbnail-planner capabilities. Keep Creator v1
+schemas/default requests/saved plans/demos compatible; use Creator v2 only for
+explicit opt-in, with role guards preserving Developer tested-result semantics.
+
+Reuse artifact storage for bounded PNG bytes and the existing engine/approval
+service for exact review bundles. Render strict layout data locally using pinned
+Pillow and a bundled licensed font, independently validate before staging, then
+verify frozen receipts/hashes at acceptance without rerendering. Preview only
+verified local PNGs under existing browser and desktop origin restrictions.
+
+Offline injected-model tests establish contracts and real image rendering, not
+live AI quality. Live calls remain disabled until separately authorized. Broader
+imagery/image-service generation, independent research, video, real three-role
+acceptance and other original roadmap work remain incomplete. Result Review History
+and Developer memory-context evidence remain deferred.

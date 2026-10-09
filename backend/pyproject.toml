@@ -14,6 +14,7 @@ dependencies = [
   "jsonschema>=4.23,<5",
   "httpx>=0.27,<1",
   "python-dotenv>=1,<2",
+  "Pillow==12.2.0",
 ]
 
 [project.optional-dependencies]
@@ -24,6 +25,9 @@ agentos = "agentos.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+agentos = ["assets/*.ttf", "assets/*.txt", "assets/*.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

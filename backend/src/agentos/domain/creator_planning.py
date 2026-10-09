@@ -7,8 +7,9 @@ from pydantic import Field
 from agentos.domain.base import Definition
 from agentos.domain.creator import ResearchResult, SourceText
 from agentos.domain.planning import PlanBinding, PlanTask
+from agentos.domain.thumbnail import ThumbnailLayout
 
-CreatorKind = Literal["creator_research", "creator_outline", "creator_script"]
+CreatorKind = Literal["creator_research", "creator_outline", "creator_script", "creator_thumbnail"]
 
 
 class CreatorPlanTask(PlanTask):
@@ -21,6 +22,18 @@ class CreatorPlan(Definition):
         max_length=16
     )
     tasks: tuple[CreatorPlanTask, ...] = Field(min_length=2, max_length=6)
+
+
+class ThumbnailPlanTask(PlanTask):
+    bindings: tuple[PlanBinding, ...] = Field(max_length=5)
+
+
+class CreatorThumbnailPlan(Definition):
+    rationale: str = Field(min_length=1, max_length=4000)
+    constraints: tuple[Annotated[str, Field(min_length=1, max_length=1000)], ...] = Field(
+        max_length=16
+    )
+    tasks: tuple[ThumbnailPlanTask, ...] = Field(min_length=3, max_length=7)
 
 
 def input_schema(kind: CreatorKind, *, planned: bool = True) -> dict[str, Any]:
@@ -43,9 +56,13 @@ def input_schema(kind: CreatorKind, *, planned: bool = True) -> dict[str, Any]:
             {key: research["properties"][key] for key in ("summary", "evidence", "limitations")}
         )
         definitions.update(research["$defs"])
-    if kind == "creator_script":
+    if kind in {"creator_script", "creator_thumbnail"}:
         properties["outline"] = {"type": "string", "minLength": 1, "maxLength": 24000}
         required.append("outline")
+    if kind == "creator_thumbnail":
+        properties["script"] = {"type": "string", "minLength": 1, "maxLength": 24000}
+        properties["include_thumbnail"] = {"type": "boolean", "const": True}
+        required += ["script", "include_thumbnail"]
     if planned:
         properties["objective"] = {"type": "string", "minLength": 1, "maxLength": 2000}
         properties["constraints"] = {
@@ -65,6 +82,8 @@ def input_schema(kind: CreatorKind, *, planned: bool = True) -> dict[str, Any]:
 
 
 def output_schema(kind: CreatorKind) -> dict[str, Any]:
+    if kind == "creator_thumbnail":
+        return ThumbnailLayout.model_json_schema()
     if kind == "creator_research":
         return ResearchResult.model_json_schema()
     key = "outline" if kind == "creator_outline" else "script"

@@ -75,6 +75,48 @@ class CreatorExecutor:
             research.verify(sources)
         # Do not enrich with source files or unrelated workspace notes.
         outputs = await self.generator.generate(agent, inputs)
+        if kind == "creator_thumbnail":
+            from agentos.adapters.thumbnail import render_thumbnail
+            from agentos.domain.thumbnail import ThumbnailLayout, ThumbnailRenderingError
+
+            try:
+                layout = ThumbnailLayout.model_validate(outputs)
+            except ValueError:
+                raise ThumbnailRenderingError(
+                    "Graphic thumbnail layout is invalid; use printable ASCII text, hex colors "
+                    "and supported composition/decoration"
+                ) from None
+            png, evidence = render_thumbnail(layout)
+            thumbnail_artifacts: tuple[ArtifactDraft, ...] = (
+                ArtifactDraft(name="thumbnail.png", media_type="image/png", content=png),
+                ArtifactDraft(
+                    name="thumbnail-layout.json", content=evidence.model_dump_json(indent=2)
+                ),
+                ArtifactDraft(
+                    name="reviewed-script.md", media_type="text/markdown", content=inputs["script"]
+                ),
+                ArtifactDraft(
+                    name="reviewed-outline.md",
+                    media_type="text/markdown",
+                    content=inputs["outline"],
+                ),
+            )
+            if sources:
+                assert research is not None
+                thumbnail_artifacts += (
+                    ArtifactDraft(
+                        name="reviewed-research.json", content=research.model_dump_json(indent=2)
+                    ),
+                    ArtifactDraft(
+                        name="reviewed-sources.json",
+                        content=json.dumps(
+                            [source.model_dump(mode="json") for source in sources],
+                            ensure_ascii=False,
+                            indent=2,
+                        ),
+                    ),
+                )
+            return AgentResult(outputs=outputs, artifacts=thumbnail_artifacts)
         Draft202012Validator(agent.output_schema).validate(outputs)
         if kind == "creator_research":
             result = ResearchResult.model_validate(outputs)

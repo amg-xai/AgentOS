@@ -8,7 +8,7 @@ shared memory, tools, artifacts, and human approvals.
 ## Current status
 
 The backend provides validated agent discovery, persisted missions, explicit
-orchestration, scoped result review, durable text artifacts, and permission-checked
+orchestration, scoped result review, durable text/PNG artifacts, and permission-checked
 tool interfaces. Dependency outputs flow into downstream agents through bindings.
 The Developer workflow now connects a configured structured model provider to
 scoped source snapshots, scratch-only patch checking, and actual test execution.
@@ -17,7 +17,8 @@ are explicit; the default application never silently runs test fixtures.
 React/TypeScript Mission Control provides mission creation, execution history,
 artifact inspection, result approval/denial, retry, and workspace memory.
 The Creator package reuses that engine for a supplied brief, outline, and reviewed
-video script. Student produces notes and a quiz with a separate answer key from
+video script, with an explicit optional graphic thumbnail rendered locally for review.
+Student produces notes and a quiz with a separate answer key from
 supplied study material. Choose Developer, Creator, or Student in the workflow
 selector.
 

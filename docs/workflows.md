@@ -134,3 +134,12 @@ to one final review, using the same final notes for quiz/Focus. Role-aware prefl
 and actual output validation reuse this engine; goal/constraints/objectives/settings
 persist and reach generation. Binding-resolved exact quiz or Focus bundles guard
 staging and approval. Saved fixed graphs and labelled demos retain their contracts.
+
+## Creator graphic review
+
+Explicit thumbnail requests use Creator v2 planning on the same engine. A final
+thumbnail task consumes the exact script/outline and optional supplied research,
+then stages a real local PNG, frozen layout receipt and reviewed text bundle.
+Staging verifies rendering; acceptance checks frozen evidence without rendering.
+Script-only Creator v1 plans and demos remain unchanged. Content review does not
+establish test success or publish anything. [Contract](creator-workflow.md).

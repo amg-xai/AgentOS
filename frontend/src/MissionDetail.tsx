@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
-import { api, artifactText, date, errorMessage, label } from './api';
+import { api, artifactPreview, date, errorMessage, label } from './api';
 import type { Activity, Approval, Artifact, Mission, PatchRevisionStatus } from './api';
 import { Badge, ErrorNotice } from './components';
 import { TaskDependencies } from './TaskDependencies';
@@ -28,6 +28,7 @@ export function MissionDetail({
   const tabButtons = useRef<Partial<Record<(typeof tabs)[number], HTMLButtonElement | null>>>({});
   const [artifact, setArtifact] = useState<string>('');
   const [text, setText] = useState('');
+  const [previewOwner, setPreviewOwner] = useState('');
   const [artifactError, setArtifactError] = useState('');
   const [artifactLoading, setArtifactLoading] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -106,16 +107,21 @@ export function MissionDetail({
       refreshNumber.current += 1;
     };
   }, [refresh]);
+  const previewMetadata = artifacts.find((item) => item.id === artifact);
   useEffect(() => {
-    if (!artifact) return;
+    if (!previewMetadata) return;
     const controller = new AbortController();
     setArtifactLoading(true);
     setText('');
+    setPreviewOwner('');
     setArtifactError('');
     setSaved(false);
-    artifactText(artifact, controller.signal)
+    artifactPreview(previewMetadata, controller.signal)
       .then((content) => {
-        if (!controller.signal.aborted) setText(content);
+        if (!controller.signal.aborted) {
+          setText(content);
+          setPreviewOwner(artifact);
+        }
       })
       .catch((e) => {
         if (!controller.signal.aborted) setArtifactError(errorMessage(e));
@@ -124,7 +130,7 @@ export function MissionDetail({
         if (!controller.signal.aborted) setArtifactLoading(false);
       });
     return () => controller.abort();
-  }, [artifact]);
+  }, [artifact, previewMetadata?.media_type, previewMetadata?.size, id, demo]);
   async function action(path: string, body: Record<string, unknown> = {}) {
     if (!mission) return false;
     setBusy(true);
@@ -280,13 +286,15 @@ export function MissionDetail({
                 ? 'Inspect the study plan, original time settings, quiz, answer key, and reviewed notes. Durations are suggested effort. Acceptance records content review; it does not verify correctness, completed study, or exam readiness.'
                 : 'Inspect the quiz, answer key, and reviewed notes. Acceptance records review of this material; it does not verify correctness or exam readiness.'
               : creator
-                ? mission.tasks.some(
-                    (task) =>
-                      task.agent_id === 'creator_research' ||
-                      'evidence' in (task.input_bindings ?? {}),
-                  )
-                  ? 'Inspect the script, reviewed outline, research, and supplied sources. Quotes establish provenance; source truth and interpretations require your review. Acceptance records this content; it does not publish or send it.'
-                  : 'Inspect the script and its reviewed outline. Acceptance records this content; it does not publish or send it.'
+                ? mission.planning?.contract_version === 2
+                  ? 'Inspect the graphic thumbnail, frozen layout receipt, reviewed script and outline, plus supplied-source evidence when present. Acceptance records content review; it does not establish test success, factual correctness or publication.'
+                  : mission.tasks.some(
+                        (task) =>
+                          task.agent_id === 'creator_research' ||
+                          'evidence' in (task.input_bindings ?? {}),
+                      )
+                    ? 'Inspect the script, reviewed outline, research, and supplied sources. Quotes establish provenance; source truth and interpretations require your review. Acceptance records this content; it does not publish or send it.'
+                    : 'Inspect the script and its reviewed outline. Acceptance records this content; it does not publish or send it.'
                 : 'Inspect the diff and test report. Acceptance records this result; it does not change the source project or publish anything.'}
           </p>
           {p.payload?.artifact_refs && (
@@ -314,7 +322,9 @@ export function MissionDetail({
                         ? 'study-plan.md'
                         : 'quiz.md'
                       : creator
-                        ? 'script.md'
+                        ? mission.planning?.contract_version === 2
+                          ? 'thumbnail.png'
+                          : 'script.md'
                         : 'tested.diff'),
                 ) ?? review[0];
               if (preferred) setArtifact(preferred.id);
@@ -598,8 +608,23 @@ export function MissionDetail({
                 <ErrorNotice message={artifactError} />
                 {artifactLoading ? (
                   <p role="status">Verifying and loading artifact…</p>
+                ) : selectedArtifact?.media_type === 'image/png' ? (
+                  !artifactError &&
+                  previewOwner === artifact &&
+                  text && (
+                    <img
+                      className="thumbnail-preview"
+                      src={text}
+                      alt="Creator graphic thumbnail for human review"
+                      onError={() =>
+                        setArtifactError(
+                          'PNG could not be displayed or failed its integrity check.',
+                        )
+                      }
+                    />
+                  )
                 ) : (
-                  <pre className="artifact-content">{text}</pre>
+                  <pre className="artifact-content">{previewOwner === artifact ? text : ''}</pre>
                 )}
                 <p className="muted mono hash">SHA-256 {selectedArtifact?.sha256}</p>
                 {selectedArtifact && !artifactLoading && !artifactError && (

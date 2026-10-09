@@ -80,20 +80,49 @@ class ApprovalService:
             and mission.role_id == "creator"
             and (has_sources(mission) or mission.planning)
         ):
-            expected_creator = (
-                creator_review_evidence(mission, task, task.outputs or {})
-                if mission.planning
-                else source_review_evidence(mission, task.outputs or {})
-            )
             actual_creator = {
                 self.repository.artifact(ref).name: self.artifacts.read(
                     self.repository.artifact(ref)
-                ).decode("utf-8")
+                )
                 for ref in task.artifact_refs
+            }
+            if mission.planning and mission.planning.contract_version == 2:
+                from agentos.services.creator import thumbnail_review_evidence
+
+                try:
+                    frozen = (
+                        actual_creator["thumbnail.png"],
+                        actual_creator["thumbnail-layout.json"].decode("utf-8"),
+                    )
+                except (KeyError, UnicodeDecodeError):
+                    raise StateConflict("Thumbnail frozen evidence is unavailable") from None
+                expected_creator = thumbnail_review_evidence(
+                    mission, task, task.outputs or {}, frozen=frozen
+                )
+            else:
+                expected_creator = (
+                    creator_review_evidence(mission, task, task.outputs or {})
+                    if mission.planning
+                    else source_review_evidence(mission, task.outputs or {})
+                )
+            expected_bytes = {
+                name: value if isinstance(value, bytes) else value.encode("utf-8")
+                for name, value in expected_creator.items()
             }
             if (
                 len(task.artifact_refs) != len(expected_creator)
-                or actual_creator != expected_creator
+                or actual_creator != expected_bytes
+                or any(
+                    self.repository.artifact(ref).media_type
+                    != (
+                        "image/png"
+                        if self.repository.artifact(ref).name == "thumbnail.png"
+                        else "text/markdown"
+                        if self.repository.artifact(ref).name.endswith(".md")
+                        else "text/plain"
+                    )
+                    for ref in task.artifact_refs
+                )
             ):
                 raise StateConflict("Creator review evidence does not match its sources")
         if (

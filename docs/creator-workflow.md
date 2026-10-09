@@ -77,7 +77,8 @@ continues to describe Developer; clients should use per-role readiness for Creat
 Live provider acceptance remains deferred. Automated provider tests use mocked
 transport, and the offline scenario verifies interaction rather than AI quality.
 Browser visual, responsive, and screen-reader acceptance remains unverified.
-Web/file research, images/thumbnails, rendered video, and publishing remain deferred.
+Web/file research, photographic/image-service generation, rendered video, and
+publishing remain deferred. Opted-in local graphic thumbnails are described below.
 Student notes/quiz are implemented separately; original PLAN.md retains the full scope.
 
 ## Optional supplied-source research
@@ -149,9 +150,59 @@ never establishes tests passed or factual correctness. Original outline artifact
 and prior decisions remain inspectable after restart.
 
 Saved unplanned brief/source graphs and the fixed demo retain their previous behavior.
-Creator thumbnails/images, external research and live quality acceptance remain
-unfinished original PLAN.md requirements; this milestone does not complete Phase 9.
+Broader Creator imagery, external research and live quality acceptance remain
+unfinished original PLAN.md requirements; the bounded graphic subset below does
+not complete all of Phase 9.
 
 `/status.workflows` exposes optional `source_research_ready` for Creator. A package
 without research support can still create brief-only missions; clients omit sources
 for that path. Saved brief-only missions remain inspectable and the demo stays unchanged.
+
+## Optional graphic thumbnail
+
+In normal mode, explicitly select **Include a graphic thumbnail** when available.
+The API equivalent is `{"goal":"Your brief","include_thumbnail":true}`; optional
+`sources` retain the same exact-text contract. Default requests omit the flag and
+keep script-only version-1 planning. `thumbnail_ready` indicates optional registered
+planner/agent/executor support; missing support leaves existing script creation
+available. The fixed offline demo rejects thumbnail requests and remains unchanged.
+
+Creation compiles a Creator version-2 plan with 3–7 tasks: 1–4 outlines/refinements,
+one intermediate script, one research iff sources, and exactly one final reviewed
+thumbnail. Every task leads to this review. Thumbnail binds the script and the same
+final outline used by the script, plus research summary/evidence/limitations when
+sources exist. Preflight validates registered role/capability/schema/executor,
+tool-free READ permissions, DAG, typed bindings, original goal/constraints/objectives,
+source copies, explicit intent and review boundary before persistence or run claims.
+Managed tasks cannot be completed manually.
+
+The model proposes only a strict headline/subtitle, three hex colors, left/center
+composition and circle/bars/none decoration. A local Pillow renderer produces an
+actual 1280×720 RGB PNG using the bundled OFL-licensed Noto Sans font. Text supports
+printable ASCII U+0020–U+007E; unsupported glyphs, unreadable color contrast, long
+words or overflowing lines fail explicitly. No arbitrary paths, fonts, URLs,
+assets, drawing code or extra layout fields are allowed. PNG bytes are bounded to
+2 MB and decoded/validated; no base64 bodies enter mission outputs or audit events.
+This is graphic composition, not photographic synthesis or rendered video.
+
+Final review owns exactly `thumbnail.png`, `thumbnail-layout.json`,
+`reviewed-script.md` and `reviewed-outline.md`; source-backed missions also own
+`reviewed-research.json` and `reviewed-sources.json`. Staging independently renders
+and compares the complete bundle. The receipt freezes the strict layout, renderer,
+Pillow version, font hash, dimensions and PNG hash. Acceptance checks that stored
+receipt, PNG integrity, exact bound text, scope, attempt, version and approval
+digest without rerendering. Pending evidence survives renderer upgrades.
+
+Mission Control and linked-memory inspection stream bounded verified PNG responses,
+then display the immutable local content endpoint. Every image request verifies
+storage integrity again. PNG uses inline disposition; download links retain the
+download action. Existing same-origin/CSP/desktop restrictions remain. Text stays
+inert; no HTML/SVG or remote-image rendering is added. Errors and stale selections
+do not expose a previous image. Inspect the layout and all text evidence before
+accepting. Acceptance records content review, never passing tests, factual truth,
+publication or source modification. Denial/retry reruns only the thumbnail while
+retaining completed upstream tasks and earlier artifact/approval history.
+
+Offline validation uses injected structured-model responses and real local PNGs,
+not scripted normal-mode behavior or authorized live calls. Genuine model quality
+and native browser/desktop rendering acceptance remain separately unverified.

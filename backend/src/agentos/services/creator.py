@@ -1,5 +1,6 @@
 """Creator graph reuses the existing mission and dependency contracts."""
 
+import hashlib
 import json
 from typing import Any
 
@@ -107,7 +108,7 @@ def validate_source_mission(
         ) from None
 
 
-def source_review_evidence(mission: Mission, outputs: dict[str, Any]) -> dict[str, str]:
+def source_review_evidence(mission: Mission, outputs: dict[str, Any]) -> dict[str, str | bytes]:
     if mission.planning is not None:
         task = next(t for t in mission.tasks if t.review_required)
         return creator_review_evidence(mission, task, outputs)
@@ -132,9 +133,11 @@ def source_review_evidence(mission: Mission, outputs: dict[str, Any]) -> dict[st
 
 def creator_review_evidence(
     mission: Mission, task: TaskSpec, outputs: dict[str, Any]
-) -> dict[str, str]:
+) -> dict[str, str | bytes]:
     try:
-        return _creator_review_evidence(mission, task, outputs)
+        if mission.planning and mission.planning.contract_version == 2:
+            return thumbnail_review_evidence(mission, task, outputs)
+        return {**_creator_review_evidence(mission, task, outputs)}
     except (KeyError, ValueError, StopIteration):
         raise StateConflict("Creator review evidence is incomplete or changed") from None
 
@@ -144,7 +147,7 @@ def _creator_review_evidence(
 ) -> dict[str, str]:
     """Resolve exact current review evidence by bindings, never canonical task IDs."""
     if mission.planning:
-        if mission.planning.contract_version != 1:
+        if mission.planning.contract_version not in {1, 2}:
             raise StateConflict("Unsupported Creator review plan version")
         for item in mission.tasks:
             if (
@@ -179,3 +182,73 @@ def _creator_review_evidence(
             }
         )
     return expected
+
+
+def thumbnail_review_evidence(
+    mission: Mission,
+    task: TaskSpec,
+    outputs: dict[str, Any],
+    *,
+    frozen: tuple[bytes, str] | None = None,
+) -> dict[str, str | bytes]:
+    """Stage by independently rendering; accept a validated frozen receipt without rendering."""
+    from agentos.adapters.thumbnail import render_thumbnail, validate_png
+    from agentos.domain.missions import TaskStatus
+    from agentos.domain.thumbnail import ThumbnailEvidence, ThumbnailLayout
+
+    try:
+        if not mission.planning or mission.planning.contract_version != 2:
+            raise ValueError("Missing thumbnail plan")
+        if task.inputs.get("include_thumbnail") is not True or not task.review_required:
+            raise ValueError("Missing thumbnail intent or review")
+        by_id = {t.id: t for t in mission.tasks}
+        script_binding = task.input_bindings["script"]
+        script = by_id[script_binding.task_id]
+        research_keys = (
+            {"summary", "evidence", "limitations"} if task.inputs.get("sources") else set()
+        )
+        if (
+            set(task.input_bindings) != {"script", "outline"} | research_keys
+            or set(task.dependencies) != {b.task_id for b in task.input_bindings.values()}
+            or any(
+                task.input_bindings[key] != script.input_bindings.get(key) for key in research_keys
+            )
+        ):
+            raise ValueError("Thumbnail evidence bindings changed")
+        if (
+            script_binding.output_key != "script"
+            or script.review_required
+            or script.input_bindings.get("outline") != task.input_bindings.get("outline")
+            or any(
+                by_id[b.task_id].status != TaskStatus.COMPLETED
+                for b in task.input_bindings.values()
+            )
+        ):
+            raise ValueError("Thumbnail upstream evidence is incomplete or changed")
+        # Reuse exact script/outline/source validation; don't trust executor-provided review text.
+        text = _creator_review_evidence(mission, script, script.outputs or {})
+        if task.inputs.get("sources") != script.inputs.get("sources"):
+            raise ValueError("Thumbnail sources changed")
+        if (
+            task.inputs.get("goal") != mission.goal
+            or task.inputs.get("constraints") != list(mission.planning.constraints)
+            or task.inputs.get("objective") != mission.planning.objectives.get(task.id)
+        ):
+            raise ValueError("Thumbnail plan inputs changed")
+        text["reviewed-script.md"] = text.pop("script.md")
+        layout = ThumbnailLayout.model_validate(outputs)
+        if frozen is None:
+            png, receipt = render_thumbnail(layout)
+            receipt_text = receipt.model_dump_json(indent=2)
+        else:
+            png, receipt_text = frozen
+            receipt = ThumbnailEvidence.model_validate_json(receipt_text)
+            validate_png(png)
+            if (
+                receipt.layout != layout
+                or receipt.receipt.png_sha256 != hashlib.sha256(png).hexdigest()
+            ):
+                raise ValueError("Frozen thumbnail receipt does not match")
+        return {**text, "thumbnail.png": png, "thumbnail-layout.json": receipt_text}
+    except (KeyError, ValueError, StopIteration):
+        raise StateConflict("Thumbnail review evidence is incomplete or changed") from None
