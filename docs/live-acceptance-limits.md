@@ -1,5 +1,11 @@
 # Bounded live acceptance prerequisites
 
+Current policy: ₹0 budget, no paid/cloud API calls and generation disabled.
+Responses compatibility and spending-control information below is retained as
+historical preparation, not authorization to configure or use a billing account.
+The optional [local-only path](local-inference.md) retains this policy/ledger;
+no runner/model download or real inference has been authorized or validated.
+
 Generation remains disabled until the user separately authorizes a specific
 isolated acceptance session. Preparing these controls grants no authorization.
 Developer is the first target; Creator and Student follow only within the approved

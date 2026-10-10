@@ -609,3 +609,25 @@ The original sample and prepared source/test copies still match. No actual provi
 configuration, credentials or generation flag was changed; no live calls occurred.
 Local inspection of 22 actual schemas cannot establish live endpoint/model quality
 or compatibility. See [remaining acceptance requirements](live-acceptance-limits.md).
+
+## Zero-budget local inference preparation
+
+Validated offline on Windows on 2026-10-10: 734 backend tests pass with three
+existing Windows link skips, including 46 new local-provider contract checks.
+These use in-memory transport and temporary request-policy/ledger files: no
+runner, model download, actual provider endpoint or billing account is required.
+Explicit selection, all three manifest schema paths, disabled dispatch, local
+availability/cloud rejection, timeouts, malformed/incomplete results and inherited
+request bounds pass. Normal mode remains distinct from scripted demo mode.
+
+All 119 frontend unit tests, 10 continuous React-to-real-backend three-role
+journeys and 26 desktop tests pass. Ruff lint/format, Windows/Linux mypy,
+TypeScript/Vite build, frontend/desktop formatting and syntax checks, and a
+network-free backend wheel build pass. Original PLAN.md, role manifests and
+sample sources are unchanged. Read-only doctor reports normal execution blocked;
+no active credentials, provider settings or generation flag were changed.
+
+Hardware feasibility is documented in [local inference preparation](local-inference.md).
+Real-model performance, schema reliability and context-preserving runner behavior
+remain unvalidated. No runner/model installation, download or live inference
+occurred; these still require separate authorization under the ₹0 constraint.

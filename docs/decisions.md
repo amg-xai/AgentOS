@@ -365,3 +365,21 @@ explicit user authorization, chosen endpoint/model, bounded data/session allowan
 and verified spending controls remain necessary. See
 [live acceptance limits](live-acceptance-limits.md); no roadmap or provider activation
 is introduced by these prerequisites.
+
+## Zero-budget local inference preparation (2026-10-10)
+
+The user's ₹0 constraint supersedes paid/cloud acceptance preparation. Preserve
+all existing dispatch gates, policy/ledger safeguards, permissions and review
+contracts. Add explicit optional native Ollama selection behind the common
+structured generator, with cloud-disabled status and installed local completion
+metadata required before chat. Reject remote references, redirects, unsupported
+results and silent fallback. No runner/model is installed or downloaded and no
+active provider, key or generation setting changes.
+
+All three role packages use the same adapter, original inputs and registered
+schemas. Mock transport verifies contracts, not actual model quality. Hardware
+supports investigating a small open-weight candidate, but available RAM is tight
+and complete mission fit remains unvalidated. Downloads and inference need
+separate authorization. Real-model acceptance and original Phase 6 semantic
+retrieval remain unfinished; no roadmap is rewritten. See
+[local preparation](local-inference.md).

@@ -1,5 +1,12 @@
 # Model provider
 
+The current project budget is ₹0. Keep generation disabled and do not configure
+or execute paid/cloud acceptance. The compatible, disabled-by-default
+[local Ollama path](local-inference.md) is prepared for all three profiles;
+runner/model downloads and real inference require separate authorization.
+The Responses setup instructions below describe the preserved interface, not
+authorization to use a billing account or a cloud free tier.
+
 The Responses adapter uses a configurable model and endpoint, strict JSON Schema
 outputs, local output validation, bounded HTTP requests, and no automatic retries
 or fixture fallback. Requests disable provider-side storage with `store: false`.

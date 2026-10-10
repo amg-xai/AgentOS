@@ -1,5 +1,11 @@
 # Architecture
 
+Model selection preserves the Responses default and supports an optional native
+Ollama adapter through the same structured generator and dispatch controls. Its
+loopback-only preflight requires cloud disabled and an installed local completion
+model; it cannot download or fall back to scripted output. Generation remains
+disabled under the ₹0 budget. See [local inference preparation](docs/local-inference.md).
+
 Status: registry, role loading, persisted missions, explicit orchestration,
 result approvals, artifacts, scoped local tools, a configurable model adapter,
 workspace memory, and React Mission Control are implemented. All three roles have

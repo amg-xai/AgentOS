@@ -23,6 +23,7 @@ from agentos.adapters.demo import (
 from agentos.adapters.developer import DeveloperExecutor, register_local_tools
 from agentos.adapters.local_tools import LocalWorkspaceTools
 from agentos.adapters.manifests import load_registry
+from agentos.adapters.ollama import create_model_executor
 from agentos.adapters.planning import (
     StructuredCreatorPlanner,
     StructuredDeveloperPlanner,
@@ -170,7 +171,7 @@ def create_app(
     settings = ModelSettings.from_environment() if demo_root is None and model is None else None
     if settings is not None:
         if settings.allow_live_calls and settings.live_limits_ready():
-            model = ResponsesExecutor(settings)
+            model = create_model_executor(settings)
     bindings = executors or ExecutorRegistry()
     generator: StructuredGenerator | None = DemoGenerator() if demo_root is not None else model
     if executors is None and workspace is not None and generator is not None:
