@@ -21,8 +21,11 @@ from agentos.adapters.demo import (
     demo_workspace,
 )
 from agentos.adapters.developer import DeveloperExecutor, register_local_tools
+from agentos.adapters.embeddings import EmbeddingSettings, OllamaEmbeddings
 from agentos.adapters.local_tools import LocalWorkspaceTools
 from agentos.adapters.manifests import load_registry
+from agentos.adapters.memory_index import MemoryIndexStore
+from agentos.adapters.memory_sources import MemoryCorpus
 from agentos.adapters.ollama import create_model_executor
 from agentos.adapters.planning import (
     StructuredCreatorPlanner,
@@ -45,6 +48,7 @@ from agentos.domain.governance import (
     UserRole,
     require_operator,
 )
+from agentos.domain.memory import Embedder, MemoryRebuild, MemoryResults, MemorySearch
 from agentos.domain.missions import (
     Mission,
     MissionCreate,
@@ -80,6 +84,7 @@ from agentos.services.creator_planning import (
 )
 from agentos.services.developer import developer_mission
 from agentos.services.execution import ExecutorRegistry
+from agentos.services.memory import SemanticMemory
 from agentos.services.missions import MissionService
 from agentos.services.orchestration import Orchestrator
 from agentos.services.overview import workspace_overview
@@ -119,6 +124,7 @@ def create_app(
     planner: DeveloperPlanner | None = None,
     creator_planner: CreatorPlanner | None = None,
     student_planner: StudentPlanner | None = None,
+    embedder: Embedder | None = None,
 ) -> FastAPI:
     if demo_root is not None:
         if any(
@@ -135,6 +141,7 @@ def create_app(
                 planner,
                 creator_planner,
                 student_planner,
+                embedder,
             )
         ):
             raise ValueError("Demo mode uses its own isolated startup configuration")
@@ -159,6 +166,17 @@ def create_app(
         or Path(os.environ.get("AGENTOS_ARTIFACTS", str(repository.path.parent / "artifacts")))
     )
     memory = WorkspaceStore(repository.path.parent / "workspace.sqlite3")
+    embedding_error = None
+    if demo_root is None and embedder is None:
+        try:
+            embedding_settings = EmbeddingSettings.from_environment()
+            if embedding_settings is not None:
+                embedder = OllamaEmbeddings(embedding_settings)
+        except ValueError:
+            embedding_error = "Local embedding configuration is invalid"
+    semantic_memory = SemanticMemory(
+        MemoryIndexStore(memory.path), MemoryCorpus(memory, repository, storage), embedder
+    )
     configuration = Path(os.environ.get("AGENTOS_WORKSPACE_CONFIG", ".agentos/workspace.json"))
     workspace_error: str | None = None
     if demo_root is None and workspace is None and configuration.exists():
@@ -487,6 +505,16 @@ def create_app(
 
     @app.exception_handler(ProviderFailure)
     async def provider_failed(request: Request, exc: ProviderFailure) -> JSONResponse:
+        if request.url.path.startswith("/memory/semantic/"):
+            return JSONResponse(
+                status_code=502,
+                content={
+                    "detail": (
+                        "Local embedding request failed. No fallback was used; "
+                        "rebuild failure preserves the previous index."
+                    )
+                },
+            )
         return JSONResponse(
             status_code=502, content={"detail": "Provider planning failed; no mission was created"}
         )
@@ -535,6 +563,27 @@ def create_app(
         limit: int = Query(default=20, ge=1, le=100),
     ) -> list[MemoryNote]:
         return memory.notes(query, limit)
+
+    @app.get("/memory/semantic/status")
+    def semantic_status() -> dict[str, object]:
+        return {**semantic_memory.status(), "configuration_error": embedding_error}
+
+    @app.get("/memory/notes/{note_id}")
+    def memory_note(note_id: str) -> MemoryNote:
+        notes, _ = memory.memory_notes()
+        note = next((n for n in notes if n.id == note_id), None)
+        if note is None:
+            raise HTTPException(404, "Memory note unavailable in the current local corpus")
+        return note
+
+    @app.post("/memory/semantic/index")
+    async def rebuild_memory_index(request: MemoryRebuild) -> dict[str, object]:
+        require_operator(role)
+        return await semantic_memory.rebuild()
+
+    @app.post("/memory/semantic/search")
+    async def semantic_search(request: MemorySearch) -> MemoryResults:
+        return await semantic_memory.search(request)
 
     @app.post("/memory", status_code=201)
     def add_memory(request: MemoryCreate) -> MemoryNote:

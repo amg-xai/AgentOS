@@ -6,11 +6,13 @@ import { ErrorNotice } from './components';
 export function MemoryArtifact({
   artifactId,
   noteTitle,
+  sourceLabel = 'From note',
   onClose,
   onOpenMission,
 }: {
   artifactId: string;
   noteTitle: string;
+  sourceLabel?: string;
   onClose: () => void;
   onOpenMission?: (id: string) => void;
 }) {
@@ -52,7 +54,9 @@ export function MemoryArtifact({
         <h2 id={headingId}>Linked artifact</h2>
         <button onClick={onClose}>Close preview</button>
       </div>
-      <p>From note: {noteTitle}</p>
+      <p>
+        {sourceLabel}: {noteTitle}
+      </p>
       <p className="muted mono">Artifact {artifactId}</p>
       <ErrorNotice message={error} />
       {error ? (

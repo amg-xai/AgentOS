@@ -631,3 +631,27 @@ Hardware feasibility is documented in [local inference preparation](local-infere
 Real-model performance, schema reliability and context-preserving runner behavior
 remain unvalidated. No runner/model installation, download or live inference
 occurred; these still require separate authorization under the ₹0 constraint.
+
+## Shared semantic memory retrieval
+
+Validated offline on Windows on 2026-10-11: 779 backend tests pass with three
+existing platform skips, including 45 semantic-memory and local-embedding cases.
+Coverage includes ranked source references across all three profiles, exact
+approved-artifact evidence, failed-test exclusion, malformed and stale sources,
+metadata filters, schema migrations, atomic rebuilds, restart persistence, local
+model availability, bounded requests, timeouts and explicit failure behavior.
+Injected transports validate contracts; they do not validate real embedding quality.
+
+All 123 frontend unit tests, 11 continuous React-to-real-backend journeys and
+26 desktop tests pass. The new continuous journey exercises real role tools,
+approval boundaries, semantic search and artifact inspection for Developer,
+Creator and Student, with persisted results after backend restart and unchanged
+original project sources. Only model and embedding transports are injected.
+
+Ruff lint/format, Windows/Linux mypy, TypeScript/Vite build, frontend/desktop
+format and syntax checks, documentation links and an offline backend wheel build
+pass. Legacy lexical retrieval and saved role contracts remain unchanged.
+No credentials, provider configuration or generation flags were changed; no
+model downloads or actual inference occurred. Local semantic relevance and
+real-model execution remain unvalidated. See [semantic memory](semantic-memory.md)
+for disabled-by-default configuration, bounds and current limitations.

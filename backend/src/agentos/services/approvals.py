@@ -10,7 +10,7 @@ from agentos.domain.governance import (
     require_operator,
     review_payload,
 )
-from agentos.domain.missions import Mission, NewEvent, StateConflict, TaskStatus
+from agentos.domain.missions import Mission, NewEvent, StateConflict, Task, TaskStatus
 from agentos.services.missions import refresh_dependencies
 from agentos.services.runtime import ArtifactStorage, RuntimeRepository
 
@@ -39,128 +39,15 @@ class ApprovalService:
             or payload_digest(review_payload(task, mission)) != approval.payload_digest
         ):
             raise StateConflict("Approval is stale, already decided, or its payload does not match")
-        for artifact_id in task.artifact_refs:
-            artifact = self.repository.artifact(artifact_id)
-            if artifact.mission_id != mission.id or artifact.task_id != task.id:
-                raise StateConflict("Artifact scope does not match the approval")
-            if request.decision == "approve":
-                self.artifacts.read(artifact)
-        from agentos.services.creator import (
-            creator_review_evidence,
-            has_sources,
-            source_review_evidence,
-        )
-        from agentos.services.student import (
-            has_study_plan,
-            student_review_evidence,
-            study_review_evidence,
-        )
-
-        if (
-            request.decision == "approve"
-            and mission.role_id == "student"
-            and (mission.planning is not None or has_study_plan(mission))
-        ):
-            from agentos.services.student_sources import validate_source_artifacts
-
-            validate_source_artifacts(mission, self.repository, self.artifacts)
-            expected_study = (
-                student_review_evidence(mission, task, task.outputs or {})
-                if mission.planning
-                else study_review_evidence(mission, task.outputs or {})
-            )
-            actual_study = {
-                self.repository.artifact(ref).name: self.artifacts.read(
-                    self.repository.artifact(ref)
-                ).decode("utf-8")
-                for ref in task.artifact_refs
-            }
-            if len(task.artifact_refs) != len(expected_study) or actual_study != expected_study:
-                raise StateConflict("Student review evidence does not match its study inputs")
-
-        if (
-            request.decision == "approve"
-            and mission.role_id == "creator"
-            and (has_sources(mission) or mission.planning)
-        ):
-            actual_creator = {
-                self.repository.artifact(ref).name: self.artifacts.read(
-                    self.repository.artifact(ref)
-                )
-                for ref in task.artifact_refs
-            }
-            if mission.planning and mission.planning.contract_version == 2:
-                from agentos.services.creator import thumbnail_review_evidence
-
-                try:
-                    frozen = (
-                        actual_creator["thumbnail.png"],
-                        actual_creator["thumbnail-layout.json"].decode("utf-8"),
-                    )
-                except (KeyError, UnicodeDecodeError):
-                    raise StateConflict("Thumbnail frozen evidence is unavailable") from None
-                expected_creator = thumbnail_review_evidence(
-                    mission, task, task.outputs or {}, frozen=frozen
-                )
-            else:
-                expected_creator = (
-                    creator_review_evidence(mission, task, task.outputs or {})
-                    if mission.planning
-                    else source_review_evidence(mission, task.outputs or {})
-                )
-            expected_bytes = {
-                name: value if isinstance(value, bytes) else value.encode("utf-8")
-                for name, value in expected_creator.items()
-            }
-            if (
-                len(task.artifact_refs) != len(expected_creator)
-                or actual_creator != expected_bytes
-                or any(
-                    self.repository.artifact(ref).media_type
-                    != (
-                        "image/png"
-                        if self.repository.artifact(ref).name == "thumbnail.png"
-                        else "text/markdown"
-                        if self.repository.artifact(ref).name.endswith(".md")
-                        else "text/plain"
-                    )
-                    for ref in task.artifact_refs
-                )
-            ):
-                raise StateConflict("Creator review evidence does not match its sources")
-        if (
-            request.decision == "approve"
-            and mission.role_id == "developer"
-            and mission.planning
-            and mission.planning.contract_version in (2, 3)
-        ):
-            from agentos.services.planning import review_evidence, validate_issue_artifacts
-
-            validate_issue_artifacts(mission, self.repository, self.artifacts)
-            expected = review_evidence(mission, task, task.outputs or {})
-            actual = {
-                self.repository.artifact(ref).name: self.artifacts.read(
-                    self.repository.artifact(ref)
-                ).decode("utf-8")
-                for ref in task.artifact_refs
-            }
-            if len(task.artifact_refs) != len(expected) or actual != expected:
-                raise StateConflict("Review evidence does not match the tested result")
+        if request.decision == "approve":
+            self.validate_evidence(mission, task)
+        else:
+            for ref in task.artifact_refs:
+                artifact = self.repository.artifact(ref)
+                if artifact.mission_id != mission.id or artifact.task_id != task.id:
+                    raise StateConflict("Artifact scope does not match the approval")
         now = datetime.now(UTC)
         approved = request.decision == "approve"
-        if (
-            approved
-            and (
-                task.requires_passed_tests
-                or (
-                    mission.role_id == "developer"
-                    and mission.planning is not None
-                    and mission.planning.contract_version in (2, 3)
-                )
-            )
-            and (task.outputs is None or task.outputs.get("passed") is not True)
-        ):
-            raise StateConflict("Tests must explicitly pass before accepting this result")
         decision = approval.model_copy(
             update={
                 "status": ApprovalStatus.APPROVED if approved else ApprovalStatus.DENIED,
@@ -213,3 +100,114 @@ class ApprovalService:
                     )
                 )
         return self.repository.save(updated, mission.version, events, decision=decision)
+
+    def validate_evidence(self, mission: Mission, task: Task) -> None:
+        """Verify exact review evidence without deciding, rerunning or mutating it."""
+        for artifact_id in task.artifact_refs:
+            artifact = self.repository.artifact(artifact_id)
+            if artifact.mission_id != mission.id or artifact.task_id != task.id:
+                raise StateConflict("Artifact scope does not match the approval")
+            self.artifacts.read(artifact)
+        from agentos.services.creator import (
+            creator_review_evidence,
+            has_sources,
+            source_review_evidence,
+        )
+        from agentos.services.student import (
+            has_study_plan,
+            student_review_evidence,
+            study_review_evidence,
+        )
+
+        if mission.role_id == "student" and (
+            mission.planning is not None or has_study_plan(mission)
+        ):
+            from agentos.services.student_sources import validate_source_artifacts
+
+            validate_source_artifacts(mission, self.repository, self.artifacts)
+            expected_study = (
+                student_review_evidence(mission, task, task.outputs or {})
+                if mission.planning
+                else study_review_evidence(mission, task.outputs or {})
+            )
+            actual_study = {
+                self.repository.artifact(ref).name: self.artifacts.read(
+                    self.repository.artifact(ref)
+                ).decode("utf-8")
+                for ref in task.artifact_refs
+            }
+            if len(task.artifact_refs) != len(expected_study) or actual_study != expected_study:
+                raise StateConflict("Student review evidence does not match its study inputs")
+
+        if mission.role_id == "creator" and (has_sources(mission) or mission.planning):
+            actual_creator = {
+                self.repository.artifact(ref).name: self.artifacts.read(
+                    self.repository.artifact(ref)
+                )
+                for ref in task.artifact_refs
+            }
+            if mission.planning and mission.planning.contract_version == 2:
+                from agentos.services.creator import thumbnail_review_evidence
+
+                try:
+                    frozen = (
+                        actual_creator["thumbnail.png"],
+                        actual_creator["thumbnail-layout.json"].decode("utf-8"),
+                    )
+                except (KeyError, UnicodeDecodeError):
+                    raise StateConflict("Thumbnail frozen evidence is unavailable") from None
+                expected_creator = thumbnail_review_evidence(
+                    mission, task, task.outputs or {}, frozen=frozen
+                )
+            else:
+                expected_creator = (
+                    creator_review_evidence(mission, task, task.outputs or {})
+                    if mission.planning
+                    else source_review_evidence(mission, task.outputs or {})
+                )
+            expected_bytes = {
+                name: value if isinstance(value, bytes) else value.encode("utf-8")
+                for name, value in expected_creator.items()
+            }
+            if (
+                len(task.artifact_refs) != len(expected_creator)
+                or actual_creator != expected_bytes
+                or any(
+                    self.repository.artifact(ref).media_type
+                    != (
+                        "image/png"
+                        if self.repository.artifact(ref).name == "thumbnail.png"
+                        else "text/markdown"
+                        if self.repository.artifact(ref).name.endswith(".md")
+                        else "text/plain"
+                    )
+                    for ref in task.artifact_refs
+                )
+            ):
+                raise StateConflict("Creator review evidence does not match its sources")
+        if (
+            mission.role_id == "developer"
+            and mission.planning
+            and mission.planning.contract_version in (2, 3)
+        ):
+            from agentos.services.planning import review_evidence, validate_issue_artifacts
+
+            validate_issue_artifacts(mission, self.repository, self.artifacts)
+            expected = review_evidence(mission, task, task.outputs or {})
+            actual = {
+                self.repository.artifact(ref).name: self.artifacts.read(
+                    self.repository.artifact(ref)
+                ).decode("utf-8")
+                for ref in task.artifact_refs
+            }
+            if len(task.artifact_refs) != len(expected) or actual != expected:
+                raise StateConflict("Review evidence does not match the tested result")
+        if (
+            task.requires_passed_tests
+            or (
+                mission.role_id == "developer"
+                and mission.planning is not None
+                and mission.planning.contract_version in (2, 3)
+            )
+        ) and (task.outputs is None or task.outputs.get("passed") is not True):
+            raise StateConflict("Tests must explicitly pass before accepting this result")

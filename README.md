@@ -180,16 +180,16 @@ The offline demo uses fixed stacks-and-queues notes and questions.
 
 ## Technology stack
 
-| Layer             | Repository stack                                                        |
-| ----------------- | ----------------------------------------------------------------------- |
-| Mission Control   | React 19 · TypeScript · Vite · CSS                                      |
-| Local API         | Python 3.11+ · FastAPI · Uvicorn · Pydantic                             |
-| Orchestration     | Shared Python mission/dependency services · JSON manifests              |
-| State and memory  | SQLite · filesystem artifacts · bounded keyword retrieval               |
-| Model interface   | HTTPX · JSON Schema · Responses adapter · optional Ollama adapter       |
-| Graphic rendering | Pillow · bundled font assets                                            |
-| Desktop shell     | Electron · owned loopback backend lifecycle                             |
-| Verification      | pytest · Ruff · mypy · Vitest · Testing Library · Node tests · Prettier |
+| Layer             | Repository stack                                                            |
+| ----------------- | --------------------------------------------------------------------------- |
+| Mission Control   | React 19 · TypeScript · Vite · CSS                                          |
+| Local API         | Python 3.11+ · FastAPI · Uvicorn · Pydantic                                 |
+| Orchestration     | Shared Python mission/dependency services · JSON manifests                  |
+| State and memory  | SQLite · filesystem artifacts · keyword + optional local semantic retrieval |
+| Model interface   | HTTPX · JSON Schema · Responses adapter · optional Ollama adapter           |
+| Graphic rendering | Pillow · bundled font assets                                                |
+| Desktop shell     | Electron · owned loopback backend lifecycle                                 |
+| Verification      | pytest · Ruff · mypy · Vitest · Testing Library · Node tests · Prettier     |
 
 Dependency contracts: [backend](backend/pyproject.toml), [frontend](frontend/package.json)
 and [desktop](desktop/package.json). No cloud platform, vector database or external
@@ -282,11 +282,12 @@ continuous UI/backend acceptance run on Linux and Windows.
 | Continuous Developer v3 | Actual baseline/patched tests, five review artifacts, failed-test rejection, revisions, approval, restart persistence and original-source integrity |
 | Continuous Creator      | Sourced script and PNG review, invalid evidence/layout rejection and persistence                                                                    |
 | Continuous Student      | Sourced quiz/focus journeys, provenance rejection, review and persistence                                                                           |
+| Shared semantic memory  | Ranked source evidence, approved artifact eligibility, restart, disabled inference and three-role UI/backend search                                 |
 | Desktop lifecycle       | Backend ownership, launch identity, navigation/download safeguards and shutdown                                                                     |
 
-[Recorded local validation](docs/validation.md#zero-budget-local-inference-preparation)
-reports **734 backend passes + 3 existing Windows skips**, **119 frontend tests**,
-**10 continuous journeys** and **26 desktop tests**, with build/type/lint/format
+[Recorded local validation](docs/validation.md#shared-semantic-memory-retrieval)
+reports **779 backend passes + 3 existing platform skips**, **123 frontend tests**,
+**11 continuous journeys** and **26 desktop tests**, with build/type/lint/format
 checks passing. These are dated evidence, not live counters.
 
 **Model outputs in automated acceptance use injected transport.** Real tools,
@@ -328,7 +329,8 @@ replace it or declare the full MVP complete.
 | **Implemented**                    | Bounded Developer, Creator and Student workflows with continuous offline acceptance                       |
 | **Implemented**                    | Mission Control, workspace notes, keyword retrieval, history and checkout-based Electron shell            |
 | **In progress — preparation only** | First complete **real-AI** workflow: local adapter prepared; runner/model and mission quality unvalidated |
-| **Planned**                        | Phase 6 semantic retrieval and broader layered context                                                    |
+| **Implemented — model pending**    | [Shared semantic search](docs/semantic-memory.md); real embedding relevance remains unvalidated           |
+| **Planned**                        | Broader layered agent context                                                                             |
 | **Planned / optional**             | Broader role capabilities and GitHub/GitLab, Slack/Jira, browser and other tool adapters                  |
 | **Pending validation / packaging** | Native desktop visual acceptance and standalone distribution                                              |
 

@@ -51,7 +51,7 @@ class WorkspaceStore:
         with closing(sqlite3.connect(path)) as conn, conn:
             conn.execute("BEGIN IMMEDIATE")
             version = conn.execute("PRAGMA user_version").fetchone()[0]
-            if version not in {0, 1, 2}:
+            if version not in {0, 1, 2, 3}:
                 raise RuntimeError("Unsupported workspace database version")
             if version == 0:
                 conn.execute("CREATE TABLE notes(id TEXT PRIMARY KEY, payload TEXT NOT NULL)")
@@ -64,7 +64,12 @@ class WorkspaceStore:
                     "CREATE TABLE recipes(mission_id TEXT PRIMARY KEY, payload TEXT NOT NULL, "
                     "digest TEXT NOT NULL, source_digest TEXT NOT NULL)"
                 )
-                conn.execute("PRAGMA user_version = 2")
+            if version < 3:
+                conn.execute(
+                    "CREATE TABLE memory_index (id INTEGER PRIMARY KEY CHECK (id=1), "
+                    "payload TEXT NOT NULL, digest TEXT NOT NULL)"
+                )
+                conn.execute("PRAGMA user_version = 3")
 
     def execution_snapshot(
         self, mission_id: str, settings: WorkspaceSettings
@@ -146,6 +151,27 @@ class WorkspaceStore:
             for n in notes
         ]
         return [note for score, note in sorted(scored, key=lambda x: -x[0]) if score > 0][:limit]
+
+    def memory_notes(self) -> tuple[list[MemoryNote], int]:
+        """Bounded source scan; malformed rows never become retrieval evidence."""
+        with closing(sqlite3.connect(self.path)) as conn:
+            rows = conn.execute(
+                "SELECT id, payload FROM notes ORDER BY rowid DESC LIMIT 1000"
+            ).fetchall()
+        notes = []
+        invalid = 0
+        for identity, payload in rows:
+            try:
+                if len(payload.encode()) > 64000:
+                    raise ValueError("Note exceeds source bound")
+                note = MemoryNote.model_validate_json(payload)
+                if note.id != identity:
+                    raise ValueError("Note identity mismatch")
+                if note.workspace_id == "local":
+                    notes.append(note)
+            except (ValueError, TypeError):
+                invalid += 1
+        return notes, invalid
 
     def snapshot(self, mission_id: str, settings: WorkspaceSettings) -> dict[str, str]:
         with closing(sqlite3.connect(self.path)) as conn, conn:

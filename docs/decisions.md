@@ -383,3 +383,19 @@ and complete mission fit remains unvalidated. Downloads and inference need
 separate authorization. Real-model acceptance and original Phase 6 semantic
 retrieval remain unfinished; no roadmap is rewritten. See
 [local preparation](local-inference.md).
+
+## Shared semantic memory search
+
+Address original PLAN.md Phase 6 with a bounded shared retrieval service and
+explicit Memory UI. Reuse the workspace SQLite store (additive schema 3), exact
+approval evidence validation, local Ollama preflight/HTTP controls and durable
+request reservations. Optional memory allowance defaults to zero and preserves
+legacy policy fingerprints. Do not switch on generation, change configuration,
+download models or silently fall back. Search filters source eligibility before
+ranking and after query inference; cached text is never an authorization source.
+
+Preserve saved role plans, lexical note browsing, test recipes and exact review
+bundles. Automatic agent-context adoption remains separate, including the deferred
+Developer context-evidence proposal. Model-backed relevance is unvalidated; injected
+vectors establish contracts and all-role integration only. See
+[semantic memory](semantic-memory.md) for bounds, source provenance and acceptance.

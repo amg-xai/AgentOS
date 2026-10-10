@@ -157,3 +157,19 @@ worker liveness guarantee.
 Automated API and React/JSDOM checks cover counts beyond one page, navigation,
 permissions, stale refreshes, and mode changes. Browser/native visual, responsive,
 and screen-reader acceptance remain manual; live model quality remains deferred.
+
+## Explicit semantic memory search
+
+Workspace memory offers **Open semantic search** separately from existing keyword
+note browsing. Search local notes, completed mission outcome metadata and exact
+approved text artifacts; filter by profile, mission and source kind and inspect
+source references. Operator/Admin may explicitly rebuild the persistent index;
+Viewer may search/read. There are no requests on each keystroke or implicit agent
+input changes. Embeddings remain disabled and real-model relevance is not validated.
+See [source eligibility, limits and local adapter](semantic-memory.md).
+
+The continuous Memory acceptance test uses the actual React UI and isolated HTTP
+backend, existing three-role execution/approval services and injected embeddings.
+It checks pending-artifact exclusion, all-profile source inspection, persistent
+index restart and unchanged original project files. It supplements the existing
+role journeys rather than replacing real-model acceptance.

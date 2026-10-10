@@ -12,6 +12,15 @@ workspace memory, and React Mission Control are implemented. All three roles hav
 continuous React-to-real-HTTP acceptance with injected model transport. Live provider
 and native/browser rendering acceptance verification remain outstanding.
 
+Shared semantic memory adds explicit Memory search across local notes, stored
+mission outcomes and exact approved text artifacts. An interface-based retrieval
+service uses a bounded derived workspace-schema-3 cache and an optional guarded
+local embedding adapter. Rebuilds are atomic; search revalidates current source
+eligibility and model identity. Existing lexical/agent inputs and mission-schema-2
+contracts remain unchanged. Embeddings are separately disabled by default; no
+model/download or real relevance validation has occurred. See
+[semantic memory](docs/semantic-memory.md).
+
 Opted-in normal Creator missions use Creator planning version 2: script preparation
 followed by a registered graphic-layout agent and local PNG rendering. The same
 orchestrator stages the image, frozen rendering receipt and exact bound text for

@@ -25,6 +25,7 @@ class LiveRequestPolicy(Definition):
     max_request_bytes: int = Field(strict=True, ge=1, le=1_000_000)
     provider_spend_control_confirmed: Literal[True]
     spend_control_reference: Annotated[str, Field(min_length=1, max_length=500)]
+    memory_requests: int = Field(default=0, strict=True, ge=0, le=26)
 
     @field_validator("provider_spend_control_confirmed", mode="before")
     @classmethod
@@ -41,7 +42,9 @@ class LiveRequestPolicy(Definition):
         return value.astimezone(UTC)
 
     def fingerprint(self) -> str:
-        return hashlib.sha256(self.model_dump_json().encode()).hexdigest()
+        # Zero means legacy policy: preserve exact existing file fingerprints.
+        excluded = {"memory_requests"} if self.memory_requests == 0 else set()
+        return hashlib.sha256(self.model_dump_json(exclude=excluded).encode()).hexdigest()
 
     def check(self, endpoint: str, model: str) -> None:
         if self.expires_at <= datetime.now(UTC) or self.endpoint != endpoint or self.model != model:
@@ -73,12 +76,25 @@ class LiveRequestLedger:
         rows = conn.execute("SELECT digest FROM policy").fetchall()
         if rows != [(self.policy.fingerprint(),)]:
             raise ValueError("Acceptance ledger policy does not match")
+        allowed: tuple[str, ...] = ("developer", "creator", "student")
+        if self.policy.memory_requests:
+            allowed += ("memory",)
+        placeholders = ",".join("?" for _ in allowed)
         if conn.execute(
-            "SELECT COUNT(*) FROM reservations WHERE role NOT IN ('developer','creator','student')"
+            f"SELECT COUNT(*) FROM reservations WHERE role NOT IN ({placeholders})", allowed
         ).fetchone()[0]:
             raise ValueError("Acceptance ledger contains invalid reservations")
 
-    def validate(self) -> None:
+    def validate(self, *, memory: bool = False) -> None:
+        allowances = (
+            (("memory", self.policy.memory_requests),)
+            if memory
+            else (
+                ("developer", self.policy.developer_requests),
+                ("creator", self.policy.creator_requests),
+                ("student", self.policy.student_requests),
+            )
+        )
         with closing(self._connect("ro")) as conn:
             self._validate(conn)
             if (
@@ -91,11 +107,7 @@ class LiveRequestLedger:
                     "SELECT COUNT(*) FROM reservations WHERE role = ?", (role,)
                 ).fetchone()[0]
                 < limit
-                for role, limit in (
-                    ("developer", self.policy.developer_requests),
-                    ("creator", self.policy.creator_requests),
-                    ("student", self.policy.student_requests),
-                )
+                for role, limit in allowances
             ):
                 raise ValueError("Acceptance role allowances are exhausted")
 
@@ -104,6 +116,7 @@ class LiveRequestLedger:
             "developer": self.policy.developer_requests,
             "creator": self.policy.creator_requests,
             "student": self.policy.student_requests,
+            "memory": self.policy.memory_requests,
         }.get(role, 0)
         with closing(self._connect("rw")) as conn, conn:
             conn.execute("BEGIN IMMEDIATE")

@@ -346,6 +346,7 @@ def test_version_one_workspace_migration_and_saved_mission_restart(registry, tmp
     note = store.add_note(MemoryCreate(title="Legacy note", content="Preserve migration evidence"))
     with sqlite3.connect(path) as conn:
         conn.execute("DROP TABLE recipes")
+        conn.execute("DROP TABLE memory_index")
         conn.execute("PRAGMA user_version = 1")
     migrated = WorkspaceStore(path)
     assert migrated.snapshot("legacy", workspace) == snapshot and migrated.notes()[0] == note
@@ -372,5 +373,5 @@ def test_version_one_workspace_migration_and_saved_mission_restart(registry, tmp
         assert len(client.get(f"/missions/{mission.id}/artifacts").json()) == 5
         assert client.get("/memory").json()[0]["id"] == note.id
     with sqlite3.connect(path) as conn:
-        assert conn.execute("PRAGMA user_version").fetchone()[0] == 2
+        assert conn.execute("PRAGMA user_version").fetchone()[0] == 3
         assert conn.execute("SELECT count(*) FROM recipes").fetchone()[0] == 0

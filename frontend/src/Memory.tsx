@@ -4,6 +4,7 @@ import { api, date, errorMessage } from './api';
 import type { Note } from './api';
 import { ErrorNotice } from './components';
 import { MemoryArtifact } from './MemoryArtifact';
+import { SemanticMemory } from './SemanticMemory';
 export function Memory({
   canWrite,
   demo = false,
@@ -22,6 +23,7 @@ export function Memory({
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [revision, setRevision] = useState(0);
+  const [semantic, setSemantic] = useState(false);
   const [preview, setPreview] = useState<{
     note: Note;
     artifactId: string;
@@ -75,6 +77,12 @@ export function Memory({
         Retrieval uses keyword overlap, not semantic search.
       </div>
       <ErrorNotice message={error || readError} />
+      {!demo && (
+        <button onClick={() => setSemantic((value) => !value)}>
+          {semantic ? 'Close semantic search' : 'Open semantic search'}
+        </button>
+      )}
+      {semantic && !demo && <SemanticMemory canWrite={canWrite} onOpenMission={onOpenMission} />}
       {preview && (
         <MemoryArtifact
           key={`${preview.note.id}:${preview.artifactId}`}

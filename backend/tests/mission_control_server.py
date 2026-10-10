@@ -16,6 +16,7 @@ from student_source_fixture import output_for
 from test_creator import OUTLINE, SCRIPT
 from test_creator_thumbnail import LAYOUT, thumbnail_plan
 from test_developer import ISSUE, issue_plan
+from test_memory import InjectedEmbeddings
 
 from agentos.adapters.provider import ModelSettings, ResponsesExecutor
 from agentos.api.app import create_app
@@ -129,6 +130,7 @@ def main():
         artifact_root=root / "artifacts",
         workspace=workspace,
         model=model,
+        embedder=InjectedEmbeddings(),
     )
     with socket.socket() as listener:
         listener.bind(("127.0.0.1", 0))

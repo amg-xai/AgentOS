@@ -15,6 +15,9 @@ class OllamaExecutor(ResponsesExecutor):
     request_path = "/api/chat"
 
     async def preflight(self, client: httpx.AsyncClient) -> None:
+        await self.local_model_preflight(client, "completion")
+
+    async def local_model_preflight(self, client: httpx.AsyncClient, capability: str) -> None:
         status = await self.request_json(client, "GET", "/api/status")
         if not isinstance(status.get("cloud"), dict) or status["cloud"].get("disabled") is not True:
             raise ProviderFailure(
@@ -41,12 +44,12 @@ class OllamaExecutor(ResponsesExecutor):
         if (
             any(details.get(k) not in (None, "") for k in ("remote_host", "remote_model"))
             or not isinstance(capabilities, list)
-            or "completion" not in capabilities
+            or capability not in capabilities
             or not isinstance(details.get("model_info"), dict)
             or not details["model_info"]
         ):
             raise ProviderFailure(
-                "Local completion model required; remote or unsupported model rejected"
+                f"Local {capability} model required; remote or unsupported model rejected"
             )
 
     def request_body(
