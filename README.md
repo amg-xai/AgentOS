@@ -37,11 +37,11 @@ and capabilities while sharing missions, tools, memory, artifacts and approvals.
 
 ![Developer, Creator and Student profile cards](docs/images/agentos-profiles.svg)
 
-| Profile       | Bring a goal and context                                | Inspect the result                                                           |
-| ------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| **Developer** | Investigate an issue in a scoped local project          | Issue evidence, tested patch, baseline/patched reports and human review      |
-| **Creator**   | Prepare video content from a brief and supplied sources | Research, outline, script and an optional locally rendered graphic thumbnail |
-| **Student**   | Study supplied material with traceable sources          | Findings, summaries, notes, quiz, answer key and optional focus plan         |
+| Profile       | From goal to reviewed artifacts                                                     |
+| ------------- | ----------------------------------------------------------------------------------- |
+| **Developer** | Scoped issue investigation → tested diff, issue evidence and test reports           |
+| **Creator**   | Supplied brief and sources → outline, script and optional graphic thumbnail         |
+| **Student**   | Study material → sourced summaries, notes, quiz, answer key and optional focus plan |
 
 Normal workflows use bounded, capability-driven planning. The offline demo uses
 fixed scenarios and scripted generation; it cannot answer arbitrary requests.
@@ -63,6 +63,8 @@ recorded activity, filtered history, artifact downloads, memory and result revie
 <img src="docs/images/divider.svg" alt="" width="100%">
 
 ## How AgentOS works
+
+On narrow screens, use GitHub's diagram expand control to inspect the labels.
 
 ### Shared architecture
 
@@ -98,7 +100,7 @@ flowchart TB
     Run --> Save["Persist activity, results and artifacts"]
     Save --> Checks["Validate evidence<br/>Enforce Developer test outcomes"]
     Checks --> Review["Pause for explicit human review"]
-    Review -->|Accept exact result| Result["Complete reviewed work<br/>Resume downstream tasks when needed"]
+    Review -->|Accept exact result| Result["Complete reviewed work<br/>Explicit resume for downstream tasks"]
     Review -->|Deny| Retry["Fail task / explicit retry<br/>Developer revisions remain bounded"]
     Retry --> Run
     classDef work fill:#0b1728,stroke:#49dcf3,color:#eef6ff;
