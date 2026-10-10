@@ -4,10 +4,12 @@ export function CreatorSources({
   sources,
   onChange,
   disabled,
+  purpose = 'outlining',
 }: {
   sources: SourceText[];
   onChange: (sources: SourceText[]) => void;
   disabled: boolean;
+  purpose?: 'outlining' | 'study summarization';
 }) {
   function add() {
     let number = 1;
@@ -21,7 +23,7 @@ export function CreatorSources({
     <fieldset disabled={disabled}>
       <legend>Optional source text</legend>
       <p className="muted">
-        Paste sources to research before outlining. Source text and research are sent to the
+        Paste sources to research before {purpose}. Source text and research are sent to the
         configured model. Quotes are checked against your text; source truth and interpretations
         require human review. No websites or files are opened.
       </p>

@@ -234,6 +234,10 @@ unittest runs, artifacts, approvals, revisions and SQLite persistence are real.
 It covers a passing result, success on the second explicit patch revision, and
 exhaustion of both revision cycles; it verifies all five v3 review files, failed-test
 rejection, explicit acceptance, process restart and byte-preserved source files.
+It also covers sourced Student research → summary → notes → quiz, with and without
+explicit Focus settings. Student journeys validate source-form feedback, inspect
+summary artifacts, verify eight/eleven exact review files, reject invalid research,
+approve through UI controls and restart before/after acceptance without model reruns.
 It creates temporary test storage and does not read your provider configuration.
 The existing normal-mode API enum `live` identifies normal execution, not proof
 that this test contacts a live model. Live authorization remains disabled.

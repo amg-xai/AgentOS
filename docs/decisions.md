@@ -312,3 +312,25 @@ live AI quality. Live calls remain disabled until separately authorized. Broader
 imagery/image-service generation, independent research, video, real three-role
 acceptance and other original roadmap work remain incomplete. Result Review History
 and Developer memory-context evidence remain deferred.
+
+## Student supplied-source study pipeline
+
+Complete the missing original PLAN.md Phase 3 Research/Study and Summarizer
+capabilities and Phase 10 local study chain through Student planning contract v2.
+Nonempty pasted sources opt in; existing goal-only v1/saved plans/demos retain
+their contracts. Use a separate registered sourced planner and schemas, selecting
+capabilities rather than fixed agent/task IDs. Keep all content agents tool-free
+READ and execute on the shared mission engine.
+
+Reuse neutral Creator source contracts with compatibility exports. Literal source
+quotes, one-based summary evidence references and per-question provenance make
+content traceable without claiming factual correctness. Retained outputs must match
+frozen artifacts before downstream execution or acceptance. Final review owns
+source/research/summary copies and notes/quiz provenance, and binds the goal,
+workspace and full task/plan definitions through the existing digest mechanism.
+
+Continuous acceptance renders actual React against the real isolated HTTP backend
+with injected structured model transport, including invalid-research rejection,
+optional Focus, exact evidence, explicit human approval and process restarts.
+No independent research, model authorization, provider change or new engine.
+Live quality acceptance and the broader original roadmap remain unfinished.

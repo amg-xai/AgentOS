@@ -11,6 +11,7 @@ from pathlib import Path
 
 import httpx
 import uvicorn
+from student_source_fixture import output_for
 from test_developer import ISSUE, issue_plan
 
 from agentos.adapters.provider import ModelSettings, ResponsesExecutor
@@ -33,7 +34,11 @@ def main():
         agent = body["text"]["format"]["name"]
         with observations.open("a", encoding="utf-8") as stream:
             stream.write(json.dumps({"agent": agent, "inputs": inputs}) + "\n")
-        if agent == "developer_planner":
+        if agent.startswith("student_"):
+            outputs = output_for(agent, inputs)
+            if "invalid evidence" in inputs["goal"] and agent == "student_research":
+                outputs["research"]["evidence"][0]["quote"] = "Invented quotation"
+        elif agent == "developer_planner":
             outputs = issue_plan()
         elif agent == "issue_specification":
             outputs = {"issue": ISSUE}

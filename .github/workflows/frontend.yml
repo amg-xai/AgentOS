@@ -23,7 +23,7 @@ jobs:
       - run: npm run build
       - run: npm run format:check
 
-  continuous-developer:
+  continuous-missions:
     strategy:
       fail-fast: false
       matrix:

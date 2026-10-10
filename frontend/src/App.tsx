@@ -191,7 +191,10 @@ export function App() {
     try {
       if (!workflow?.ready || !canWrite) return;
       const sourceContext =
-        roleId === 'creator' && !demo && workflow.source_research_ready && sources.length > 0;
+        (roleId === 'creator' || roleId === 'student') &&
+        !demo &&
+        workflow.source_research_ready &&
+        sources.length > 0;
       if (
         sourceContext &&
         (sources.some((source) => !source.label.trim() || !source.body.trim()) ||
@@ -495,13 +498,16 @@ export function App() {
                             </span>
                           </label>
                         )}
-                        {!demo && roleId === 'creator' && workflow?.source_research_ready && (
-                          <CreatorSources
-                            sources={sources}
-                            onChange={setSources}
-                            disabled={busy || !canWrite}
-                          />
-                        )}
+                        {!demo &&
+                          (roleId === 'creator' || roleId === 'student') &&
+                          workflow?.source_research_ready && (
+                            <CreatorSources
+                              purpose={roleId === 'student' ? 'study summarization' : 'outlining'}
+                              sources={sources}
+                              onChange={setSources}
+                              disabled={busy || !canWrite}
+                            />
+                          )}
                         {!demo && roleId === 'student' && workflow?.study_planning_ready && (
                           <StudySettingsForm
                             settings={studySettings}

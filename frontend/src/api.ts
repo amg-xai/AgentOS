@@ -1,6 +1,7 @@
 export interface Workflow {
   thumbnail_ready?: boolean;
   source_research_ready?: boolean;
+  source_focus_ready?: boolean;
   study_planning_ready?: boolean;
   role_id: string;
   name: string;

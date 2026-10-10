@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { configure, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, test, vi } from 'vitest';
 import { App } from '../src/App';
@@ -12,6 +12,8 @@ const reviewNames = [
   'reviewed-issue.json',
   'reviewed-issue.md',
 ];
+
+configure({ asyncUtilTimeout: 10000 });
 
 // Only model transport is injected. UI fetches real HTTP responses, and Git/tests,
 // persistence, artifact integrity, approvals and revisions use production services.

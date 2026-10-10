@@ -83,9 +83,67 @@ facts, grade answers, or establish exam readiness. Questions and answers are
 separate artifacts for convenient study, not an access-control boundary.
 
 Live AI quality remains deferred. Browser visual, responsive, and screen-reader
-acceptance remains unverified. Interactive answering/scoring, research, citations,
+acceptance remains unverified. Interactive answering/scoring, independent research,
 calendar scheduling and standalone Electron packaging remain deferred.
 Optional bounded study planning is described below.
+
+## Supplied-source research and summarization (v2)
+
+In normal Mission Control, select Student and **Add source** to paste labelled
+study material separately from the original goal. Nonempty sources select Student
+planning contract v2. Goal-only creation, saved v1 plans, legacy missions and the
+fixed offline demo retain their existing contracts. The demo rejects custom sources.
+Normal mode never falls back to scripted content, and live calls remain disabled
+until explicitly authorized. Source-backed model quality has not been live-tested.
+
+POST to `/workflows/student` with `goal`, optional `study_settings`, and
+`sources: [{id, label, body}]`. Source bounds match Creator: at most eight sources,
+160-character labels, 12,000-character bodies and 48,000 total body characters.
+IDs must be unique; text must be nonblank. Whitespace and Unicode are preserved.
+Only source IDs/labels go to the planner; exact bodies go to execution steps.
+No websites or files are opened, and memory is not implicitly added to prompts.
+
+The registered sourced planner selects capabilities and objectives for 4–8 tasks:
+one Research/Study, one Summarizer, one to four notes/refinements, one quiz, and
+Focus only when explicit settings are supplied. All tasks lead to one human review.
+Creation and run preflight validate role membership, tool-free READ permissions,
+executor schemas, graph bounds/dependencies, typed bindings, original goal,
+constraints, exact sources and settings. No canonical agent/task IDs are required.
+
+Research records a summary, limitations and 1–8 evidence items with source IDs,
+literal quotes and interpretations. Quotes must occur in the supplied source.
+The structured study summary has 1–8 topics, each with nonempty, unique one-based
+references into research evidence. Notes reference summary topics; each quiz
+question has its own references into topics covered by the bound notes. Unknown,
+duplicate, out-of-range or missing references block execution. These checks establish
+traceability; they do not prove that interpretations, notes or answers are correct.
+
+Intermediate tasks own frozen `sources.json`, `research.json`, `study-summary.json`,
+`notes.md` and `notes-provenance.json` as applicable. Before downstream execution
+and acceptance, retained outputs must still match their scoped immutable artifacts.
+The final quiz or Focus attempt adds these five files to its existing result bundle:
+
+- `reviewed-sources.json`
+- `reviewed-research.json`
+- `reviewed-study-summary.json`
+- `reviewed-notes-provenance.json`
+- `reviewed-quiz-provenance.json`
+
+There are eight final review files without Focus, eleven with Focus. The notes
+provenance lists one-based summary topic indices; quiz provenance has one such list
+per question. Follow summary topics to research evidence and then literal source
+quotes. The final attempt owns every reviewed copy. Approval binds the original
+goal and plan definitions through a digest as well as attempt, outputs, artifact
+references, exact content and hashes. Changed evidence or stale decisions are
+rejected. Deny/retry reruns only the final task, preserving completed upstream
+work and earlier attempts. Restart preserves plans, evidence and approvals.
+
+Automated acceptance exercises actual React against an isolated real HTTP backend
+with injected model transport: source-form validation, capability assignments,
+research/summary/notes/quiz with and without Focus, artifact inspection, explicit
+approval and restart before/after acceptance. Invalid research blocks downstream
+tasks and produces no approval. This validates the offline integration contract,
+not genuine AI quality, native browser rendering or exam readiness.
 
 ## Optional bounded study planning
 

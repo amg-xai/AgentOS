@@ -1,5 +1,35 @@
 # Backend validation
 
+## Student source-evidence workflow
+
+Validated on Windows on 2026-10-10 with live calls disabled:
+
+- Student v2 source contracts, registered capability selection and preflight cover
+  valid plans, alternate agent IDs, unsafe permissions/tools, unsupported schemas,
+  missing executors, invalid bindings/dependencies, mandatory review and rejection
+  of generic/saved missions attempting to bypass the v2 boundary.
+- Injected execution checks exact quotes, summary evidence references, notes and
+  individual-question provenance. Invalid output blocks dependents and approvals.
+  Changed goals/workspaces/sources/outputs or damaged intermediate/review artifacts
+  cannot be accepted. Denial/retry preserves upstream work and stale decisions fail.
+- Three new actual React-to-real-HTTP journeys cover sourced quiz, optional Focus
+  and invalid research. They validate form feedback and assignments, inspect summary
+  artifacts, verify eight/eleven review files, explicitly approve through UI controls,
+  and restart the backend before/after acceptance without model reruns. The existing
+  three Developer v3 continuous journeys remain green; source files remain unchanged.
+- Full checks: 653 backend tests passed, three Windows link cases skipped;
+  119 frontend unit tests, six continuous journeys and 26 desktop tests passed,
+  including owned backend process integration. Ruff lint/format, strict Windows/Linux
+  Mypy over 58 source files, TypeScript/Vite build, frontend formatting, desktop
+  syntax/format and the offline backend wheel build passed.
+
+The continuous suite runs separately on Linux and Windows in CI. Student v1,
+Developer v1/v2/v3, Creator v1/v2 and fixed demos retain regression coverage.
+Neutral source contracts preserve Creator imports and schemas. The original
+PLAN.md and full three-role scope remain unchanged. This establishes provenance
+and offline integration contracts, not factual correctness, live AI quality,
+independent research or native/browser visual acceptance.
+
 ## Continuous Developer v3 UI/API validation
 
 Validated on Windows on 2026-10-10:

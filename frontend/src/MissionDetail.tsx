@@ -279,12 +279,15 @@ export function MissionDetail({
           <h3>The result is ready for your review</h3>
           <p>
             {student
-              ? mission.tasks.some(
-                  (task) =>
-                    task.agent_id === 'student_focus' || 'questions' in (task.input_bindings ?? {}),
-                )
-                ? 'Inspect the study plan, original time settings, quiz, answer key, and reviewed notes. Durations are suggested effort. Acceptance records content review; it does not verify correctness, completed study, or exam readiness.'
-                : 'Inspect the quiz, answer key, and reviewed notes. Acceptance records review of this material; it does not verify correctness or exam readiness.'
+              ? mission.planning?.contract_version === 2
+                ? 'Inspect the supplied sources, research, study summary, notes and quiz provenance, quiz and answer key, and study plan when requested. References establish provenance, not factual correctness or exam readiness. Acceptance reviews this exact bundle.'
+                : mission.tasks.some(
+                      (task) =>
+                        task.agent_id === 'student_focus' ||
+                        'questions' in (task.input_bindings ?? {}),
+                    )
+                  ? 'Inspect the study plan, original time settings, quiz, answer key, and reviewed notes. Durations are suggested effort. Acceptance records content review; it does not verify correctness, completed study, or exam readiness.'
+                  : 'Inspect the quiz, answer key, and reviewed notes. Acceptance records review of this material; it does not verify correctness or exam readiness.'
               : creator
                 ? mission.planning?.contract_version === 2
                   ? 'Inspect the graphic thumbnail, frozen layout receipt, reviewed script and outline, plus supplied-source evidence when present. Acceptance records content review; it does not establish test success, factual correctness or publication.'

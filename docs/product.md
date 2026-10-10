@@ -18,7 +18,7 @@ multiple-choice quiz with a separate answer key, including a fixed offline demo.
 Optional Student planning adds suggested study blocks within explicit time and
 session budgets, with the full notes/quiz/plan bundle reviewed together. Study review
 records acceptance without asserting correctness or exam readiness. Interactive
-answering, scoring, research, and calendar scheduling remain deferred.
+answering, scoring, independent research, and calendar scheduling remain deferred.
 Do not advertise placeholder packages as functional.
 
 Normal Developer missions now use [bounded goal-driven planning](developer-planning.md).
@@ -38,8 +38,10 @@ Normal Student creation also uses bounded goal-driven decomposition and register
 notes/quiz/Focus selection. Inspect the plan, run content work explicitly and review
 the exact final bundle. Notes refinements preserve the original goal/constraints;
 only explicit time settings request Focus. This completes planning/selection for
-the supplied-material subset; research/summarizer capabilities and live quality
-acceptance remain unfinished original-roadmap work.
+the supplied-material subset. Sourced Student v2 adds registered Research/Study
+and Summarizer stages, frozen source/research/summary evidence and per-question
+provenance before exact quiz/Focus review. Independent source acquisition and
+live quality acceptance remain unfinished original-roadmap work.
 
 Mission Control includes workspace-wide totals, recent waiting reviews/artifacts,
 and recorded task activity for installed agents. These are read-only projections

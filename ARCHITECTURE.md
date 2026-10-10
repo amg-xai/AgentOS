@@ -39,6 +39,17 @@ Student adds a fixed notes/quiz fixture in the same isolated demo history.
 
 ## Boundaries
 
+Student missions with explicitly pasted sources use planning contract v2 on the
+same engine. A separate registered planner selects tool-free Research/Study,
+Summarizer, sourced notes/quiz and optional Focus capabilities. Neutral source
+contracts are shared with Creator, preserving its compatibility exports and schemas.
+Exact quotes and summary/question references establish provenance; frozen upstream
+artifacts are verified before dispatch and acceptance. Final review owns exact
+source/research/summary and provenance copies and binds the goal/plan digest.
+Goal-only Student v1 and demos retain their existing contracts. See
+[Student workflow](docs/student-workflow.md). No external research or live calls
+are introduced.
+
 - **Core domain:** agent and tool definitions, role manifests, missions, tasks,
   dependency validation, states, permissions, approvals, and events.
 - **Application services:** orchestration, context retrieval, artifact handling,
