@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="650" viewBox="0 0 1600 650" role="img" aria-labelledby="title desc">
+<title id="title">AgentOS — goals into accountable work</title>
+<desc id="desc">Original concept illustration: a mission engine connects Developer, Creator and Student agents with tools, memory and human review. This is not an application screenshot.</desc>
+<defs>
+<linearGradient id="bg" x2="1" y2="1"><stop stop-color="#06101d"/><stop offset=".55" stop-color="#09172b"/><stop offset="1" stop-color="#050c18"/></linearGradient>
+<radialGradient id="light"><stop stop-color="#13d5da" stop-opacity=".18"/><stop offset="1" stop-color="#13d5da" stop-opacity="0"/></radialGradient>
+<linearGradient id="accent"><stop stop-color="#63e6ff"/><stop offset="1" stop-color="#48e5bc"/></linearGradient>
+<linearGradient id="glass" x2="0" y2="1"><stop stop-color="#162c42"/><stop offset="1" stop-color="#0a1628"/></linearGradient>
+<linearGradient id="edge"><stop stop-color="#6ceaff" stop-opacity=".9"/><stop offset="1" stop-color="#9886fa" stop-opacity=".25"/></linearGradient>
+<pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0v40" fill="none" stroke="#668eb0" stroke-opacity=".075"/></pattern>
+<filter id="glow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="7"/></filter>
+</defs>
+<rect width="1600" height="650" rx="28" fill="url(#bg)"/>
+<rect width="1600" height="650" rx="28" fill="url(#grid)"/>
+<ellipse cx="1140" cy="335" rx="560" ry="440" fill="url(#light)"/>
+<path d="M80 84h1440" stroke="#284157" stroke-opacity=".65"/>
+<g font-family="Segoe UI,Arial,sans-serif">
+<g transform="translate(82 28)" fill="none" stroke="url(#accent)" stroke-width="3"><path d="m22 0 22 13v26L22 52 0 39V13zM0 13l22 13 22-13M22 26v26"/></g>
+<text x="146" y="61" fill="#91b1c7" font-size="22" letter-spacing="4">LOCAL MULTI-AGENT WORKSPACE</text>
+<text x="1520" y="61" text-anchor="end" fill="#90a8c4" font-size="20" letter-spacing="3">MISSION / MEMORY / REVIEW</text>
+<text x="82" y="267" fill="url(#accent)" font-size="132" font-weight="700" letter-spacing="-7">AgentOS</text>
+<text x="86" y="359" fill="#eef6ff" font-size="48" font-weight="600">Goals into</text>
+<text x="86" y="420" fill="#eef6ff" font-size="48" font-weight="600">accountable work.</text>
+<path d="M86 462h76" stroke="url(#accent)" stroke-width="3"/>
+<text x="86" y="505" fill="#9bb5ce" font-size="26">One engine. Three profiles. Human control.</text>
+<g font-size="19" font-weight="600" letter-spacing="2">
+<rect x="84" y="549" width="194" height="43" rx="21" fill="#102538" stroke="#49dcf3" stroke-opacity=".35"/><text x="181" y="577" text-anchor="middle" fill="#70e4f6">DEVELOPER</text>
+<rect x="294" y="549" width="165" height="43" rx="21" fill="#1a2039" stroke="#a69bff" stroke-opacity=".35"/><text x="377" y="577" text-anchor="middle" fill="#bbb2ff">CREATOR</text>
+<rect x="475" y="549" width="165" height="43" rx="21" fill="#102a2d" stroke="#42e6bc" stroke-opacity=".35"/><text x="558" y="577" text-anchor="middle" fill="#76eccd">STUDENT</text>
+</g>
+<g fill="none" stroke-width="1.5">
+<ellipse cx="1140" cy="338" rx="334" ry="218" stroke="#42d6de" stroke-opacity=".16"/>
+<ellipse cx="1140" cy="338" rx="274" ry="159" stroke="#887ee4" stroke-opacity=".16"/>
+<path d="M1090 185v54m185 53h94m-94 107h94m-279 42v57m-182-159h-69" stroke="url(#edge)" stroke-width="2"/>
+<path d="M1090 185v54m185 53h94m-279 149v57" stroke="#35e1e4" stroke-width="8" opacity=".26" filter="url(#glow)"/>
+</g>
+<g transform="translate(892 236)">
+<rect x="-6" y="-6" width="394" height="216" rx="24" fill="#30d8e4" opacity=".09" filter="url(#glow)"/>
+<rect width="382" height="204" rx="20" fill="url(#glass)" stroke="url(#edge)"/>
+<path d="M0 62h382" stroke="#2b465e"/>
+<circle cx="27" cy="31" r="5" fill="#4ae6c0"/>
+<text x="45" y="39" fill="#e5f7ff" font-size="23" letter-spacing="3">MISSION ENGINE</text>
+<path d="M65 110h252" stroke="#478fa9" stroke-width="2"/>
+<g fill="#0b2031" stroke="#55dcea" stroke-width="2"><circle cx="65" cy="110" r="15"/><circle cx="148" cy="110" r="15"/><circle cx="233" cy="110" r="15"/><circle cx="317" cy="110" r="15"/></g>
+<g fill="#60e4e3"><circle cx="65" cy="110" r="4"/><circle cx="148" cy="110" r="4"/><circle cx="233" cy="110" r="4"/><circle cx="317" cy="110" r="4"/></g>
+<text x="191" y="167" fill="#a3c3d8" text-anchor="middle" font-size="18" letter-spacing="3">PLAN · EXECUTE · REVIEW</text>
+</g>
+</g>
+<g transform="translate(1042 92)" fill="none" stroke="#49dcf3" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect width="96" height="96" rx="24" fill="#0b1728" stroke-opacity=".55"/><path d="M35 30 20 48l15 18m26-36 15 18-15 18M54 25 42 71"/></g>
+<g transform="translate(1369 244)" fill="none" stroke="#a69bff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect width="96" height="96" rx="24" fill="#0b1728" stroke-opacity=".55"/><path d="m48 18 8 22 22 8-22 8-8 22-8-22-22-8 22-8zM73 20v14m-7-7h14"/></g>
+<g transform="translate(1042 497)" fill="none" stroke="#42e6bc" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect width="96" height="96" rx="24" fill="#0b1728" stroke-opacity=".55"/><path d="M48 30c-9-7-20-9-30-7v44c10-2 21 0 30 7 9-7 20-9 30-7V23c-10-2-21 0-30 7zm0 0v44M27 38l12 3m-12 9 12 3m18-12 12-3m-12 15 12-3"/></g>
+<g transform="translate(1371 374)" fill="none" stroke="#7edaca" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect width="92" height="92" rx="24" fill="#0b1728" stroke-opacity=".5"/><path d="m46 20 23 9v19c0 16-23 26-23 26S23 64 23 48V29zM34 47l8 8 17-19"/></g>
+<g fill="#67e6e8"><circle cx="817" cy="339" r="5"/><circle cx="891" cy="339" r="4"/><circle cx="1276" cy="292" r="4"/></g>
+<rect x="1" y="1" width="1598" height="648" rx="27" fill="none" stroke="#35516f" stroke-opacity=".5"/>
+</svg>
