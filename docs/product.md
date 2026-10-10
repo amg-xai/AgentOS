@@ -58,6 +58,11 @@ downloads, and the owning mission without changing approvals or execution.
 Acceptance for the vertical slice: a user creates a mission, sees tasks run,
 inspects tool activity and test output, reviews a diff, approves an explicit
 action, resumes execution, and can inspect the completed mission after restart.
+Continuous React-to-real-backend tests now exercise the bounded Developer,
+Creator and Student journeys using injected model transport. Creator includes
+source research, script and actual graphic-thumbnail artifacts with human review.
+This verifies offline integration and persistence; live AI quality and native
+visual acceptance remain outstanding.
 
 Exclude production deployment, billing, multi-tenancy, broad marketplaces,
 custom models, and extensive integrations from the initial scope.

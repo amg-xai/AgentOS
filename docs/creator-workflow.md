@@ -74,8 +74,13 @@ mission run, retry, cancellation, artifact, memory, and approval endpoints.
 context notice, and optional fixed demo goal. The legacy `workflow_ready` field
 continues to describe Developer; clients should use per-role readiness for Creator.
 
-Live provider acceptance remains deferred. Automated provider tests use mocked
-transport, and the offline scenario verifies interaction rather than AI quality.
+Live provider acceptance remains deferred. Automated provider tests use injected
+transport. Continuous acceptance renders the actual React UI against an isolated
+real HTTP backend for sourced script and graphic-thumbnail journeys. It verifies
+exact review files, real PNG decoding and frozen receipt hashes, denial/retry,
+explicit acceptance and process restart, plus invalid research/layout rejection.
+See [continuous validation](getting-started.md#continuous-offline-integration-validation).
+The fixed offline scenario verifies interaction rather than AI quality.
 Browser visual, responsive, and screen-reader acceptance remains unverified.
 Web/file research, photographic/image-service generation, rendered video, and
 publishing remain deferred. Opted-in local graphic thumbnails are described below.

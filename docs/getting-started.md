@@ -239,6 +239,11 @@ explicit Focus settings. Student journeys validate source-form feedback, inspect
 summary artifacts, verify eight/eleven exact review files, reject invalid research,
 approve through UI controls and restart before/after acceptance without model reruns.
 It creates temporary test storage and does not read your provider configuration.
+Creator journeys cover sourced v1 scripts and v2 graphic thumbnails with outline
+refinement. They verify four/six exact review files, decode real PNG bytes, inspect
+the UI preview/download controls, deny and retry only the thumbnail, reject stale
+decisions and invalid research/layouts, and restart before/after explicit acceptance.
+All three roles use the same HTTP backend, orchestrator, artifacts and approvals.
 The existing normal-mode API enum `live` identifies normal execution, not proof
 that this test contacts a live model. Live authorization remains disabled.
 

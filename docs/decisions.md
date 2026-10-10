@@ -1,5 +1,17 @@
 # Decisions and baseline
 
+## 2026-10-10: Continuous Creator acceptance coverage
+
+Close the remaining three-role UI/API acceptance gap using the existing React/JSDOM
+runner, isolated real HTTP test server and injected model transport. Exercise sourced
+Creator v1 script and v2 graphic journeys with outline refinement, real local PNGs,
+exact review evidence, explicit denial/thumbnail-only retry/acceptance and process
+restart. Invalid research and graphic layouts must fail without review approval.
+Reuse existing registries, planning, renderer, storage and approval services; add no
+production mode, provider change or workflow engine. Normal execution never receives
+the test transport. Live AI quality, independent research, broader imagery and native
+visual acceptance remain separately unfinished. Original PLAN.md remains authoritative.
+
 ## 2026-10-10: Continuous normal Developer acceptance coverage
 
 Close the UI/API integration gap with the existing React/JSDOM runner connected

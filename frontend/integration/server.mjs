@@ -1,9 +1,27 @@
 import { transferableAbortController } from 'node:util';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 export const createRoot = () => mkdtemp(join(tmpdir(), 'agentos-ui-acceptance-'));
+export const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
+export const inspectPng = (bytes) => {
+  const python = process.env.AGENTOS_TEST_PYTHON;
+  if (!python) throw new Error('Set AGENTOS_TEST_PYTHON for actual PNG decoding.');
+  const decoded = spawnSync(
+    python,
+    [
+      '-c',
+      'import sys,json; from io import BytesIO; from PIL import Image; im=Image.open(BytesIO(sys.stdin.buffer.read())); im.load(); print(json.dumps([im.size,im.mode,len(im.getcolors(1000000))]))',
+    ],
+    { input: bytes, timeout: 10000 },
+  );
+  if (decoded.error || decoded.status !== 0)
+    throw new Error('PNG decoding failed', { cause: decoded.error });
+  const [size, mode, colors] = JSON.parse(decoded.stdout.toString());
+  return { size, mode, colors };
+};
 export const removeRoot = (root) => {
   const target = resolve(root);
   if (

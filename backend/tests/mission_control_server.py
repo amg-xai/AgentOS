@@ -11,7 +11,10 @@ from pathlib import Path
 
 import httpx
 import uvicorn
+from creator_plan_fixture import creator_plan
 from student_source_fixture import output_for
+from test_creator import OUTLINE, SCRIPT
+from test_creator_thumbnail import LAYOUT, thumbnail_plan
 from test_developer import ISSUE, issue_plan
 
 from agentos.adapters.provider import ModelSettings, ResponsesExecutor
@@ -34,7 +37,39 @@ def main():
         agent = body["text"]["format"]["name"]
         with observations.open("a", encoding="utf-8") as stream:
             stream.write(json.dumps({"agent": agent, "inputs": inputs}) + "\n")
-        if agent.startswith("student_"):
+        if agent.startswith("creator_"):
+            if agent in {"creator_planner", "creator_thumbnail_planner"}:
+                outputs = (
+                    thumbnail_plan(sources=bool(inputs["sources"]), refine=True)
+                    if agent == "creator_thumbnail_planner"
+                    else creator_plan(sources=bool(inputs["sources"]), refine=True)
+                )
+            elif agent == "creator_research":
+                outputs = {
+                    "summary": "Local mission history",
+                    "evidence": [
+                        {
+                            "source_id": inputs["sources"][0]["id"],
+                            "quote": "Invented quotation"
+                            if "invalid evidence" in inputs["goal"]
+                            else "AgentOS keeps local history.",
+                            "interpretation": "A supplied statement, not independently verified",
+                        }
+                    ],
+                    "limitations": ["No independent fact checking"],
+                }
+            elif agent == "creator_outline":
+                outputs = {"outline": OUTLINE + (" Refined." if "context" in inputs else "")}
+            elif agent == "creator_script":
+                outputs = {"script": SCRIPT}
+            elif agent == "creator_thumbnail":
+                outputs = {
+                    **LAYOUT,
+                    **({"headline": "日本語"} if "invalid layout" in inputs["goal"] else {}),
+                }
+            else:
+                raise AssertionError(f"Unexpected Creator capability: {agent}")
+        elif agent.startswith("student_"):
             outputs = output_for(agent, inputs)
             if "invalid evidence" in inputs["goal"] and agent == "student_research":
                 outputs["research"]["evidence"][0]["quote"] = "Invented quotation"

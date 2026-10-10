@@ -1,5 +1,29 @@
 # Backend validation
 
+## Continuous Creator UI/API validation
+
+Validated on Windows on 2026-10-10 with live authorization disabled:
+
+- Four actual React/JSDOM-to-real-HTTP journeys cover sourced Creator v1 script,
+  v2 graphic thumbnail with outline refinement and denial/retry, invalid research,
+  and invalid layout. Only model transport is injected; registered planning,
+  execution, rendering, persistence and approval services are real.
+- Tests check original goal/constraints/sources, assignments and dependency bindings,
+  four/six exact review files, independently decoded 1280x720 RGB PNG bytes and
+  frozen receipt hashes. Thumbnail retry preserves upstream work and prior evidence;
+  stale/replayed decisions fail. UI acceptance and process restart preserve results,
+  approvals, activity and artifacts without model reruns or source modifications.
+- Full checks: 653 backend tests passed, three Windows link cases skipped;
+  119 frontend unit tests, ten continuous journeys across all three roles, and
+  26 desktop tests passed. Ruff lint/format, strict Windows/Linux Mypy, frontend
+  TypeScript/Vite build and formatting, desktop syntax/format, and offline backend
+  wheel build passed. Existing Linux/Windows continuous-missions CI includes Creator.
+
+No production behavior, role contract, provider configuration, dependency or storage
+schema changes were needed. Original PLAN.md remains unchanged. These checks prove
+offline integration and local artifact integrity, not live AI quality, factual
+correctness, publication or native/browser visual rendering/accessibility.
+
 ## Student source-evidence workflow
 
 Validated on Windows on 2026-10-10 with live calls disabled:

@@ -2,8 +2,9 @@
 
 Status: registry, role loading, persisted missions, explicit orchestration,
 result approvals, artifacts, scoped local tools, a configurable model adapter,
-workspace memory, and React Mission Control are implemented. Live provider and
-browser acceptance verification remain outstanding.
+workspace memory, and React Mission Control are implemented. All three roles have
+continuous React-to-real-HTTP acceptance with injected model transport. Live provider
+and native/browser rendering acceptance verification remain outstanding.
 
 Opted-in normal Creator missions use Creator planning version 2: script preparation
 followed by a registered graphic-layout agent and local PNG rendering. The same
