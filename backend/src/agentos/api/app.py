@@ -217,6 +217,15 @@ def create_app(
             try:
                 student_kind(candidate, legacy=True)
             except StateConflict:
+                if demo_root is None:
+                    from agentos.adapters.student_sources import StudentSourceExecutor
+                    from agentos.services.student_sources import source_kind
+
+                    try:
+                        source_kind(candidate)
+                    except StateConflict:
+                        continue
+                    bindings.register_agent(candidate.id, StudentSourceExecutor(generator))
                 continue
             bindings.register_agent(candidate.id, student)
 
@@ -322,15 +331,49 @@ def create_app(
                 except (KeyError, StateConflict, MissionValidationError):
                     reason = "Required workflow agents or executors are unavailable."
             source_research_ready = False
+            source_focus_ready = False
             thumbnail_ready = False
             study_planning_ready = False
             if role_id == "student" and not reason and demo_root is None:
                 study_planning_ready = "student_focus" in student_kinds
+                from agentos.services.student_sources import source_kind, source_planner
+
+                try:
+                    source_planner(catalog)
+                    supported = set()
+                    for candidate in catalog.role_agents("student"):
+                        try:
+                            sourced_kind = source_kind(candidate)
+                            bindings.resolve(candidate)
+                        except StateConflict:
+                            continue
+                        supported.add(sourced_kind)
+                    source_research_ready = {
+                        "student_research",
+                        "student_summary",
+                        "student_source_notes",
+                        "student_source_quiz",
+                    } <= supported
+                    source_focus_ready = (
+                        source_research_ready and "student_source_focus" in supported
+                    )
+                except StateConflict:
+                    pass
                 steps = "Goal-driven plan → notes → quiz → optional study plan → human review"
                 notice = (
                     "Your study brief, extracted constraints, task objectives, registered catalog, "
                     "bound notes/quiz and explicit optional time settings are sent to the model."
                 )
+                if source_research_ready:
+                    steps = (
+                        "Goal-driven plan → optional source research and summary → notes → quiz "
+                        "→ optional study plan → human review"
+                    )
+                    notice = (
+                        "Your goal and supplied study sources are sent to the model. Research "
+                        "quotes and summary/quiz references are checked for provenance; "
+                        "content correctness needs human review. No websites or files are opened."
+                    )
             if role_id == "creator" and not reason and demo_root is None:
                 source_research_ready = "creator_research" in creator_kinds
                 try:
@@ -339,7 +382,7 @@ def create_app(
                 except StateConflict:
                     pass
                 steps = "Goal-driven plan → outlines → script → human review"
-            if source_research_ready:
+            if source_research_ready and role_id == "creator":
                 steps = (
                     "Goal-driven plan → optional source research → outlines → script → human review"
                 )
@@ -368,7 +411,11 @@ def create_app(
                         else {}
                     ),
                     **(
-                        {"study_planning_ready": study_planning_ready}
+                        {
+                            "study_planning_ready": study_planning_ready,
+                            "source_research_ready": source_research_ready,
+                            "source_focus_ready": source_focus_ready,
+                        }
                         if role_id == "student"
                         else {}
                     ),
@@ -552,13 +599,21 @@ def create_app(
         require_operator(role)
         require_workflow("student")
         if demo_root is not None and (
-            request.goal != STUDENT_DEMO_GOAL or request.study_settings is not None
+            request.goal != STUDENT_DEMO_GOAL
+            or request.study_settings is not None
+            or request.sources
         ):
             raise StateConflict("Offline Student demo supports only its fixed study brief")
         if demo_root is not None:
             return missions.create(student_mission(request.goal))
         if student_planner is None:
             raise StateConflict("Student planning is unavailable")
+        if request.sources:
+            status = next(w for w in workflow_status() if w["role_id"] == "student")
+            if not status["source_research_ready"] or (
+                request.study_settings is not None and not status["source_focus_ready"]
+            ):
+                raise StateConflict("Student sourced research or Focus is unavailable")
         if (
             request.study_settings is not None
             and not next(w for w in workflow_status() if w["role_id"] == "student")[
@@ -602,6 +657,9 @@ def create_app(
         require_operator(role)
         if demo_root is not None:
             raise StateConflict("Use a fixed workflow scenario in offline demo mode")
+        from agentos.services.student_sources import require_source_plan
+
+        require_source_plan(request, catalog)
         if any(
             t.agent_id in {a.id for a in catalog.agents() if a.capability == "developer_issue"}
             for t in request.tasks

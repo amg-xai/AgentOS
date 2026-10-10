@@ -125,6 +125,10 @@ def student_review_evidence(
     mission: Mission, task: TaskSpec, outputs: dict[str, Any]
 ) -> dict[str, str]:
     """Resolve the exact planned result bundle through current dependency bindings."""
+    from agentos.services.student_sources import is_sourced, source_review_evidence
+
+    if is_sourced(mission):
+        return source_review_evidence(mission, task, outputs)
     try:
         evidence = mission.planning
         if mission.role_id != "student" or not evidence or evidence.contract_version != 1:

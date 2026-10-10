@@ -63,3 +63,12 @@ Focus remains optional and creates study-effort content, not mission decompositi
 Optional objective/constraints/settings/context fields preserve saved legacy input
 contracts. Strict schema/permission/binding checks guard compilation and execution;
 final review resolves exact evidence by task bindings. See [Student planning](student-workflow.md).
+
+Sourced Student v2 separately registers `student_source_plan`, `student_research`,
+`student_summary`, `student_source_notes`, `student_source_quiz` and
+`student_source_focus`. The planner has no tools/permissions; content agents are
+tool-free READ. Version-specific schemas preserve legacy Student execution.
+Research verifies source IDs and literal quotes; summaries, notes and individual
+questions retain bounded references to upstream evidence. Exact frozen artifacts
+and owned review copies are checked before dispatch and acceptance. Creator source
+types remain available from their existing imports through shared domain exports.

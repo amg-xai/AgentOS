@@ -7,7 +7,7 @@ from typing import Annotated
 from pydantic import Field, field_validator
 
 from agentos.domain.base import Definition, Text
-from agentos.domain.creator import SourceText, validate_sources
+from agentos.domain.sources import SourceText, validate_sources
 from agentos.domain.student import StudySettings
 
 
@@ -88,3 +88,6 @@ class CreatorMissionCreate(Definition):
 class StudentMissionCreate(Definition):
     goal: Annotated[str, Field(min_length=1, max_length=8000)]
     study_settings: StudySettings | None = None
+    sources: tuple[SourceText, ...] = Field(default=(), max_length=8)
+
+    _sources = field_validator("sources")(validate_sources)

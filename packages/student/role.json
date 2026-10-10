@@ -9,7 +9,13 @@
       "student_notes",
       "student_quiz",
       "student_focus",
-      "student_planner"
+      "student_planner",
+      "student_research",
+      "student_source_focus",
+      "student_source_notes",
+      "student_source_quiz",
+      "student_summary",
+      "student_source_planner"
     ],
     "tools": []
   }

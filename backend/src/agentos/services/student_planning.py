@@ -65,7 +65,9 @@ def compile_student_plan(
     registry: AgentRegistry,
     executors: ExecutorRegistry,
 ) -> MissionCreate:
-    plan = StudentPlan.model_validate(plan.model_dump())
+    from agentos.domain.student_sources import StudentSourcePlan
+
+    plan = (StudentSourcePlan if request.sources else StudentPlan).model_validate(plan.model_dump())
     settings = request.study_settings.model_dump(mode="json") if request.study_settings else None
     tasks = []
     for task in plan.tasks:
@@ -87,6 +89,11 @@ def compile_student_plan(
                     "objective": task.objective,
                     "constraints": list(plan.constraints),
                     "study_settings": settings,
+                    **(
+                        {"sources": [s.model_dump(mode="json") for s in request.sources]}
+                        if request.sources
+                        else {}
+                    ),
                 },
                 review_required=task.review_required,
             )
@@ -96,7 +103,7 @@ def compile_student_plan(
         role_id="student",
         tasks=tuple(tasks),
         planning=PlanningEvidence(
-            contract_version=1,
+            contract_version=2 if request.sources else 1,
             planner_id=planner_id,
             rationale=plan.rationale,
             constraints=plan.constraints,
@@ -113,6 +120,11 @@ def validate_student_plan(
     executors: ExecutorRegistry,
 ) -> None:
     try:
+        from agentos.services.student_sources import is_sourced, validate_source_plan
+
+        if is_sourced(mission):
+            validate_source_plan(mission, registry, executors)
+            return
         _validate_student_plan(mission, registry, executors)
     except StateConflict:
         raise

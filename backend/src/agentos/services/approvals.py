@@ -61,6 +61,9 @@ class ApprovalService:
             and mission.role_id == "student"
             and (mission.planning is not None or has_study_plan(mission))
         ):
+            from agentos.services.student_sources import validate_source_artifacts
+
+            validate_source_artifacts(mission, self.repository, self.artifacts)
             expected_study = (
                 student_review_evidence(mission, task, task.outputs or {})
                 if mission.planning

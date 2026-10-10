@@ -82,6 +82,9 @@ class Orchestrator:
             and mission.planning.contract_version == 2
         ):
             raise StateConflict("Graphic thumbnails require an explicit validated Creator plan")
+        from agentos.services.student_sources import require_source_plan
+
+        require_source_plan(mission, self.registry)
         if mission.planning is not None:
             if mission.role_id == "creator":
                 from agentos.services.creator_planning import validate_creator_plan
@@ -150,6 +153,9 @@ class Orchestrator:
                     from agentos.services.planning import validate_issue_artifacts
 
                     validate_issue_artifacts(mission, self.repository, self.artifacts)
+                    from agentos.services.student_sources import validate_source_artifacts
+
+                    validate_source_artifacts(mission, self.repository, self.artifacts)
                     inputs = copy.deepcopy(task.inputs)
                     for key, binding in task.input_bindings.items():
                         dependency = next(t for t in mission.tasks if t.id == binding.task_id)
@@ -228,10 +234,29 @@ class Orchestrator:
         if mission.role_id == "student" and mission.planning is not None:
             from agentos.services.student import student_review_evidence
             from agentos.services.student_planning import student_kind, validate_student_output
-
-            validate_student_output(
-                student_kind(self.registry.agent(task.agent_id)), result.outputs
+            from agentos.services.student_sources import (
+                is_sourced,
+                resolved_inputs,
+                source_artifacts,
+                source_kind,
             )
+
+            if is_sourced(mission):
+                expected = source_artifacts(
+                    source_kind(self.registry.agent(task.agent_id)),
+                    resolved_inputs(mission, task),
+                    result.outputs,
+                )
+                if (
+                    result.artifact_refs
+                    or len(result.artifacts) != len(expected)
+                    or {a.name: a.content for a in result.artifacts} != expected
+                ):
+                    raise StateConflict("Sourced Student must own its exact evidence artifacts")
+            else:
+                validate_student_output(
+                    student_kind(self.registry.agent(task.agent_id)), result.outputs
+                )
             if task.review_required:
                 expected_study = student_review_evidence(mission, task, result.outputs)
                 if (
