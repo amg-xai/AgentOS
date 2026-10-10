@@ -102,15 +102,45 @@ function mockFetch(overrides: Record<string, unknown> = {}) {
     }),
   );
 }
-test('shows missing configuration honestly and disables mission creation', async () => {
+test('shows missing configuration honestly and allows goal entry without promising execution', async () => {
   mockFetch();
   render(<App />);
   expect(
     await screen.findByText('Finish local setup to run your first mission'),
   ).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: '+ New mission' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: '+ New mission' })).toBeEnabled();
   expect(screen.getByText('Your next idea starts here')).toBeInTheDocument();
   expect(screen.getByText('Not configured')).toBeInTheDocument();
+});
+
+test('normal prime goal submission reports model unavailable and preserves entered text', async () => {
+  mockFetch();
+  const original = globalThis.fetch;
+  const requests: unknown[] = [];
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (path: string, options?: RequestInit) => {
+      if (path === '/workflows/developer') {
+        requests.push(JSON.parse(options?.body as string));
+        return new Response(JSON.stringify({ detail: 'Model execution is unavailable.' }), {
+          status: 409,
+        });
+      }
+      return original(path, options);
+    }),
+  );
+  const user = userEvent.setup();
+  render(<App />);
+  await user.click(await screen.findByRole('button', { name: '+ New mission' }));
+  const field = screen.getByLabelText('What should your agents investigate and fix?');
+  const goal =
+    'Implement a prime-number checker for negative numbers, 0, 1, 2, primes and composites.';
+  await user.type(field, goal);
+  await user.click(screen.getByRole('button', { name: 'Create mission' }));
+  await screen.findByText('Model execution is unavailable.');
+  expect(requests).toEqual([{ goal }]);
+  expect(field).toHaveValue(goal);
+  expect(screen.queryByText('OFFLINE DEMO MISSION')).not.toBeInTheDocument();
 });
 test('creates a mission and exposes API failures', async () => {
   mockFetch({

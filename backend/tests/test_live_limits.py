@@ -40,6 +40,21 @@ def executor(monkeypatch, handler):
     return ResponsesExecutor(settings(monkeypatch))
 
 
+def test_local_authorization_cannot_consume_cloud_ledger(
+    monkeypatch, live_policy_environment, registry
+):
+    config = settings(monkeypatch).model_copy(
+        update={"allow_live_calls": False, "allow_local_calls": True}
+    )
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **_: pytest.fail("No cloud requests"))
+    before = count(config.live_ledger_path)
+    with pytest.raises(ProviderFailure, match="Cloud model calls are disabled"):
+        asyncio.run(
+            ResponsesExecutor(config).generate(registry.agent("investigation"), {"goal": "x"})
+        )
+    assert count(config.live_ledger_path) == before
+
+
 def run(model, registry):
     return asyncio.run(model.generate(registry.agent("investigation"), {"goal": "fix"}))
 

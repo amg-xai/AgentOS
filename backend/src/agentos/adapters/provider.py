@@ -38,9 +38,13 @@ class ModelSettings(Definition):
     timeout_seconds: float = Field(default=120, gt=0, le=300)
     max_output_tokens: int = Field(default=8192, ge=256, le=32768)
     allow_live_calls: bool = Field(default=False, strict=True)
+    allow_local_calls: bool = Field(default=False, strict=True)
     live_policy_path: Path | None = None
     live_ledger_path: Path | None = None
     local_context_tokens: int = Field(default=8192, strict=True, ge=4096, le=32768)
+
+    def generation_authorized(self) -> bool:
+        return self.allow_local_calls if self.provider == "ollama" else self.allow_live_calls
 
     @model_validator(mode="after")
     def local_only(self) -> Self:
@@ -123,6 +127,7 @@ class ModelSettings(Definition):
             base_url=endpoint,
             api_key=SecretStr(key) if key else None,
             allow_live_calls=os.environ.get("AGENTOS_ALLOW_LIVE_MODELS") == "1",
+            allow_local_calls=os.environ.get("AGENTOS_ALLOW_LOCAL_MODELS") == "1",
             live_policy_path=Path(policy_path) if policy_path else None,
             live_ledger_path=Path(ledger_path) if ledger_path else None,
         )
@@ -146,8 +151,11 @@ class ResponsesExecutor:
         return AgentResult(outputs=await self.generate(agent, inputs))
 
     async def generate(self, agent: AgentDefinition, inputs: dict[str, Any]) -> dict[str, Any]:
-        if self._transport is None and not self.settings.allow_live_calls:
-            raise ProviderFailure("Live model calls are disabled pending explicit authorization")
+        if self._transport is None and not self.settings.generation_authorized():
+            scope = "Local" if self.settings.provider == "ollama" else "Cloud"
+            raise ProviderFailure(
+                f"{scope} model calls are disabled pending explicit authorization"
+            )
         try:
             return await asyncio.wait_for(
                 self._generate(agent, inputs), timeout=self.settings.timeout_seconds

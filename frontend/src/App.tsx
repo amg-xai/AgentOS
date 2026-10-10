@@ -189,7 +189,7 @@ export function App() {
     setError('');
     const generation = modeGeneration.current;
     try {
-      if (!workflow?.ready || !canWrite) return;
+      if (!workflow || (demo && !workflow.ready) || !canWrite) return;
       const sourceContext =
         (roleId === 'creator' || roleId === 'student') &&
         !demo &&
@@ -339,7 +339,7 @@ export function App() {
             {page === 'missions' && (
               <button
                 className="primary"
-                disabled={!workflow?.ready || !canWrite}
+                disabled={!workflow || (demo && !workflow.ready) || !canWrite || busy}
                 onClick={() => {
                   modeGeneration.current++;
                   setSources([]);
@@ -379,7 +379,7 @@ export function App() {
                       !status.workspace_configured &&
                       'Select source files and test commands in workspace configuration. '}
                     {!status.provider_configured &&
-                      'Configure a model and provider credentials in the server environment. '}
+                      'Model execution is unavailable. Local Ollama needs no API key and requires separate authorization. '}
                     Restart the service after changing configuration.
                   </p>
                   <a
@@ -516,7 +516,13 @@ export function App() {
                         )}
                         <button
                           className="primary"
-                          disabled={busy || !goal.trim() || !workflow?.ready || !canWrite}
+                          disabled={
+                            busy ||
+                            !goal.trim() ||
+                            !workflow ||
+                            (demo && !workflow.ready) ||
+                            !canWrite
+                          }
                         >
                           {busy ? 'Creating…' : demo ? 'Create demo mission' : 'Create mission'}
                         </button>

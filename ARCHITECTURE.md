@@ -6,6 +6,13 @@ loopback-only preflight requires cloud disabled and an installed local completio
 model; it cannot download or fall back to scripted output. Generation remains
 disabled under the ₹0 budget. See [local inference preparation](docs/local-inference.md).
 
+Local generation has a separate, disabled-by-default authorization gate; it cannot
+authorize Responses/cloud dispatch. Existing endpoint/model-bound policies and
+durable request reservations remain mandatory. Optional protected verification
+paths/hashes freeze with new Developer execution recipes; patch tools reject their
+modification and verification integrity failures cannot pass. Older recipes retain
+explicit legacy/unprotected semantics. This does not provide an OS sandbox.
+
 Status: registry, role loading, persisted missions, explicit orchestration,
 result approvals, artifacts, scoped local tools, a configurable model adapter,
 workspace memory, and React Mission Control are implemented. All three roles have

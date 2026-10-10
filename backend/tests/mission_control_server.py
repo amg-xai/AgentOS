@@ -123,13 +123,14 @@ def main():
         files=("calculator.py", "test_calculator.py", "README.md"),
         test_commands=(("python", "-m", "unittest", "discover", "-v"),),
         test_timeout_seconds=30,
+        protected_files=("test_calculator.py",),
     )
     app = create_app(
         package_root=project / "packages",
         db_path=root / "missions.sqlite3",
         artifact_root=root / "artifacts",
         workspace=workspace,
-        model=model,
+        model=None if (root / "model-disabled").exists() else model,
         embedder=InjectedEmbeddings(),
     )
     with socket.socket() as listener:

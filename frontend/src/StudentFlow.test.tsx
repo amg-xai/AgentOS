@@ -175,7 +175,8 @@ test.each([false, true])(
     const packageSelect = screen.getByLabelText('Role package');
     await user.selectOptions(packageSelect, 'developer');
     expect(screen.getByLabelText('Workflow')).toHaveValue('developer');
-    expect(screen.getByRole('button', { name: '+ New mission' })).toBeDisabled();
+    if (demo) expect(screen.getByRole('button', { name: '+ New mission' })).toBeDisabled();
+    else expect(screen.getByRole('button', { name: '+ New mission' })).toBeEnabled();
     await user.selectOptions(packageSelect, 'student');
     expect(screen.getByLabelText('Workflow')).toHaveValue('student');
     const input = screen.getByLabelText('What material should your study notes and quiz cover?');

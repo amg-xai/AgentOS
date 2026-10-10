@@ -47,6 +47,178 @@ def tools(tmp_path, workspace):
     )
 
 
+def protected_settings(workspace):
+    return WorkspaceSettings(
+        **(workspace.model_dump() | {"protected_files": ("test_calculator.py",)})
+    )
+
+
+@pytest.mark.parametrize("version", [2, 3])
+def test_protected_verification_freezes_across_restart_retry_and_configuration(
+    tmp_path, workspace, version
+):
+    protected = protected_settings(workspace)
+    baseline = asyncio.run(
+        tools(tmp_path, protected).test({"operation": "baseline"}, context(version))
+    )
+    assert baseline["baseline_passed"] is False
+    assert "Verification: protected" in baseline["baseline_report"]
+    changed = WorkspaceSettings(
+        **(
+            workspace.model_dump()
+            | {"files": ("calculator.py",), "test_commands": (("python", "missing.py"),)}
+        )
+    )
+    (workspace.repository / "test_calculator.py").unlink()
+    for _ in range(2):
+        result = asyncio.run(tools(tmp_path, changed).test({"diff": PATCH}, context(version)))
+        assert result["passed"] is True
+        assert "Verification: protected" in result["report"]
+        assert "Protected file SHA-256: test_calculator.py:" in result["report"]
+        assert "missing.py" not in result["report"]
+
+
+@pytest.mark.parametrize("version", [2, 3])
+def test_patch_cannot_touch_frozen_protected_test(tmp_path, workspace, version):
+    instance = tools(tmp_path, protected_settings(workspace))
+    instance._read(context(version))
+    bad = (
+        "diff --git a/test_calculator.py b/test_calculator.py\n"
+        "--- a/test_calculator.py\n+++ b/test_calculator.py\n"
+        "@@ -1 +1 @@\n-import unittest\n+raise SystemExit(0)\n"
+    )
+    with patch(
+        "agentos.adapters.local_tools.subprocess.run", side_effect=AssertionError("No Git dispatch")
+    ):
+        with pytest.raises(StateConflict, match="protected verification"):
+            instance._prepare(bad, context(version))
+
+
+@pytest.mark.parametrize("damage", ["missing", "changed", "symlink"])
+def test_missing_or_modified_verification_prevents_test_execution(tmp_path, workspace, damage):
+    instance = tools(tmp_path, protected_settings(workspace))
+    scratch = instance._scratch
+
+    def damaged(files):
+        directory = scratch(files)
+        target = directory / "test_calculator.py"
+        if damage == "changed":
+            target.write_text("raise SystemExit(0)\n")
+        else:
+            target.unlink()
+            if damage == "symlink":
+                try:
+                    target.symlink_to(workspace.repository / "test_calculator.py")
+                except OSError:
+                    pytest.skip("Symlink creation unavailable")
+        return directory
+
+    instance._scratch = damaged
+    with patch(
+        "agentos.adapters.local_tools.subprocess.Popen", side_effect=AssertionError("No tests")
+    ):
+        result = asyncio.run(instance.test({"operation": "baseline"}, context(3)))
+    assert result["baseline_passed"] is False
+    assert "integrity failed before execution" in result["baseline_report"]
+
+
+def test_verification_modified_during_zero_exit_command_cannot_pass(tmp_path, workspace):
+    runner = workspace.repository / "runner.py"
+    runner.write_text(
+        "from pathlib import Path\nPath('test_calculator.py').write_text('weakened')\n"
+    )
+    config = WorkspaceSettings(
+        **(
+            workspace.model_dump()
+            | {
+                "files": workspace.files + ("runner.py",),
+                "protected_files": ("test_calculator.py",),
+                "test_commands": (("python", "runner.py"),),
+            }
+        )
+    )
+    result = asyncio.run(tools(tmp_path, config).test({"diff": PATCH}, context(3)))
+    assert result["passed"] is False
+    assert "Exit code: 0" in result["report"]
+    assert "integrity failed after execution" in result["report"]
+
+
+def test_old_recipe_never_acquires_protection_from_new_settings(tmp_path, workspace):
+    instance = tools(tmp_path, workspace)
+    instance._read(context(3))
+    result = asyncio.run(
+        tools(tmp_path, protected_settings(workspace)).test({"diff": PATCH}, context(3))
+    )
+    assert result["passed"] is True
+    assert "Verification: legacy/unprotected" in result["report"]
+
+
+def test_integrity_failure_cannot_be_human_accepted(tmp_path, workspace):
+    (workspace.repository / "runner.py").write_text(
+        "from pathlib import Path\nPath('test_calculator.py').unlink()\n"
+    )
+    config = WorkspaceSettings(
+        **(
+            workspace.model_dump()
+            | {
+                "files": workspace.files + ("runner.py",),
+                "protected_files": ("test_calculator.py",),
+                "test_commands": (("python", "runner.py"),),
+            }
+        )
+    )
+    with TestClient(configured_app(tmp_path, config)) as client:
+        mission = client.post("/workflows/developer", json={"goal": "Fix addition"}).json()
+        base = f"/missions/{mission['id']}"
+        result = client.post(base + "/run", json={"expected_version": mission["version"]}).json()
+        assert result["status"] == "WAITING_APPROVAL"
+        assert result["tasks"][-1]["outputs"]["passed"] is False
+        approval = client.get(base + "/approvals").json()[0]
+        response = client.post(
+            f"/approvals/{approval['id']}/decision",
+            json={
+                "expected_version": result["version"],
+                "payload_digest": approval["payload_digest"],
+                "decision": "approve",
+            },
+        )
+        assert response.status_code == 409
+        assert "Tests must explicitly pass" in response.json()["detail"]
+
+
+@pytest.mark.parametrize("evidence", [None, {}, {"test_calculator.py": "bad"}])
+def test_malformed_frozen_verification_is_rejected(tmp_path, workspace, evidence):
+    import hashlib
+
+    store = WorkspaceStore(tmp_path / "workspace.sqlite3")
+    store.execution_snapshot("frozen", protected_settings(workspace))
+    with sqlite3.connect(store.path) as conn:
+        payload, source_digest = conn.execute(
+            "SELECT payload, source_digest FROM recipes"
+        ).fetchone()
+        recipe = json.loads(payload)
+        recipe["verification"] = evidence
+        payload = json.dumps(recipe)
+        digest = hashlib.sha256((source_digest + payload).encode()).hexdigest()
+        conn.execute("UPDATE recipes SET payload=?, digest=?", (payload, digest))
+    with pytest.raises(StateConflict, match="verification evidence"):
+        store.execution_snapshot("frozen", workspace)
+
+
+@pytest.mark.parametrize(
+    "paths",
+    [
+        ("../tests.py",),
+        ("missing.py",),
+        ("test_calculator.py", "TEST_calculator.py"),
+        ("calculator.py", "test_calculator.py"),
+    ],
+)
+def test_protected_verification_scope_is_explicit_and_valid(workspace, paths):
+    with pytest.raises(ValidationError):
+        WorkspaceSettings(**(workspace.model_dump() | {"protected_files": paths}))
+
+
 @pytest.mark.parametrize(
     "case",
     [

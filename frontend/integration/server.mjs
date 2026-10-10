@@ -1,10 +1,11 @@
 import { transferableAbortController } from 'node:util';
 import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 export const createRoot = () => mkdtemp(join(tmpdir(), 'agentos-ui-acceptance-'));
+export const disableModel = (root) => writeFile(join(root, 'model-disabled'), 'No model dispatch');
 export const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 export const inspectPng = (bytes) => {
   const python = process.env.AGENTOS_TEST_PYTHON;

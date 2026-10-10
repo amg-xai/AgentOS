@@ -1,4 +1,5 @@
 export function createRoot(): Promise<string>;
+export function disableModel(root: string): Promise<void>;
 export function sha256(bytes: Uint8Array): string;
 export function inspectPng(bytes: Uint8Array): { size: number[]; mode: string; colors: number };
 export function removeRoot(root: string): Promise<void>;

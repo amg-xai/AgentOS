@@ -57,6 +57,20 @@ def checks(report):
     return {check.id: check for check in report.checks}
 
 
+def test_local_readiness_uses_only_local_authorization(configured_root, monkeypatch):
+    monkeypatch.setenv("AGENTOS_MODEL_PROVIDER", "ollama")
+    monkeypatch.setenv("AGENTOS_MODEL", "test:local")
+    monkeypatch.setenv("AGENTOS_MODEL_URL", "http://127.0.0.1:11434")
+    monkeypatch.setenv("AGENTOS_ALLOW_LOCAL_MODELS", "0")
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **_: pytest.fail("Read-only diagnostics"))
+    assert not checks(diagnose(configured_root))["provider"].passed
+    monkeypatch.setenv("AGENTOS_ALLOW_LOCAL_MODELS", "1")
+    monkeypatch.setenv("AGENTOS_ALLOW_LIVE_MODELS", "0")
+    report = diagnose(configured_root)
+    assert checks(report)["provider"].passed
+    assert not checks(report)["live_limits"].passed
+
+
 def test_configured_provider_remains_blocked_without_live_authorization(
     configured_root, monkeypatch
 ):

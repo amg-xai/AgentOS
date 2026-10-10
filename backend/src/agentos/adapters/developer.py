@@ -147,6 +147,8 @@ class DeveloperExecutor:
                 note.model_dump(mode="json") for note in self.memory.notes(inputs["goal"], limit=5)
             ]
         else:
+            if source["protected_files"]:
+                enriched["protected_verification_files"] = sorted(source["protected_files"])
             if context.patch_revision is not None:
                 enriched["patch_revision"] = context.patch_revision.model_dump(mode="json")
             enriched["patch_rules"] = (

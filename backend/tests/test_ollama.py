@@ -300,7 +300,7 @@ def test_production_branch_inherits_ledger_output_bytes_and_no_refunds(
     )
     model = create_model_executor(
         local_settings(
-            allow_live_calls=True, live_policy_path=policy_path, live_ledger_path=ledger_path
+            allow_local_calls=True, live_policy_path=policy_path, live_ledger_path=ledger_path
         )
     )
     with pytest.raises(ProviderFailure, match="request limit"):
@@ -325,3 +325,62 @@ def test_disabled_local_api_cannot_silently_become_demo(tmp_path, monkeypatch):
         assert status["execution_mode"] != "demo"
         assert {w["role_id"] for w in status["workflows"]} == {"developer", "creator", "student"}
         assert not any(w["ready"] for w in status["workflows"])
+
+
+@pytest.mark.parametrize(
+    "provider,cloud,local,authorized",
+    [
+        ("ollama", False, False, False),
+        ("ollama", True, False, False),
+        ("ollama", False, True, True),
+        ("responses", False, True, False),
+        ("responses", True, False, True),
+    ],
+)
+def test_local_and_cloud_authorization_are_independent(
+    registry, monkeypatch, provider, cloud, local, authorized
+):
+    config = (
+        local_settings if provider == "ollama" else lambda **kw: ModelSettings(model="test", **kw)
+    )(allow_live_calls=cloud, allow_local_calls=local)
+    assert config.generation_authorized() is authorized
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **_: pytest.fail("Unauthorized HTTP"))
+    if not authorized:
+        with pytest.raises(ProviderFailure, match="disabled"):
+            asyncio.run(
+                create_model_executor(config).generate(
+                    registry.agent("investigation"), {"goal": "prime numbers"}
+                )
+            )
+
+
+def test_local_environment_flag_does_not_authorize_cloud(monkeypatch):
+    monkeypatch.setenv("AGENTOS_MODEL", MODEL)
+    monkeypatch.setenv("AGENTOS_MODEL_PROVIDER", "ollama")
+    monkeypatch.setenv("AGENTOS_MODEL_URL", ENDPOINT)
+    monkeypatch.setenv("AGENTOS_ALLOW_LOCAL_MODELS", "1")
+    monkeypatch.setenv("AGENTOS_ALLOW_LIVE_MODELS", "0")
+    assert ModelSettings.from_environment().generation_authorized()
+    monkeypatch.setenv("AGENTOS_MODEL_PROVIDER", "responses")
+    assert not ModelSettings.from_environment().generation_authorized()
+
+
+@pytest.mark.parametrize("role", ["developer", "creator", "student"])
+def test_prime_goal_unavailable_has_no_placeholder_or_model_request(tmp_path, monkeypatch, role):
+    monkeypatch.setenv("AGENTOS_MODEL_PROVIDER", "ollama")
+    monkeypatch.setenv("AGENTOS_MODEL", MODEL)
+    monkeypatch.setenv("AGENTOS_MODEL_URL", ENDPOINT)
+    monkeypatch.setenv("AGENTOS_ALLOW_LOCAL_MODELS", "0")
+    monkeypatch.setenv("AGENTOS_ALLOW_LIVE_MODELS", "1")
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **_: pytest.fail("No model HTTP"))
+    with TestClient(create_app(db_path=tmp_path / "missions.db")) as client:
+        response = client.post(
+            f"/workflows/{role}",
+            json={
+                "goal": "Implement a prime-number checker; verify negative numbers, "
+                "0, 1, 2, primes and composites."
+            },
+        )
+        assert response.status_code == 409
+        assert "Model execution is unavailable" in response.json()["detail"]
+        assert client.get("/missions").json() == []

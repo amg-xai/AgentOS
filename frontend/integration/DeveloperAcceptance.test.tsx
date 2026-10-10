@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { expect, test, vi } from 'vitest';
 import { App } from '../src/App';
 import type { Activity, Approval, Artifact, Mission, Status } from '../src/api';
-import { createRoot, readSources, removeRoot, startServer } from './server.mjs';
+import { createRoot, disableModel, readSources, removeRoot, startServer } from './server.mjs';
 
 const reviewNames = [
   'tested.diff',
@@ -12,6 +12,35 @@ const reviewNames = [
   'reviewed-issue.json',
   'reviewed-issue.md',
 ];
+
+test('normal prime goal reports unavailable on the real backend without creating a mission', async () => {
+  const root = await createRoot();
+  let server: Awaited<ReturnType<typeof startServer>> | undefined;
+  let view: ReturnType<typeof render> | undefined;
+  try {
+    await disableModel(root);
+    server = await startServer(root);
+    vi.stubGlobal('fetch', server.fetch);
+    view = render(<App />);
+    const user = userEvent.setup();
+    await screen.findByText('Finish local setup to run your first mission');
+    await user.click(screen.getByRole('button', { name: '+ New mission' }));
+    const goal =
+      'Implement a prime-number checker; verify negative numbers, 0, 1, 2, primes and composites.';
+    const input = screen.getByLabelText('What should your agents investigate and fix?');
+    await user.type(input, goal);
+    await user.click(screen.getByRole('button', { name: 'Create mission' }));
+    await screen.findByRole('alert');
+    expect(screen.getByRole('alert')).toHaveTextContent('Model execution is unavailable');
+    expect(input).toHaveValue(goal);
+    expect(await (await server.request('/missions')).json()).toEqual([]);
+    expect(screen.queryByText('OFFLINE DEMO MISSION')).not.toBeInTheDocument();
+  } finally {
+    view?.unmount();
+    await server?.stop();
+    await removeRoot(root);
+  }
+});
 
 configure({ asyncUtilTimeout: 10000 });
 
@@ -170,6 +199,11 @@ test.each(['passing', 'two revisions', 'exhaust revisions'] as const)(
         mission.tasks.find((task) => task.id === 'baseline')?.outputs?.baseline_report,
       );
       expect(content.get('test-report.txt')).toContain('Ran 3 tests');
+      expect(content.get('test-report.txt')).toContain('Verification: protected');
+      expect(content.get('test-report.txt')).toContain(
+        'Protected file SHA-256: test_calculator.py:',
+      );
+      expect(content.get('reviewed-baseline-report.txt')).toContain('Verification: protected');
       expect(content.get('tested.diff')).toContain(
         scenario === 'exhaust revisions' ? '+    return left * right' : '+    return left + right',
       );

@@ -52,7 +52,7 @@ the patch in a new application-owned scratch directory. Each test attempt gets a
 fresh directory from the snapshot. Source files are never targeted by patch
 application. Scratch directories are retained locally for inspection.
 
-New normal Developer missions use planning version 2. On first execution access,
+Version-2/3 planned Developer missions freeze evidence on first execution access:
 freeze selected source and the execution recipe in one workspace-store transaction.
 The additive version-2 workspace database migration preserves version-1 notes and
 snapshots. Recipes store selected file scope, configured argv with resolved absolute
@@ -70,6 +70,19 @@ test success. Only explicit passing patched tests can be accepted.
 
 Frozen recipes do not freeze runner binaries, dependencies, host state, or test
 intent. Inspect the diff and reports before accepting a result.
+
+For new version-2/3 executions, optional `protected_files` selects existing
+verification files already present in `files`, leaving at least one editable
+source file. Their normalized UTF-8 snapshot hashes and paths freeze in the same
+recipe transaction. Git patch checking rejects edits to those paths, and the
+runner checks their integrity before and after each configured command. Missing,
+redirected or changed evidence prevents a passing result, even with exit code 0.
+Baseline and patched reports identify protection and hashes; the existing exact
+review bundle binds those reports. Restart, retry and configuration changes use
+the frozen protection. Existing recipes without this metadata remain explicitly
+`legacy/unprotected`; adding a setting never upgrades old evidence. Protection
+does not establish test coverage or provide OS isolation. Trusted verification
+must be authored independently of generated patches and actually cover the goal.
 
 **Scratch execution is not an OS security sandbox.** Tests and generated code run
 with the server user's privileges and can access the host. Select trusted projects

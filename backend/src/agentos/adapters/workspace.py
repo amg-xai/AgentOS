@@ -44,6 +44,23 @@ def read_workspace_source(settings: WorkspaceSettings) -> dict[str, str]:
     return files
 
 
+def verification_evidence(files: dict[str, str], recipe: dict[str, Any]) -> dict[str, str]:
+    """Absent metadata is legacy, never inferred from changed workspace settings."""
+    if "verification" not in recipe:
+        return {}
+    evidence = recipe["verification"]
+    if not isinstance(evidence, dict) or not evidence:
+        raise StateConflict("Frozen verification evidence is malformed")
+    for path, digest in evidence.items():
+        if (
+            path not in files
+            or not isinstance(digest, str)
+            or hashlib.sha256(files[path].encode()).hexdigest() != digest
+        ):
+            raise StateConflict("Frozen verification evidence does not match source")
+    return evidence
+
+
 class WorkspaceStore:
     def __init__(self, path: Path) -> None:
         self.path = path
@@ -96,9 +113,10 @@ class WorkspaceStore:
                 ):
                     raise StateConflict("Frozen execution integrity check failed")
                 files = json.loads(source_payload)
-                recipe = json.loads(payload)
+                recipe: dict[str, Any] = json.loads(payload)
                 if recipe["files"] != sorted(files):
                     raise StateConflict("Frozen execution scope mismatch")
+                verification_evidence(files, recipe)
                 return files, recipe, source_digest, digest
             files = read_workspace_source(settings)
             commands = []
@@ -116,6 +134,11 @@ class WorkspaceStore:
                 "commands": commands,
                 "timeout_seconds": settings.test_timeout_seconds,
             }
+            if settings.protected_files:
+                recipe["verification"] = {
+                    path: hashlib.sha256(files[path].encode()).hexdigest()
+                    for path in sorted(settings.protected_files)
+                }
             source_payload = json.dumps(files, ensure_ascii=False, sort_keys=True)
             source_digest = hashlib.sha256(source_payload.encode()).hexdigest()
             payload = json.dumps(recipe, ensure_ascii=False, sort_keys=True)

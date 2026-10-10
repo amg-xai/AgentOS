@@ -16,7 +16,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from agentos.adapters.workspace import WorkspaceStore
+from agentos.adapters.workspace import WorkspaceStore, verification_evidence
 from agentos.domain.agents import ExecutionContext
 from agentos.domain.missions import StateConflict
 from agentos.domain.workspace import WorkspaceSettings, scoped_path
@@ -46,12 +46,13 @@ class LocalWorkspaceTools:
     def _read(self, context: ExecutionContext) -> dict[str, Any]:
         if context.workspace_id != "local":
             raise StateConflict("Unknown workspace")
-        files = (
-            self.store.execution_snapshot(context.mission_id, self.settings)[0]
-            if context.planning_version in (2, 3)
-            else self.store.snapshot(context.mission_id, self.settings)
-        )
-        return {"files": files}
+        protected = {}
+        if context.planning_version in (2, 3):
+            files, recipe, _, _ = self.store.execution_snapshot(context.mission_id, self.settings)
+            protected = verification_evidence(files, recipe)
+        else:
+            files = self.store.snapshot(context.mission_id, self.settings)
+        return {"files": files, "protected_files": protected}
 
     def _scratch(self, files: dict[str, str]) -> Path:
         directory = Path(tempfile.mkdtemp(prefix="run-", dir=self.scratch))
@@ -64,11 +65,14 @@ class LocalWorkspaceTools:
     def _prepare(self, diff: str, context: ExecutionContext) -> Path:
         if len(diff.encode()) > 200_000 or not diff.strip():
             raise StateConflict("Patch must be nonempty and at most 200 KB")
-        files = self._read(context)["files"]
+        source = self._read(context)
+        files, protected = source["files"], source["protected_files"]
         # Restrict patches to existing, explicitly selected text files. No renames,
         # mode changes, binary patches, new paths, symlinks, or submodules.
         paths = []
         for line in diff.splitlines():
+            if line in {f"diff --git a/{path} b/{path}" for path in protected}:
+                raise StateConflict("Patch touches protected verification files")
             if line.startswith("diff --git ") and line not in {
                 f"diff --git a/{path} b/{path}" for path in files
             }:
@@ -80,6 +84,8 @@ class LocalWorkspaceTools:
                 path = scoped_path(label[2:])
                 if path not in files:
                     raise StateConflict("Patch targets a file outside the selected scope")
+                if path in protected:
+                    raise StateConflict("Patch touches protected verification files")
                 paths.append(path)
             if re.match(
                 r"(?:old mode|new mode|new file mode|deleted file mode|rename |copy |GIT binary)",
@@ -106,7 +112,27 @@ class LocalWorkspaceTools:
             )
             if result.returncode:
                 raise StateConflict("Patch did not apply cleanly to the immutable source snapshot")
+        if not self._verification_intact(directory, protected):
+            raise StateConflict("Patch changed protected verification evidence")
         return directory
+
+    @staticmethod
+    def _verification_intact(directory: Path, evidence: dict[str, str]) -> bool:
+        for relative, digest in evidence.items():
+            path = directory / relative
+            try:
+                current = path
+                while current != directory:
+                    if current.is_symlink() or current.resolve() != current.absolute():
+                        return False
+                    current = current.parent
+                if not path.is_file() or path.stat().st_size > 100_000:
+                    return False
+                if hashlib.sha256(path.read_bytes()).hexdigest() != digest:
+                    return False
+            except OSError:
+                return False
+        return True
 
     async def patch(self, inputs: dict[str, Any], context: ExecutionContext) -> dict[str, Any]:
         directory = await asyncio.to_thread(self._prepare, inputs["diff"], context)
@@ -124,11 +150,13 @@ class LocalWorkspaceTools:
         commands = self.settings.test_commands
         timeout = self.settings.test_timeout_seconds
         digests = []
+        protected: dict[str, str] = {}
         if context.planning_version in (2, 3):
             files, recipe, source_digest, recipe_digest = self.store.execution_snapshot(
                 context.mission_id, self.settings
             )
             commands, timeout = recipe["commands"], recipe["timeout_seconds"]
+            protected = verification_evidence(files, recipe)
             digests = [f"Source SHA-256: {source_digest}", f"Recipe SHA-256: {recipe_digest}"]
         directory = self._prepare(diff, context) if diff is not None else self._scratch(files)
         reports = [
@@ -137,10 +165,16 @@ class LocalWorkspaceTools:
             else "Baseline: immutable source without a patch",
             f"Scratch directory: {directory.name}",
             *digests,
+            "Verification: protected" if protected else "Verification: legacy/unprotected",
+            *(f"Protected file SHA-256: {path}: {digest}" for path, digest in protected.items()),
         ]
         passed = True
         outcomes = []
         for configured in commands:
+            if not self._verification_intact(directory, protected):
+                passed = False
+                reports.append("Verification integrity failed before execution; command not run.")
+                break
             command = list(configured)
             if command[0] in {"python", "python3"}:
                 command[0] = sys.executable
@@ -195,6 +229,10 @@ class LocalWorkspaceTools:
                 f"Timed out: {timed_out}\nOutput limit exceeded: {output_limited}\n{text[:32000]}\n"
                 + ("[Output truncated]" if len(text) > 32000 else "")
             )
+            if not self._verification_intact(directory, protected):
+                passed = False
+                reports.append("Verification integrity failed after execution; result cannot pass.")
+                break
         if diff is None:
             return {
                 "baseline_passed": passed,

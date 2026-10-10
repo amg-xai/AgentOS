@@ -148,13 +148,13 @@ def diagnose(root: Path, *, demo: bool = False, workflow: str = "developer") -> 
         provider = None if demo else ModelSettings.from_environment()
         record(
             "provider",
-            demo or (provider is not None and provider.allow_live_calls),
+            demo or (provider is not None and provider.generation_authorized()),
             "Offline demo uses scripted responses; provider configuration is ignored."
             if demo
-            else "Provider configuration and live-call authorization are present; "
+            else "Provider configuration and provider-specific authorization are present; "
             "connectivity is unverified."
-            if provider and provider.allow_live_calls
-            else "Live calls are disabled; explicit authorization is required."
+            if provider and provider.generation_authorized()
+            else "Selected provider execution is disabled; separate authorization is required."
             if provider
             else "Set AGENTOS_MODEL and the provider key when required in .env.",
         )

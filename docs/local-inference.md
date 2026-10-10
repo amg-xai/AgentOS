@@ -22,7 +22,13 @@ key. Inherited API-key environment variables are not read for Ollama. Unknown
 selections and invalid local settings fail rather than choosing another provider.
 No active configuration is changed by adding the adapter.
 
-The existing disabled-generation gate applies before any provider HTTP request,
+Local authorization uses `AGENTOS_ALLOW_LOCAL_MODELS`, default `0`; the old
+`AGENTOS_ALLOW_LIVE_MODELS` flag alone cannot authorize Ollama. Cloud/Responses
+dispatch continues to use only the latter flag, which remains `0` for this project.
+Enabling the local flag cannot authorize cloud calls. This is code support only:
+neither flag, credentials, policy nor active provider configuration was changed.
+
+The provider-specific disabled-generation gate applies before any provider HTTP request,
 including availability checks. Production dispatch additionally requires the
 existing unexpired endpoint/model-bound policy and durable request ledger; these
 are never provisioned automatically. Reservations precede HTTP requests, count
@@ -105,8 +111,8 @@ demonstrates real AI execution.
 
 This addresses PLAN.md's abstract model/provider configuration and prepares the
 real-workflow requirement without changing its definition of done. Real-model
-acceptance remains incomplete. The next shared-core roadmap gap is Phase 6
-semantic memory retrieval (current retrieval is bounded keyword matching), not
-another provider setup feature. Broader role capabilities, optional integrations
+acceptance remains incomplete. Shared semantic search is implemented separately, with real embedding relevance
+still unvalidated. The immediate product delivery goal is a genuine Developer
+mission in an existing project, using independent protected verification. Broader role capabilities, optional integrations
 and native desktop acceptance retain their original scope and approval rules;
 no paid service is required to continue their local implementation.

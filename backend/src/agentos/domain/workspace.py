@@ -2,9 +2,9 @@
 
 from datetime import datetime
 from pathlib import Path, PurePosixPath
-from typing import Annotated
+from typing import Annotated, Self
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 
 from agentos.domain.base import Definition, Text
 from agentos.domain.sources import SourceText, validate_sources
@@ -31,14 +31,23 @@ class WorkspaceSettings(Definition):
     files: Annotated[tuple[str, ...], Field(min_length=1, max_length=64)]
     test_commands: Annotated[tuple[tuple[str, ...], ...], Field(min_length=1, max_length=8)]
     test_timeout_seconds: int = Field(default=30, ge=1, le=120)
+    protected_files: Annotated[tuple[str, ...], Field(max_length=64)] = ()
 
-    @field_validator("files")
+    @field_validator("files", "protected_files")
     @classmethod
     def safe_files(cls, values: tuple[str, ...]) -> tuple[str, ...]:
         paths = tuple(scoped_path(value) for value in values)
         if len(set(path.casefold() for path in paths)) != len(paths):
             raise ValueError("Workspace file paths must be unique")
         return paths
+
+    @model_validator(mode="after")
+    def verification_scope(self) -> Self:
+        if not set(self.protected_files) <= set(self.files):
+            raise ValueError("Protected verification files must be selected existing files")
+        if self.protected_files and set(self.protected_files) == set(self.files):
+            raise ValueError("Protected verification needs at least one editable source file")
+        return self
 
     @field_validator("test_commands")
     @classmethod

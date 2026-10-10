@@ -655,3 +655,31 @@ No credentials, provider configuration or generation flags were changed; no
 model downloads or actual inference occurred. Local semantic relevance and
 real-model execution remain unvalidated. See [semantic memory](semantic-memory.md)
 for disabled-by-default configuration, bounds and current limitations.
+
+## Developer local-acceptance prerequisites
+
+Validated without actual inference on Windows on 2026-10-11: 806 backend tests
+pass with four platform skips. The 198 focused provider, ledger, diagnostic,
+Developer and baseline cases pass with two platform skips. Local/cloud
+authorization isolation, zero unauthorized HTTP/reservations, protected patch
+rejection, malformed/missing/modified verification evidence, zero-exit integrity
+failures, human-acceptance rejection, restart/retry/configuration persistence and
+explicit legacy/unprotected recipes are covered.
+
+All 125 frontend unit tests, 12 continuous React-to-real-backend journeys and
+26 desktop tests pass. The normal prime-goal journey submits through real HTTP,
+receives explicit model-unavailable feedback and creates no mission. Developer
+review/revision journeys use protected test snapshots and retain five exact
+review artifacts. Creator, Student and memory journeys remain compatible. Model
+transports are injected; no real NLP or inference quality is demonstrated.
+
+TypeScript/Vite build, Ruff lint/format, Windows/Linux mypy, frontend/desktop
+format and syntax, documentation references and an offline backend wheel build
+pass. Initial helper declaration and readiness-expectation failures were fixed;
+loaded frontend timeout failures passed on rerun without changing deadlines.
+
+No active configuration, credentials, source samples or original PLAN.md changed.
+Generation remains disabled; no runner/model installation, download or inference
+request occurred. Protected verification does not establish adequate coverage or
+OS isolation. The first genuine Developer mission still requires separately
+approved local setup/execution and an existing project with independent tests.

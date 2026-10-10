@@ -4,6 +4,13 @@ Mission Control shows totals across the entire selected local history, independe
 of the current 100-mission list page. Normal and explicit offline demo histories
 remain separate. The same overview is available in the web and desktop clients.
 
+In normal mode, Operator/Admin can enter a goal and choose an installed profile
+even when model execution is unavailable. Submission uses the existing workflow
+endpoint; permission and readiness checks run before planning. Unavailable-model
+errors retain the goal and create no mission. A successful creation still requires
+an explicit Run action. This does not enable inference or switch modes/providers.
+The explicit scripted demo remains limited to its fixed scenarios.
+
 ## Find work across history
 
 - **Total missions** includes every persisted mission. State counts follow the

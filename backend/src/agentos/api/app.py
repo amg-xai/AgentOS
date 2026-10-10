@@ -188,7 +188,7 @@ def create_app(
             workspace_error = "Developer workspace configuration is invalid; check workspace.json."
     settings = ModelSettings.from_environment() if demo_root is None and model is None else None
     if settings is not None:
-        if settings.allow_live_calls and settings.live_limits_ready():
+        if settings.generation_authorized() and settings.live_limits_ready():
             model = create_model_executor(settings)
     bindings = executors or ExecutorRegistry()
     generator: StructuredGenerator | None = DemoGenerator() if demo_root is not None else model
@@ -284,8 +284,9 @@ def create_app(
             reason = ""
             if generator is None:
                 reason = (
-                    "Configure a model provider, explicitly authorize live model calls, "
-                    "and provision the acceptance request policy and ledger."
+                    "Model execution is unavailable. A selected model needs separate "
+                    "authorization and a valid request policy/ledger. Local Ollama needs no "
+                    "API key; enabling local execution does not authorize cloud calls."
                 )
             elif role_id == "developer" and workspace is None:
                 reason = workspace_error or "Configure selected source files and test commands."
