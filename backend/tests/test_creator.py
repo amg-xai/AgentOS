@@ -262,7 +262,10 @@ def test_creator_demo_is_labelled_persisted_and_never_uses_a_model(demo_root):
     assert before == originals(demo_root)
 
 
-def test_creator_diagnostics_do_not_require_developer_configuration(demo_root, monkeypatch):
+def test_creator_diagnostics_do_not_require_developer_configuration(
+    demo_root, monkeypatch, live_policy_environment
+):
+    monkeypatch.setenv("AGENTOS_MODEL", "configured-model")
     monkeypatch.setenv("AGENTOS_ALLOW_LIVE_MODELS", "1")
     monkeypatch.setenv("AGENTOS_PACKAGES", str(demo_root / "packages"))
     monkeypatch.setenv("AGENTOS_MODEL_URL", "https://api.openai.com/v1")

@@ -3,6 +3,8 @@
 import asyncio
 import json
 import os
+import sqlite3
+from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -10,6 +12,7 @@ import httpx
 from jsonschema import Draft202012Validator
 from pydantic import Field, SecretStr, field_validator
 
+from agentos.adapters.live_limits import LiveRequestLedger, LiveRequestPolicy
 from agentos.domain.agents import AgentDefinition, AgentResult, ExecutionContext
 from agentos.domain.base import Definition, Text
 
@@ -33,6 +36,24 @@ class ModelSettings(Definition):
     timeout_seconds: float = Field(default=120, gt=0, le=300)
     max_output_tokens: int = Field(default=8192, ge=256, le=32768)
     allow_live_calls: bool = Field(default=False, strict=True)
+    live_policy_path: Path | None = None
+    live_ledger_path: Path | None = None
+
+    def live_limits(self) -> tuple[LiveRequestPolicy, LiveRequestLedger]:
+        if self.live_policy_path is None or self.live_ledger_path is None:
+            raise ValueError("Explicit acceptance policy and ledger are required")
+        policy = LiveRequestPolicy.model_validate_json(self.live_policy_path.read_bytes())
+        policy.check(self.base_url, self.model)
+        ledger = LiveRequestLedger(self.live_ledger_path, policy)
+        ledger.validate()
+        return policy, ledger
+
+    def live_limits_ready(self) -> bool:
+        try:
+            self.live_limits()
+            return True
+        except (ValueError, OSError, sqlite3.Error):
+            return False
 
     @field_validator("base_url")
     @classmethod
@@ -63,11 +84,15 @@ class ModelSettings(Definition):
         key = os.environ.get("AGENTOS_MODEL_KEY") or os.environ.get("OPENAI_API_KEY")
         if urlsplit(endpoint).hostname == "api.openai.com" and not key:
             return None
+        policy_path = os.environ.get("AGENTOS_LIVE_REQUEST_POLICY")
+        ledger_path = os.environ.get("AGENTOS_LIVE_REQUEST_LEDGER")
         return cls(
             model=model,
             base_url=endpoint,
             api_key=SecretStr(key) if key else None,
             allow_live_calls=os.environ.get("AGENTOS_ALLOW_LIVE_MODELS") == "1",
+            live_policy_path=Path(policy_path) if policy_path else None,
+            live_ledger_path=Path(ledger_path) if ledger_path else None,
         )
 
 
@@ -94,10 +119,19 @@ class ResponsesExecutor:
             raise ProviderFailure("Provider request deadline exceeded") from None
 
     async def _generate(self, agent: AgentDefinition, inputs: dict[str, Any]) -> dict[str, Any]:
+        policy = None
+        ledger = None
+        if self._transport is None:
+            try:
+                policy, ledger = self.settings.live_limits()
+            except Exception:
+                raise ProviderFailure("Live acceptance policy or ledger is unavailable") from None
         body = {
             "model": self.settings.model,
             "store": False,
-            "max_output_tokens": self.settings.max_output_tokens,
+            "max_output_tokens": min(self.settings.max_output_tokens, policy.max_output_tokens)
+            if policy
+            else self.settings.max_output_tokens,
             "instructions": agent.instructions,
             "input": json.dumps(inputs, ensure_ascii=False, allow_nan=False),
             "text": {
@@ -110,12 +144,19 @@ class ResponsesExecutor:
             },
         }
         encoded = json.dumps(body, ensure_ascii=False, allow_nan=False).encode("utf-8")
-        if len(encoded) > 1_000_000:
+        if len(encoded) > (policy.max_request_bytes if policy else 1_000_000):
             raise ProviderFailure("Provider input exceeds the request limit")
         headers = {"Content-Type": "application/json"}
         if self.settings.api_key:
             headers["Authorization"] = f"Bearer {self.settings.api_key.get_secret_value()}"
         try:
+            if ledger is not None:
+                try:
+                    ledger.reserve(agent.role)
+                except Exception:
+                    raise ProviderFailure(
+                        "Live acceptance request allowance is unavailable"
+                    ) from None
             async with httpx.AsyncClient(
                 transport=self._transport,
                 timeout=self.settings.timeout_seconds,

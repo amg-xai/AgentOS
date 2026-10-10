@@ -162,6 +162,18 @@ def diagnose(root: Path, *, demo: bool = False, workflow: str = "developer") -> 
         record(
             "provider", False, "Model configuration is invalid; check the endpoint and settings."
         )
+        provider = None
+    if not demo:
+        limits_ready = provider is not None and provider.live_limits_ready()
+        record(
+            "live_limits",
+            limits_ready,
+            "Acceptance policy and durable request allowance are valid; spending control "
+            "is locally attested, not remotely verified."
+            if limits_ready
+            else "Live acceptance requires a matching, unexpired policy and an existing "
+            "request ledger with remaining allowance; see docs/live-acceptance-limits.md.",
+        )
     try:
         role = UserRole(os.environ.get("AGENTOS_USER_ROLE", "operator"))
         record(

@@ -22,3 +22,10 @@ After explicit authorization for live acceptance, set `AGENTOS_ALLOW_LIVE_MODELS
 in the ignored local `.env` and restart. With the default `0`, normal workflow
 creation is blocked and the adapter rejects live transport before HTTP dispatch.
 Read-only doctor checks never contact a provider. Tests use injected transports.
+
+Live dispatch also requires an unexpired acceptance policy and an existing durable
+request ledger with matching endpoint/model and remaining role allowance. Neither
+is provisioned automatically. Read-only diagnostics report this separately from
+provider settings. See [live acceptance controls](live-acceptance-limits.md) for
+enforced request limits, provider spending prerequisites, transmitted data and the
+separate authorization required before configuration or live execution.

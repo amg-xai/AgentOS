@@ -135,6 +135,13 @@ side-effect guarantee or autonomous background recovery is claimed.
 Model providers implement an execution interface; role manifests reference
 configuration, never secrets. Start with deterministic test executors, then
 connect a real provider explicitly. Do not label test fixtures as AI execution.
+Production dispatch additionally requires an expiring acceptance policy tied to
+the exact endpoint/model and a durable SQLite request-reservation ledger. Missing,
+changed or exhausted state fails closed before HTTP. Reservations include failed
+attempts and survive restart; test transports and demo stay independent. This is
+a provider-adapter safeguard, not a second workflow engine or monetary meter.
+Provider spending controls require explicit confirmation; see
+[live acceptance limits](docs/live-acceptance-limits.md).
 There is no existing LangGraph code to reuse; evaluate it when orchestration
 requirements are implemented. Slack and Jira remain optional adapters.
 

@@ -12,7 +12,7 @@ from agentos.domain.workspace import WorkspaceSettings
 
 
 @pytest.fixture
-def configured_root(tmp_path, monkeypatch):
+def configured_root(tmp_path, monkeypatch, live_policy_environment):
     project = Path(__file__).resolve().parents[2]
     shutil.copytree(project / "packages", tmp_path / "packages")
     source = tmp_path / "source"
@@ -167,3 +167,21 @@ def test_doctor_cli_loads_environment_reports_json_and_sets_exit_code(
     output = capsys.readouterr().out
     assert "private-server-key" not in output
     assert json.loads(output)["configured_ready"] is ready
+
+
+def test_doctor_and_api_block_missing_limits_without_provisioning(configured_root, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from agentos.api.app import create_app
+
+    monkeypatch.delenv("AGENTOS_LIVE_REQUEST_POLICY")
+    missing = configured_root / "missing-allowance.db"
+    monkeypatch.setenv("AGENTOS_LIVE_REQUEST_LEDGER", str(missing))
+    report = diagnose(configured_root)
+    assert not report.configured_ready
+    assert not next(c for c in report.checks if c.id == "live_limits").passed
+    with TestClient(create_app(db_path=configured_root / "missions.db")) as client:
+        status = client.get("/status").json()
+        assert not status["provider_configured"]
+        assert not status["workflow_ready"]
+    assert not missing.exists()

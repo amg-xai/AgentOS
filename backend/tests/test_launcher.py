@@ -36,7 +36,9 @@ def test_serves_client_assets_with_browser_security_headers(tmp_path):
         assert client.get("/docs").status_code == 200
 
 
-def test_loads_explicit_workspace_configuration_without_exposing_keys(monkeypatch, tmp_path):
+def test_loads_explicit_workspace_configuration_without_exposing_keys(
+    monkeypatch, tmp_path, live_policy_environment
+):
     (tmp_path / "samples" / "calculator").mkdir(parents=True)
     path = setup_sample(tmp_path)
     monkeypatch.setenv("AGENTOS_WORKSPACE_CONFIG", str(path))

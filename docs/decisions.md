@@ -346,3 +346,22 @@ with injected structured model transport, including invalid-research rejection,
 optional Focus, exact evidence, explicit human approval and process restarts.
 No independent research, model authorization, provider change or new engine.
 Live quality acceptance and the broader original roadmap remain unfinished.
+
+## Bounded provider acceptance dispatch (2026-10-10)
+
+Prepare the original PLAN.md's first real Developer workflow without authorizing
+generation. Put request reservations at the existing Responses adapter boundary,
+with immutable endpoint/model/expiry policy binding, durable SQLite aggregate and
+role counters, byte/output bounds and no refunds for failed attempts. Startup and
+doctor never provision or reset state; injected transports and demo remain separate.
+Preserve the same mission engine, role contracts, frozen recipes and human review.
+
+Require a local attestation identifying verified provider spending controls before
+production dispatch. This is not a monetary meter or remote budget verification.
+Document provider hard-limit propagation risk rather than promising an exact dollar
+ceiling. Endpoint/model compatibility is still unverified: offline schema inspection
+and mocked HTTP tests cannot certify account access or real-model quality. A separate
+explicit user authorization, chosen endpoint/model, bounded data/session allowance,
+and verified spending controls remain necessary. See
+[live acceptance limits](live-acceptance-limits.md); no roadmap or provider activation
+is introduced by these prerequisites.

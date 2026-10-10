@@ -591,3 +591,21 @@ references and the [Mission Control guide](mission-control.md#follow-saved-artif
 Existing bounded lexical memory retrieval remains unchanged. Native/browser
 visual, responsive, screen-reader, and download-dialog acceptance remain manual
 under the existing browser restriction; live model quality testing is deferred.
+
+## Live acceptance dispatch prerequisites
+
+Validated offline on Windows on 2026-10-10: 688 backend tests pass with three existing
+Windows link skips, including 35 new request-policy/ledger and readiness cases.
+The 101 focused provider/role/diagnostic checks pass. Production-branch tests use
+an in-memory HTTP client to verify fail-closed missing/corrupt/changed/expired state,
+endpoint/model binding, per-role/aggregate exhaustion, concurrent reservations,
+durable counts, output/byte bounds and no refunds after failures or cancellation.
+Read-only diagnostics do not contact providers, create ledgers or consume allowance.
+
+All 119 frontend unit tests, 10 continuous React-to-real-backend role journeys and
+26 desktop tests pass. Ruff lint/format, native/Linux mypy, TypeScript/Vite build,
+frontend/desktop format and syntax checks, and an offline backend wheel build pass.
+The original sample and prepared source/test copies still match. No actual provider
+configuration, credentials or generation flag was changed; no live calls occurred.
+Local inspection of 22 actual schemas cannot establish live endpoint/model quality
+or compatibility. See [remaining acceptance requirements](live-acceptance-limits.md).
