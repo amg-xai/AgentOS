@@ -181,7 +181,7 @@ test.each([false, true])(
     const input = screen.getByLabelText('What material should your study notes and quiz cover?');
     if (demo) {
       expect(input).toHaveValue(goal);
-      expect(input).toHaveAttribute('readonly');
+      expect(input).not.toHaveAttribute('readonly');
     } else {
       await user.type(input, goal);
       expect(screen.getByText(/Only the supplied study brief and notes/)).toBeInTheDocument();

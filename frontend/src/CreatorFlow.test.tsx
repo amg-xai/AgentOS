@@ -168,7 +168,7 @@ test.each([false, true])(
     const input = screen.getByLabelText('What should your video script cover?');
     if (demo) {
       expect(input).toHaveValue(goal);
-      expect(input).toHaveAttribute('readonly');
+      expect(input).not.toHaveAttribute('readonly');
     } else {
       await user.type(input, goal);
       expect(screen.getByText(/Only the supplied brief and outline/)).toBeInTheDocument();

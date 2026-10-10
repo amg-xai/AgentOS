@@ -240,7 +240,41 @@ test('review artifacts remain inspectable outside the first history page', async
   expect(screen.getByRole('option', { name: /tested.diff/ })).toBeInTheDocument();
 });
 
-test('offline demo has a fixed goal and stays labelled through creation, review, and reload', async () => {
+test('Developer demo goal is editable and submits entered text without replacing it with the preset', async () => {
+  workflow(false, false, false, true);
+  const originalFetch = globalThis.fetch;
+  const submitted: unknown[] = [];
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (path: string, options?: RequestInit) => {
+      if (path === '/workflows/developer') {
+        submitted.push(JSON.parse(options?.body as string));
+        return new Response(
+          JSON.stringify({ detail: 'Offline demo supports only its fixed Calculator goal' }),
+          { status: 409 },
+        );
+      }
+      return originalFetch(path, options);
+    }),
+  );
+  const user = userEvent.setup();
+  render(<App />);
+  await screen.findByText('Offline demo — scripted responses, no model calls');
+  await user.click(screen.getByRole('button', { name: '+ New mission' }));
+  const goal = screen.getByLabelText('What should your agents investigate and fix?');
+  await user.click(goal);
+  await user.keyboard('{End}{Backspace}');
+  expect(goal).toHaveValue(demoGoal.slice(0, -1));
+  await user.clear(goal);
+  await user.type(goal, 'Investigate my calculator issue');
+  expect(goal).toHaveValue('Investigate my calculator issue');
+  await user.click(screen.getByRole('button', { name: 'Create demo mission' }));
+  await screen.findByText('Offline demo supports only its fixed Calculator goal');
+  expect(submitted).toEqual([{ goal: 'Investigate my calculator issue' }]);
+  expect(goal).toHaveValue('Investigate my calculator issue');
+});
+
+test('offline demo has a preset goal and stays labelled through creation, review, and reload', async () => {
   workflow(false, false, false, true);
   const user = userEvent.setup();
   const view = render(<App />);
@@ -251,7 +285,7 @@ test('offline demo has a fixed goal and stays labelled through creation, review,
   await user.click(screen.getByRole('button', { name: '+ New mission' }));
   const goal = screen.getByLabelText('What should your agents investigate and fix?');
   expect(goal).toHaveValue(demoGoal);
-  expect(goal).toHaveAttribute('readonly');
+  expect(goal).not.toHaveAttribute('readonly');
   expect(screen.getByText(/No source files or notes are sent to a model/)).toBeInTheDocument();
   await user.click(screen.getByRole('button', { name: 'Create demo mission' }));
   await user.click(await screen.findByRole('button', { name: 'Run mission' }));

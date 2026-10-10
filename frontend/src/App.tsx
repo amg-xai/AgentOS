@@ -470,7 +470,6 @@ export function App() {
                         <textarea
                           id="goal"
                           value={goal}
-                          readOnly={demo}
                           onChange={(e) => setGoal(e.target.value)}
                           placeholder="Investigate and fix incorrect addition. Preserve the existing tests."
                           required
@@ -479,7 +478,7 @@ export function App() {
                         />
                         <p className="muted">
                           {demo
-                            ? 'Fixed sample scenario. No source files or notes are sent to a model.'
+                            ? 'Editable preset. Offline demo execution supports only the original fixed sample goal; other goals receive validation feedback. No source files or notes are sent to a model.'
                             : workflow?.context_notice}
                         </p>
                         {!demo && roleId === 'creator' && workflow?.thumbnail_ready && (
